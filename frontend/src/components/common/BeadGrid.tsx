@@ -102,6 +102,46 @@ export const CAT_PATTERN: string[][] = [
   ['transparent','transparent','#FFA500','#FFA500','#FFA500','#FFA500','#FFA500','transparent','transparent'],
 ];
 
+/** 预设拼豆图案 - 樱桃 */
+export const CHERRY_PATTERN: string[][] = [
+  ['transparent','transparent','transparent','transparent','#228B22','transparent','transparent','transparent','transparent'],
+  ['transparent','transparent','transparent','#228B22','transparent','#228B22','transparent','transparent','transparent'],
+  ['transparent','transparent','#228B22','transparent','transparent','transparent','#228B22','transparent','transparent'],
+  ['transparent','#228B22','transparent','transparent','transparent','transparent','transparent','#228B22','transparent'],
+  ['transparent','transparent','#CC0000','#CC0000','transparent','#CC0000','#CC0000','transparent','transparent'],
+  ['transparent','#CC0000','#FF2222','#CC0000','transparent','#CC0000','#FF2222','#CC0000','transparent'],
+  ['transparent','#CC0000','#CC0000','#CC0000','transparent','#CC0000','#CC0000','#CC0000','transparent'],
+  ['transparent','transparent','#CC0000','transparent','transparent','transparent','#CC0000','transparent','transparent'],
+];
+
+/** 预设拼豆图案 - 钻石 */
+export const DIAMOND_PATTERN: string[][] = [
+  ['transparent','transparent','transparent','transparent','#00BFFF','transparent','transparent','transparent','transparent'],
+  ['transparent','transparent','transparent','#00BFFF','#87CEEB','#00BFFF','transparent','transparent','transparent'],
+  ['transparent','transparent','#00BFFF','#87CEEB','#E0F7FF','#87CEEB','#00BFFF','transparent','transparent'],
+  ['transparent','#00BFFF','#87CEEB','#E0F7FF','#FFFFFF','#E0F7FF','#87CEEB','#00BFFF','transparent'],
+  ['transparent','transparent','#00BFFF','#87CEEB','#E0F7FF','#87CEEB','#00BFFF','transparent','transparent'],
+  ['transparent','transparent','transparent','#00BFFF','#87CEEB','#00BFFF','transparent','transparent','transparent'],
+  ['transparent','transparent','transparent','transparent','#00BFFF','transparent','transparent','transparent','transparent'],
+];
+
+/** 预设拼豆图案 - 彩虹 */
+export const RAINBOW_PATTERN: string[][] = [
+  ['transparent','transparent','#FF0000','#FF0000','#FF0000','#FF0000','#FF0000','transparent','transparent'],
+  ['transparent','#FF0000','#FF6600','#FF6600','#FF6600','#FF6600','#FF6600','#FF0000','transparent'],
+  ['#FF0000','#FF6600','#FFFF00','#FFFF00','#FFFF00','#FFFF00','#FFFF00','#FF6600','#FF0000'],
+  ['#FF6600','#FFFF00','#00CC00','#00CC00','#00CC00','#00CC00','#00CC00','#FFFF00','#FF6600'],
+  ['#FFFF00','#00CC00','#0066FF','#0066FF','#0066FF','#0066FF','#0066FF','#00CC00','#FFFF00'],
+  ['transparent','#0066FF','#8B00FF','#8B00FF','#8B00FF','#8B00FF','#8B00FF','#0066FF','transparent'],
+  ['transparent','transparent','#8B00FF','#8B00FF','transparent','#8B00FF','#8B00FF','transparent','transparent'],
+];
+
+/** 所有图案集合 */
+export const ALL_PATTERNS = [
+  HEART_PATTERN, CAT_PATTERN, MUSHROOM_PATTERN, FLOWER_PATTERN, STAR_PATTERN,
+  CHERRY_PATTERN, DIAMOND_PATTERN, RAINBOW_PATTERN,
+];
+
 const styles = StyleSheet.create({
   grid: { alignItems: 'center', gap: 1 },
   row: { flexDirection: 'row' },
