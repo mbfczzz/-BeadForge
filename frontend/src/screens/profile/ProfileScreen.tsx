@@ -139,8 +139,9 @@ const S = StyleSheet.create({
   profileCard: {
     marginHorizontal: wp(14), marginTop: -wp(44),
     borderRadius: wp(18), borderWidth: 1, padding: wp(22),
-    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 5,
+    // 双层阴影: 接触阴影 + 扩散阴影
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 5,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   editBtn: { borderRadius: wp(10), paddingHorizontal: wp(16), paddingVertical: wp(8) },
@@ -157,6 +158,8 @@ const S = StyleSheet.create({
   menuCard: {
     marginHorizontal: wp(14), marginTop: wp(14),
     borderRadius: wp(18), borderWidth: 1, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(14), paddingHorizontal: wp(16) },
   menuIconW: {

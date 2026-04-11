@@ -309,8 +309,11 @@ const Card = memo(({ item }: { item: DesignItem }) => {
 const S = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header
-  header: { paddingHorizontal: PAD, paddingTop: wp(6), paddingBottom: wp(12) },
+  // Header - 微妙底边分隔
+  header: {
+    paddingHorizontal: PAD, paddingTop: wp(6), paddingBottom: wp(12),
+    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
+  },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(12) },
   logoWrap: { flexDirection: 'row', alignItems: 'center', gap: wp(8) },
   logoEmoji: { fontSize: fp(28) },
@@ -353,8 +356,11 @@ const S = StyleSheet.create({
   bannerSub: { fontSize: fp(12), color: 'rgba(255,255,255,0.8)', marginTop: wp(4), lineHeight: fp(18) },
   bannerArt: { width: wp(130), alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   bannerArtInner: {
-    backgroundColor: 'rgba(255,255,255,0.15)', padding: wp(12),
-    borderRadius: wp(16), borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.12)', padding: wp(12),
+    borderRadius: wp(16), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    // 内部磨砂感
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 6,
   },
   dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(12), gap: wp(6) },
   dot: { width: wp(6), height: wp(6), borderRadius: wp(3) },
@@ -363,9 +369,12 @@ const S = StyleSheet.create({
   // Categories
   catRow: { paddingHorizontal: PAD, paddingVertical: wp(10), gap: wp(8) },
   catChip: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(4),
+    flexDirection: 'row', alignItems: 'center', gap: wp(5),
     paddingHorizontal: wp(14), paddingVertical: wp(8),
-    borderRadius: wp(12), borderWidth: 1.5,
+    borderRadius: wp(12), borderWidth: 1,
+    // 微阴影让芯片浮起
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   catEmoji: { fontSize: fp(14) },
   catLabel: { fontSize: FontSize.sm, fontWeight: '600' },
@@ -384,23 +393,29 @@ const S = StyleSheet.create({
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
   col: { flex: 1, gap: GAP },
 
-  // Card
+  // Card - 双层阴影+微边框 = 真实纸面质感
   card: {
-    borderRadius: wp(12), overflow: 'hidden',
-    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 10, elevation: 3,
+    borderRadius: wp(14), overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)',
+    // 第一层阴影: 贴近的接触阴影
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
   },
-  cardCover: { justifyContent: 'center', alignItems: 'center' },
-  cardBody: { padding: wp(10) },
-  cardTitle: { fontSize: fp(13), fontWeight: '700', marginBottom: wp(2) },
-  cardDesc: { fontSize: fp(10), marginBottom: wp(8), lineHeight: fp(15) },
+  cardCover: {
+    justifyContent: 'center', alignItems: 'center',
+    // 封面区底部内阴影感
+    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
+  },
+  cardBody: { padding: wp(10), paddingTop: wp(9) },
+  cardTitle: { fontSize: fp(13), fontWeight: '700', marginBottom: wp(3), letterSpacing: 0.2 },
+  cardDesc: { fontSize: fp(10), marginBottom: wp(8), lineHeight: fp(16), opacity: 0.7 },
   cardFooter: { flexDirection: 'row', alignItems: 'center' },
   cardAvatar: {
     width: wp(20), height: wp(20), borderRadius: wp(10),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(5),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(6),
   },
-  cardAuthor: { fontSize: fp(10), flex: 1 },
-  cardLike: { fontSize: fp(10) },
+  cardAuthor: { fontSize: fp(10), flex: 1, fontWeight: '500' },
+  cardLike: { fontSize: fp(10), fontWeight: '500' },
 
   endT: { textAlign: 'center', fontSize: FontSize.sm, paddingVertical: Spacing.lg },
 

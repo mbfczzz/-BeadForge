@@ -122,17 +122,16 @@ const S = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingTop: wp(6),
-    borderTopWidth: 1,
-    // iOS 模糊效果
+    paddingTop: wp(8),
+    borderTopWidth: StyleSheet.hairlineWidth,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.06,
+        shadowRadius: 12,
       },
-      android: { elevation: 8 },
+      android: { elevation: 12 },
     }),
   },
 
@@ -143,12 +142,17 @@ const S = StyleSheet.create({
     paddingTop: wp(4),
   },
   tabInner: { alignItems: 'center' },
-  tabIcon: { fontSize: fp(21), height: wp(26), textAlign: 'center' },
-  tabLabel: { fontSize: fp(10), fontWeight: '600', marginTop: wp(1) },
+  tabIcon: { fontSize: fp(20), height: wp(26), textAlign: 'center' },
+  tabLabel: { fontSize: fp(10), fontWeight: '600', marginTop: wp(2), letterSpacing: 0.3 },
   pill: {
     height: wp(3),
     borderRadius: wp(1.5),
-    marginTop: wp(6),
+    marginTop: wp(5),
+    // 指示条也有微光
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
   },
 
   // 中间按钮
@@ -158,20 +162,23 @@ const S = StyleSheet.create({
     marginTop: -wp(18),
   },
   centerCircle: {
-    width: wp(52),
-    height: wp(52),
-    borderRadius: wp(26),
+    width: wp(50),
+    height: wp(50),
+    borderRadius: wp(25),
     justifyContent: 'center',
     alignItems: 'center',
-    // 阴影
+    // 双层阴影: 近处接触阴影 + 远处扩散光晕
     shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: wp(4) },
-    shadowOpacity: 0.35,
-    shadowRadius: wp(10),
+    shadowOffset: { width: 0, height: wp(3) },
+    shadowOpacity: 0.3,
+    shadowRadius: wp(8),
     elevation: 8,
+    // 微妙边框增加厚度感
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   centerPlus: {
-    fontSize: fp(26),
+    fontSize: fp(24),
     color: '#FFF',
     fontWeight: '300',
     marginTop: -wp(1),
