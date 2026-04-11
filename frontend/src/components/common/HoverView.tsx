@@ -1,29 +1,24 @@
 import React, { useRef, useCallback } from 'react';
-import { Animated, Platform, ViewStyle, TouchableOpacity } from 'react-native';
+import { Animated, Pressable, ViewStyle, Platform } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
   onPress?: () => void;
   style?: ViewStyle;
-  /** hover 时缩放 */
   hoverScale?: number;
-  /** hover 时上浮 */
   hoverLift?: number;
-  activeOpacity?: number;
 }
 
 /**
- * 带 hover 动画的触摸组件
- * Web: 鼠标悬浮时上浮+缩放, 移开复原
- * Mobile: activeOpacity
+ * 带 hover 动画的交互组件 - 用 Pressable 确保 Web mouse 事件
  */
 export const HoverView: React.FC<Props> = ({
   children, onPress, style,
   hoverScale = 1, hoverLift = 2,
-  activeOpacity = 0.7,
 }) => {
   const lift = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(1)).current;
+  const pressScale = useRef(new Animated.Value(1)).current;
 
   const onEnter = useCallback(() => {
     Animated.parallel([
@@ -39,18 +34,31 @@ export const HoverView: React.FC<Props> = ({
     ]).start();
   }, [lift, scale]);
 
-  const webProps = Platform.OS === 'web' ? { onMouseEnter: onEnter, onMouseLeave: onLeave } : {};
+  const onPressIn = useCallback(() => {
+    Animated.spring(pressScale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
+  }, [pressScale]);
+
+  const onPressOut = useCallback(() => {
+    Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 8 }).start();
+  }, [pressScale]);
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
-      activeOpacity={activeOpacity}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      onHoverIn={Platform.OS === 'web' ? onEnter : undefined}
+      onHoverOut={Platform.OS === 'web' ? onLeave : undefined}
       style={{ cursor: 'pointer' } as any}
-      {...webProps as any}
     >
-      <Animated.View style={[style, { transform: [{ translateY: lift }, { scale }] }]}>
+      <Animated.View style={[style, {
+        transform: [
+          { translateY: lift },
+          { scale: Animated.multiply(scale, pressScale) },
+        ],
+      }]}>
         {children}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };

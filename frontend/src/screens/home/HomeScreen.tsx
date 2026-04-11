@@ -54,7 +54,7 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => { fetchDesigns(true); }, []);
   useEffect(() => {
     const t = setInterval(() => {
-      setBannerIdx((p) => { const n=(p+1)%BANNERS.length; bannerRef.current?.scrollTo({ x:n*(BW+GAP), animated:true }); return n; });
+      setBannerIdx((p) => { const n=(p+1)%BANNERS.length; bannerRef.current?.scrollTo({ x:n*(BW+wp(10)), animated:true }); return n; });
     }, 5000);
     return () => clearInterval(t);
   }, []);
@@ -108,12 +108,12 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         {/* Banner */}
-        <ScrollView ref={bannerRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
-          snapToInterval={BW+GAP} decelerationRate="fast"
-          onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x/(BW+GAP)))}
-          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(10) }}>
+        <ScrollView ref={bannerRef} horizontal showsHorizontalScrollIndicator={false}
+          snapToInterval={BW + wp(10)} decelerationRate="fast"
+          onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + wp(10))))}
+          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) }}>
           {BANNERS.map((b) => (
-            <HoverView key={b.id} hoverScale={1.02} hoverLift={4} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
+            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} style={[$.banner, { width: BW, backgroundColor: b.bg }]}>
               <View style={$.bannerInner}>
                 <Text style={$.bannerT}>{b.title}</Text>
                 <Text style={$.bannerS}>{b.sub}</Text>

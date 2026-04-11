@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -53,23 +53,22 @@ const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor
     Animated.timing(opacity, { toValue: focused ? 1 : 0.5, duration: 200, useNativeDriver: true }).start();
   }, [focused]);
 
-  const onEnter = useCallback(() => {
+  const onHoverIn = useCallback(() => {
     Animated.spring(liftY, { toValue: -wp(2), useNativeDriver: true, speed: 22, bounciness: 6 }).start();
   }, [liftY]);
-  const onLeave = useCallback(() => {
+  const onHoverOut = useCallback(() => {
     Animated.spring(liftY, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
   }, [liftY]);
 
-  const webProps = Platform.OS === 'web' ? { onMouseEnter: onEnter, onMouseLeave: onLeave } : {};
-
   return (
-    <TouchableOpacity style={[S.tab, { cursor: 'pointer' } as any]} onPress={onPress} activeOpacity={0.6}
-      {...webProps as any}>
+    <Pressable style={[S.tab, { cursor: 'pointer' } as any]} onPress={onPress}
+      onHoverIn={Platform.OS === 'web' ? onHoverIn : undefined}
+      onHoverOut={Platform.OS === 'web' ? onHoverOut : undefined}>
       <Animated.View style={[S.tabInner, { opacity, transform: [{ translateY: liftY }] }]}>
         <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
         <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
