@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { BorderRadius, useTheme } from '../../theme';
+import { wp } from '../../utils/responsive';
 
 interface Props {
   width?: number | string;
@@ -9,23 +10,17 @@ interface Props {
   style?: ViewStyle;
 }
 
-/**
- * 骨架屏加载占位 - 呼吸闪烁动画
- */
 export const Skeleton: React.FC<Props> = ({
-  width = '100%',
-  height = 16,
-  borderRadius = BorderRadius.sm,
-  style,
+  width = '100%', height = 16, borderRadius = BorderRadius.sm, style,
 }) => {
   const { colors } = useTheme();
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.7, duration: 800, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.8, duration: 900, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.4, duration: 900, useNativeDriver: true }),
       ]),
     );
     anim.start();
@@ -33,41 +28,29 @@ export const Skeleton: React.FC<Props> = ({
   }, [opacity]);
 
   return (
-    <Animated.View
-      style={[
-        {
-          width: width as any,
-          height,
-          borderRadius,
-          backgroundColor: colors.border,
-          opacity,
-        },
-        style,
-      ]}
-    />
+    <Animated.View style={[{ width: width as any, height, borderRadius, backgroundColor: colors.skeleton, opacity }, style]} />
   );
 };
 
-/** 卡片骨架屏 */
 export const CardSkeleton: React.FC<{ height?: number }> = ({ height = 180 }) => {
   const { colors } = useTheme();
   return (
-    <View style={[skStyles.card, { backgroundColor: colors.cardBg }]}>
+    <View style={[sk.card, { backgroundColor: colors.cardBg }]}>
       <Skeleton width="100%" height={height} borderRadius={0} />
-      <View style={skStyles.info}>
-        <Skeleton width="70%" height={14} />
-        <Skeleton width="40%" height={10} style={{ marginTop: 8 }} />
-        <View style={skStyles.row}>
-          <Skeleton width={50} height={10} />
-          <Skeleton width={30} height={10} />
+      <View style={sk.info}>
+        <Skeleton width="65%" height={wp(13)} />
+        <Skeleton width="45%" height={wp(10)} style={{ marginTop: wp(8) }} />
+        <View style={sk.row}>
+          <Skeleton width={wp(44)} height={wp(10)} />
+          <Skeleton width={wp(28)} height={wp(10)} />
         </View>
       </View>
     </View>
   );
 };
 
-const skStyles = StyleSheet.create({
-  card: { borderRadius: BorderRadius.md, overflow: 'hidden', marginBottom: 8 },
-  info: { padding: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+const sk = StyleSheet.create({
+  card: { borderRadius: BorderRadius.md, overflow: 'hidden', marginBottom: wp(8) },
+  info: { padding: wp(10) },
+  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: wp(10) },
 });

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { FontSize, BorderRadius, Spacing, useTheme } from '../../theme';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { FontSize, BorderRadius, useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
 
 interface Props {
   label?: string;
@@ -19,15 +20,27 @@ export const Input: React.FC<Props> = ({
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
+  const borderAnim = useRef(new Animated.Value(0)).current;
 
-  const borderColor = error ? colors.error : focused ? colors.accent : 'transparent';
+  useEffect(() => {
+    Animated.timing(borderAnim, {
+      toValue: focused ? 1 : 0, duration: 200, useNativeDriver: false,
+    }).start();
+  }, [focused]);
+
+  const borderColor = error
+    ? colors.error
+    : (borderAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [colors.border, colors.accent],
+      }) as any);
 
   return (
-    <View style={styles.container}>
-      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
-      <View style={[styles.inputWrap, { backgroundColor: colors.inputBg, borderColor }]}>
+    <View style={S.wrap}>
+      {label && <Text style={[S.label, { color: focused ? colors.accent : colors.textSecondary }]}>{label}</Text>}
+      <Animated.View style={[S.box, { backgroundColor: colors.inputBg, borderColor }]}>
         <TextInput
-          style={[styles.input, { color: colors.text }]}
+          style={[S.input, { color: colors.text }]}
           placeholder={placeholder}
           placeholderTextColor={colors.textHint}
           value={value}
@@ -39,24 +52,25 @@ export const Input: React.FC<Props> = ({
           onBlur={() => setFocused(false)}
         />
         {secureTextEntry && (
-          <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={styles.eye}>
-            <Text style={{ fontSize: FontSize.sm, color: colors.textHint }}>{showPwd ? '隐藏' : '显示'}</Text>
+          <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={S.eye}>
+            <Text style={[S.eyeT, { color: colors.textHint }]}>{showPwd ? '隐藏' : '显示'}</Text>
           </TouchableOpacity>
         )}
-      </View>
-      {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
+      </Animated.View>
+      {error && <Text style={[S.err, { color: colors.error }]}>{error}</Text>}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { marginBottom: Spacing.md },
-  label: { fontSize: FontSize.sm, marginBottom: 6, fontWeight: '500' },
-  inputWrap: {
+const S = StyleSheet.create({
+  wrap: { marginBottom: wp(14) },
+  label: { fontSize: fp(12), marginBottom: wp(6), fontWeight: '600' },
+  box: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: BorderRadius.md, borderWidth: 1.5,
+    borderRadius: wp(12), borderWidth: 1.5,
   },
-  input: { flex: 1, height: 46, paddingHorizontal: Spacing.md, fontSize: FontSize.md },
-  eye: { paddingHorizontal: Spacing.md },
-  error: { fontSize: FontSize.sm, marginTop: 4 },
+  input: { flex: 1, height: wp(48), paddingHorizontal: wp(14), fontSize: fp(15) },
+  eye: { paddingHorizontal: wp(14) },
+  eyeT: { fontSize: fp(12), fontWeight: '500' },
+  err: { fontSize: fp(11), marginTop: wp(4), fontWeight: '500' },
 });

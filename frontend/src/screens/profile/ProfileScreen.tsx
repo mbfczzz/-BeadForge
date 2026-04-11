@@ -44,120 +44,134 @@ export const ProfileScreen: React.FC = () => {
     else Alert.alert('提示', '该功能即将上线');
   };
 
+  const STATS = [
+    { v: stats.designCount, l: '作品', c: colors.accent },
+    { v: stats.likeCount, l: '获赞', c: '#F43F5E' },
+    { v: stats.followerCount, l: '粉丝', c: '#F59E0B' },
+    { v: stats.followingCount, l: '关注', c: '#0EA5E9' },
+  ];
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
-      {/* 封面头部 */}
-      <View style={[styles.headerBg, { backgroundColor: colors.accent }]}>
-        {/* 背景装饰拼豆 */}
-        <View style={styles.headerDeco}>
-          <View style={{ opacity: 0.12 }}>
-            <BeadGrid pixels={ALL_PATTERNS[0]} beadSize={6} gap={1} round />
+    <ScrollView style={[S.root, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
+      {/* 封面 */}
+      <View style={[S.cover, { backgroundColor: colors.accent }]}>
+        <SafeAreaView edges={['top']} />
+        <View style={S.coverDeco}>
+          <View style={{ opacity: 0.1, transform: [{ rotate: '15deg' }] }}>
+            <BeadGrid pixels={ALL_PATTERNS[4]} beadSize={wp(7)} gap={wp(2)} round />
+          </View>
+        </View>
+        <View style={S.coverDeco2}>
+          <View style={{ opacity: 0.08, transform: [{ rotate: '-10deg' }] }}>
+            <BeadGrid pixels={ALL_PATTERNS[6]} beadSize={wp(5)} gap={wp(1.5)} round />
           </View>
         </View>
       </View>
 
-      {/* 用户信息卡片 */}
-      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.avatarRow}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={64} />
+      {/* 用户卡片 */}
+      <View style={[S.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={S.avatarRow}>
+          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(68)} />
           <TouchableOpacity
-            style={[styles.editBtn, { backgroundColor: colors.accent }]}
+            style={[S.editBtn, { backgroundColor: colors.accent }]}
             onPress={() => setSubPage('editProfile')}
           >
-            <Text style={styles.editText}>编辑资料</Text>
+            <Text style={S.editBtnT}>编辑资料</Text>
           </TouchableOpacity>
         </View>
-        <Text style={[styles.nickname, { color: colors.text }]}>{user?.nickname || user?.username}</Text>
-        <Text style={[styles.username, { color: colors.textHint }]}>@{user?.username}</Text>
-        {user?.email && <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>}
+        <Text style={[S.nick, { color: colors.text }]}>{user?.nickname || user?.username}</Text>
+        <Text style={[S.uname, { color: colors.textHint }]}>@{user?.username}</Text>
+        {user?.email && <Text style={[S.email, { color: colors.textSecondary }]}>📮 {user.email}</Text>}
 
         {/* 统计 */}
-        <View style={[styles.statsRow, { borderTopColor: colors.divider }]}>
-          {[
-            { v: stats.designCount, l: '作品', c: colors.accent },
-            { v: stats.likeCount, l: '获赞', c: '#FF6B6B' },
-            { v: stats.followerCount, l: '粉丝', c: '#FFA726' },
-            { v: stats.followingCount, l: '关注', c: '#42A5F5' },
-          ].map((s) => (
-            <View key={s.l} style={styles.statItem}>
-              <Text style={[styles.statValue, { color: s.c }]}>{s.v}</Text>
-              <Text style={[styles.statLabel, { color: colors.textHint }]}>{s.l}</Text>
-            </View>
+        <View style={[S.statsRow, { borderTopColor: colors.divider }]}>
+          {STATS.map((s) => (
+            <TouchableOpacity key={s.l} style={S.statItem} activeOpacity={0.7}>
+              <Text style={[S.statV, { color: s.c }]}>{s.v}</Text>
+              <Text style={[S.statL, { color: colors.textHint }]}>{s.l}</Text>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
 
       {/* 菜单 */}
-      <View style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[S.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {MENU.map((item, idx) => (
           <PressableScale
             key={item.key}
             onPress={() => handleMenu(item.key)}
-            style={[styles.menuItem, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
-            scale={0.98}
+            style={[S.menuItem, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
+            scale={0.985}
           >
-            <View style={[styles.menuIconWrap, { backgroundColor: colors.inputBg }]}>
-              <Text style={styles.menuIcon}>{item.icon}</Text>
+            <View style={[S.menuIconW, { backgroundColor: colors.accentLight }]}>
+              <Text style={S.menuIcon}>{item.icon}</Text>
             </View>
-            <View style={styles.menuTextWrap}>
-              <Text style={[styles.menuLabel, { color: colors.text }]}>{item.label}</Text>
-              <Text style={[styles.menuDesc, { color: colors.textHint }]}>{item.desc}</Text>
+            <View style={S.menuTextW}>
+              <Text style={[S.menuLabel, { color: colors.text }]}>{item.label}</Text>
+              <Text style={[S.menuDesc, { color: colors.textHint }]}>{item.desc}</Text>
             </View>
-            <Text style={[styles.menuArrow, { color: colors.textHint }]}>›</Text>
+            <Text style={[S.menuArrow, { color: colors.textHint }]}>›</Text>
           </PressableScale>
         ))}
       </View>
 
-      <View style={styles.logoutWrap}>
+      <View style={S.logoutW}>
         <Button title="退出登录" onPress={() => {
-          Alert.alert('退出登录', '确定？', [
+          Alert.alert('退出登录', '确定要退出吗？', [
             { text: '取消', style: 'cancel' },
-            { text: '确定', style: 'destructive', onPress: logout },
+            { text: '退出', style: 'destructive', onPress: logout },
           ]);
         }} variant="danger" />
       </View>
 
-      <Text style={[styles.footer, { color: colors.textHint }]}>BeadForge v1.0.0</Text>
+      <Text style={[S.footer, { color: colors.textHint }]}>BeadForge v1.0.0 · 用心拼出精彩</Text>
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const S = StyleSheet.create({
+  root: { flex: 1 },
 
-  headerBg: { height: 100 },
-  headerDeco: { position: 'absolute', right: 20, top: 15, opacity: 0.5 },
+  cover: { height: wp(130) },
+  coverDeco: { position: 'absolute', right: wp(15), top: wp(20) },
+  coverDeco2: { position: 'absolute', left: wp(15), bottom: wp(10) },
 
   profileCard: {
-    marginHorizontal: 12, marginTop: -40, borderRadius: BorderRadius.lg,
-    borderWidth: 1, padding: Spacing.lg,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+    marginHorizontal: wp(14), marginTop: -wp(44),
+    borderRadius: wp(18), borderWidth: 1, padding: wp(22),
+    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 5,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  editBtn: { borderRadius: BorderRadius.md, paddingHorizontal: 16, paddingVertical: 7 },
-  editText: { color: '#FFF', fontSize: FontSize.sm, fontWeight: '600' },
-  nickname: { fontSize: FontSize.xxl, fontWeight: '700', marginTop: 12 },
-  username: { fontSize: FontSize.sm, marginTop: 2 },
-  email: { fontSize: FontSize.xs, marginTop: 4 },
+  editBtn: { borderRadius: wp(10), paddingHorizontal: wp(16), paddingVertical: wp(8) },
+  editBtnT: { color: '#FFF', fontSize: fp(12), fontWeight: '700' },
+  nick: { fontSize: fp(22), fontWeight: '800', marginTop: wp(14) },
+  uname: { fontSize: fp(12), marginTop: wp(3) },
+  email: { fontSize: fp(11), marginTop: wp(6) },
 
-  statsRow: { flexDirection: 'row', marginTop: Spacing.lg, paddingTop: Spacing.md, borderTopWidth: 1 },
+  statsRow: { flexDirection: 'row', marginTop: wp(18), paddingTop: wp(16), borderTopWidth: 1 },
   statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: FontSize.xxl, fontWeight: '800' },
-  statLabel: { fontSize: FontSize.xs, marginTop: 2 },
+  statV: { fontSize: fp(22), fontWeight: '800' },
+  statL: { fontSize: fp(10), marginTop: wp(3) },
 
   menuCard: {
-    marginHorizontal: 12, marginTop: 12, borderRadius: BorderRadius.lg,
-    borderWidth: 1, overflow: 'hidden',
+    marginHorizontal: wp(14), marginTop: wp(14),
+    borderRadius: wp(18), borderWidth: 1, overflow: 'hidden',
   },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14 },
-  menuIconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  menuIcon: { fontSize: 18 },
-  menuTextWrap: { flex: 1 },
-  menuLabel: { fontSize: FontSize.md, fontWeight: '500' },
-  menuDesc: { fontSize: FontSize.xs, marginTop: 1 },
-  menuArrow: { fontSize: 20 },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(14), paddingHorizontal: wp(16) },
+  menuIconW: {
+    width: wp(38), height: wp(38), borderRadius: wp(11),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(12),
+  },
+  menuIcon: { fontSize: fp(17) },
+  menuTextW: { flex: 1 },
+  menuLabel: { fontSize: fp(14), fontWeight: '600' },
+  menuDesc: { fontSize: fp(10), marginTop: wp(2) },
+  menuArrow: { fontSize: fp(20) },
 
-  logoutWrap: { paddingHorizontal: 12, paddingTop: Spacing.lg },
-  footer: { textAlign: 'center', fontSize: FontSize.xs, paddingTop: Spacing.md, paddingBottom: wp(74) + BOTTOM_SAFE_H + wp(20) },
+  logoutW: { paddingHorizontal: wp(14), paddingTop: wp(20) },
+  footer: {
+    textAlign: 'center', fontSize: fp(10),
+    paddingTop: wp(14), paddingBottom: wp(74) + BOTTOM_SAFE_H + wp(22),
+  },
 });
