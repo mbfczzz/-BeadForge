@@ -96,7 +96,7 @@ export const HomeScreen: React.FC = () => {
 
         {/* 搜索栏 */}
         <View style={{ paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(5) }}>
-          <View style={[$.search, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.accent : colors.border }]}>
+          <View {...{ dataSet: { class: 'search' } } as any} style={[$.search, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.accent : colors.border }]}>
             <Feather name="search" size={fp(15)} color={colors.textHint} style={{ marginRight: wp(8) }} />
             <TextInput style={[$.searchInput, { color: colors.text }]} placeholder="搜索拼豆图案..."
               placeholderTextColor={colors.textHint} value={searchKeyword} onChangeText={handleSearch}
