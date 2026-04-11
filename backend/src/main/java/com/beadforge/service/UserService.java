@@ -3,6 +3,7 @@ package com.beadforge.service;
 import com.beadforge.model.dto.LoginRequest;
 import com.beadforge.model.dto.RegisterRequest;
 import com.beadforge.model.dto.UserDTO;
+import com.beadforge.model.dto.UserStatsDTO;
 
 import java.util.Map;
 
@@ -15,4 +16,6 @@ public interface UserService {
     UserDTO getUserById(Long id);
 
     UserDTO updateUser(Long id, UserDTO userDTO);
+
+    UserStatsDTO getUserStats(Long userId);
 }

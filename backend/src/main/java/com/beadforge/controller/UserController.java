@@ -2,6 +2,7 @@ package com.beadforge.controller;
 
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.UserDTO;
+import com.beadforge.model.dto.UserStatsDTO;
 import com.beadforge.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -24,5 +25,11 @@ public class UserController {
     public ApiResponse<UserDTO> updateProfile(HttpServletRequest request, @RequestBody UserDTO userDTO) {
         Long userId = (Long) request.getAttribute("userId");
         return ApiResponse.success(userService.updateUser(userId, userDTO));
+    }
+
+    @GetMapping("/stats")
+    public ApiResponse<UserStatsDTO> getStats(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        return ApiResponse.success(userService.getUserStats(userId));
     }
 }

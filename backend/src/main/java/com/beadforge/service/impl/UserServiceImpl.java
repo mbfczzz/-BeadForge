@@ -5,7 +5,10 @@ import com.beadforge.exception.BusinessException;
 import com.beadforge.model.dto.LoginRequest;
 import com.beadforge.model.dto.RegisterRequest;
 import com.beadforge.model.dto.UserDTO;
+import com.beadforge.model.dto.UserStatsDTO;
+import com.beadforge.model.entity.Design;
 import com.beadforge.model.entity.User;
+import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.UserRepository;
 import com.beadforge.service.UserService;
 import com.beadforge.util.ConvertUtil;
@@ -22,6 +25,7 @@ import java.util.Map;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final DesignRepository designRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -84,5 +88,22 @@ public class UserServiceImpl implements UserService {
         if (userDTO.getPhone() != null) user.setPhone(userDTO.getPhone());
         userRepository.updateById(user);
         return ConvertUtil.toUserDTO(user);
+    }
+
+    @Override
+    public UserStatsDTO getUserStats(Long userId) {
+        long designCount = designRepository.selectCount(
+                new QueryWrapper<Design>().eq("user_id", userId));
+
+        // 统计该用户所有作品获得的总赞数
+        QueryWrapper<Design> likeWrapper = new QueryWrapper<Design>()
+                .eq("user_id", userId)
+                .select("IFNULL(SUM(like_count), 0) as like_count");
+        Design likeResult = designRepository.selectOne(likeWrapper);
+        long totalLikes = likeResult != null && likeResult.getLikeCount() != null
+                ? likeResult.getLikeCount() : 0;
+
+        // 粉丝/关注功能待实现，暂返回 0
+        return new UserStatsDTO(designCount, totalLikes, 0, 0);
     }
 }
