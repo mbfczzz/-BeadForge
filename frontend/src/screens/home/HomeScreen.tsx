@@ -126,8 +126,8 @@ export const HomeScreen: React.FC = () => {
           {BANNERS.map((_,i) => <View key={i} style={[$.dot, { backgroundColor: bannerIdx===i ? colors.text : colors.border }, bannerIdx===i && $.dotOn]} />)}
         </View>
 
-        {/* 分类 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={$.catRow}>
+        {/* 分类标签 - 自动换行展开 */}
+        <View style={$.catWrap}>
           {CATS.map((name, idx) => {
             const on = activeCat === idx;
             return (
@@ -137,7 +137,7 @@ export const HomeScreen: React.FC = () => {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
 
         {/* 标题 */}
         <View style={$.secRow}>
@@ -249,7 +249,10 @@ const $ = StyleSheet.create({
   dotOn: { width: wp(15) },
 
   // 分类 - 1px 边框圆角药丸
-  catRow: { paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8) },
+  catWrap: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8),
+  },
   cat: { paddingHorizontal: wp(15), paddingVertical: wp(6), borderRadius: BorderRadius.full, borderWidth: 1 },
   catT: { fontSize: FontSize.sm, fontWeight: '500' },
 
