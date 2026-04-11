@@ -23,14 +23,14 @@ const BG_L = ['#FFF0F2','#FFF6EC','#EBF5FF','#EEFAF2','#FFF0FA','#FFFDE7','#EEEE
 const BG_D = ['#281520','#282218','#132030','#152A1C','#281528','#28280F','#181830','#282018'];
 
 const CATS = [
-  { key: '', label: '全部', emoji: '✨' },
-  { key: 'animal', label: '动物', emoji: '🐱' },
-  { key: 'character', label: '卡通', emoji: '🎮' },
-  { key: 'flower', label: '花卉', emoji: '🌸' },
-  { key: 'food', label: '美食', emoji: '🍰' },
-  { key: 'scenery', label: '风景', emoji: '🌈' },
-  { key: 'abstract', label: '抽象', emoji: '💎' },
-  { key: 'pixel', label: '像素', emoji: '👾' },
+  { key: '', label: '全部' },
+  { key: 'animal', label: '动物' },
+  { key: 'character', label: '卡通' },
+  { key: 'flower', label: '花卉' },
+  { key: 'food', label: '美食' },
+  { key: 'scenery', label: '风景' },
+  { key: 'abstract', label: '抽象' },
+  { key: 'pixel', label: '像素' },
 ];
 
 const BANNERS = [
@@ -103,7 +103,16 @@ export const HomeScreen: React.FC = () => {
         {/* Logo + 主题切换 */}
         <View style={S.headerRow}>
           <View style={S.logoWrap}>
-            <Text style={S.logoEmoji}>🧩</Text>
+            {/* 拼豆 Logo 标识 */}
+            <View style={[S.logoMark, { backgroundColor: colors.accent }]}>
+              <View style={S.logoGrid}>
+                {[0,1,2,3,4,5,6,7,8].map((i) => (
+                  <View key={i} style={[S.logoDot, {
+                    backgroundColor: i % 3 === 1 || i === 4 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)',
+                  }]} />
+                ))}
+              </View>
+            </View>
             <View>
               <Text style={[S.logoName, { color: colors.text }]}>BeadForge</Text>
               <Text style={[S.logoSub, { color: colors.textHint }]}>拼豆创作平台</Text>
@@ -114,13 +123,15 @@ export const HomeScreen: React.FC = () => {
             onPress={toggle}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: fp(16) }}>{dark ? '☀️' : '🌙'}</Text>
+            <View style={[S.themeDot, { backgroundColor: dark ? '#FCD34D' : '#6366F1' }]}>
+              <View style={[S.themeDotInner, { backgroundColor: dark ? 'transparent' : colors.inputBg, left: dark ? undefined : wp(5) }]} />
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* 搜索框 */}
         <View style={[S.searchBox, { backgroundColor: colors.inputBg }, searchFocused && { borderColor: colors.accent }]}>
-          <Text style={[S.searchIcon, { color: searchFocused ? colors.accent : colors.textHint }]}>🔍</Text>
+          <Text style={[S.searchIcon, { color: searchFocused ? colors.accent : colors.textHint }]}>⌕</Text>
           <TextInput
             style={[S.searchInput, { color: colors.text }]}
             placeholder="搜索图案、作者..."
@@ -205,7 +216,6 @@ export const HomeScreen: React.FC = () => {
                 }]}
                 activeOpacity={0.7}
               >
-                <Text style={S.catEmoji}>{c.emoji}</Text>
                 <Text style={[S.catLabel, { color: on ? '#FFF' : colors.textSecondary }]}>{c.label}</Text>
               </TouchableOpacity>
             );
@@ -298,7 +308,7 @@ const Card = memo(({ item }: { item: DesignItem }) => {
           <Text style={[S.cardAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
             {item.authorName || '创作者'}
           </Text>
-          <Text style={[S.cardLike, { color: colors.textHint }]}>❤ {item.likeCount}</Text>
+          <Text style={[S.cardLike, { color: colors.textHint }]}>♡ {item.likeCount}</Text>
         </View>
       </View>
     </PressableScale>
@@ -315,13 +325,26 @@ const S = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(12) },
-  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: wp(8) },
-  logoEmoji: { fontSize: fp(28) },
-  logoName: { fontSize: fp(18), fontWeight: '800', letterSpacing: 0.3 },
-  logoSub: { fontSize: fp(10), marginTop: 1 },
+  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: wp(10) },
+  logoMark: {
+    width: wp(34), height: wp(34), borderRadius: wp(10),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  logoGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    width: wp(18), height: wp(18), gap: wp(2),
+  },
+  logoDot: { width: wp(4), height: wp(4), borderRadius: wp(2) },
+  logoName: { fontSize: fp(17), fontWeight: '800', letterSpacing: 0.5 },
+  logoSub: { fontSize: fp(9), marginTop: wp(1), letterSpacing: 0.3 },
   themeBtn: {
     width: wp(38), height: wp(38), borderRadius: wp(12),
     justifyContent: 'center', alignItems: 'center', borderWidth: 1,
+  },
+  themeDot: { width: wp(18), height: wp(18), borderRadius: wp(9) },
+  themeDotInner: {
+    position: 'absolute', top: wp(2),
+    width: wp(13), height: wp(13), borderRadius: wp(7),
   },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
@@ -351,7 +374,7 @@ const S = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.25)',
     paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(6), marginBottom: wp(8),
   },
-  bannerBadgeT: { fontSize: fp(9), color: '#FFF', fontWeight: '800', letterSpacing: 1 },
+  bannerBadgeT: { fontSize: fp(9), color: '#FFF', fontWeight: '700', letterSpacing: 1.5 },
   bannerTitle: { fontSize: fp(22), fontWeight: '800', color: '#FFF' },
   bannerSub: { fontSize: fp(12), color: 'rgba(255,255,255,0.8)', marginTop: wp(4), lineHeight: fp(18) },
   bannerArt: { width: wp(130), alignItems: 'center', justifyContent: 'center', zIndex: 1 },
@@ -369,15 +392,10 @@ const S = StyleSheet.create({
   // Categories
   catRow: { paddingHorizontal: PAD, paddingVertical: wp(10), gap: wp(8) },
   catChip: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(5),
-    paddingHorizontal: wp(14), paddingVertical: wp(8),
-    borderRadius: wp(12), borderWidth: 1,
-    // 微阴影让芯片浮起
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    paddingHorizontal: wp(16), paddingVertical: wp(8),
+    borderRadius: wp(20), borderWidth: 1,
   },
-  catEmoji: { fontSize: fp(14) },
-  catLabel: { fontSize: FontSize.sm, fontWeight: '600' },
+  catLabel: { fontSize: fp(13), fontWeight: '600' },
 
   // Section
   sectionRow: {
