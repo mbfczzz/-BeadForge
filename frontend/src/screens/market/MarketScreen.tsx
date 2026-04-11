@@ -3,16 +3,10 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Colors, FontSize, Spacing } from '../../theme';
 
 export const MarketScreen: React.FC = () => (
-  <View style={styles.container}>
-    <Text style={styles.icon}>🛍️</Text>
-    <Text style={styles.title}>拼豆市场</Text>
-    <Text style={styles.subtitle}>即将上线，敬请期待！</Text>
-  </View>
+  <View style={s.c}><Text style={s.t}>市场</Text><Text style={s.sub}>即将上线</Text></View>
 );
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.snow },
-  icon: { fontSize: 64, marginBottom: Spacing.md },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.dark },
-  subtitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.gray, marginTop: Spacing.sm },
+const s = StyleSheet.create({
+  c: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white },
+  t: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.black },
+  sub: { fontSize: FontSize.md, color: Colors.gray, marginTop: Spacing.sm },
 });

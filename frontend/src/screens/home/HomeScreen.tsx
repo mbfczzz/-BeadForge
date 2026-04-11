@@ -8,219 +8,176 @@ import {
   Dimensions,
   RefreshControl,
   TextInput,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
 } from 'react-native';
 import { Colors, Spacing, FontSize, BorderRadius } from '../../theme';
 import { StateView } from '../../components/common';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = 12;
-const CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - CARD_GAP) / 2;
+const { width: SCREEN_W } = Dimensions.get('window');
 
+/** 顶部分类横滑标签 */
 const CATEGORIES = [
-  { key: '', label: '全部', icon: '🔥' },
-  { key: 'animal', label: '动物', icon: '🐱' },
-  { key: 'character', label: '卡通', icon: '🎮' },
-  { key: 'flower', label: '花卉', icon: '🌸' },
-  { key: 'food', label: '美食', icon: '🍕' },
-  { key: 'scenery', label: '风景', icon: '🏔️' },
-  { key: 'abstract', label: '抽象', icon: '🎨' },
+  '推荐', '动物', '卡通', '花卉', '美食', '风景', '抽象', '节日', '像素',
 ];
+const CAT_KEYS = ['', 'animal', 'character', 'flower', 'food', 'scenery', 'abstract', 'festival', 'pixel'];
 
-const BANNERS = [
-  { id: 1, title: '每周精选', subtitle: '编辑推荐的拼豆图案', emoji: '🏆', bg: Colors.primary, shadowBg: Colors.primaryDark },
-  { id: 2, title: '春日系列', subtitle: '花卉主题新品上线', emoji: '🌷', bg: Colors.blue, shadowBg: Colors.blueDark },
-  { id: 3, title: '像素合集', subtitle: '经典角色全收录', emoji: '👾', bg: Colors.orange, shadowBg: Colors.orangeDark },
-];
+/** 横滑卡片尺寸 */
+const CARD_W = 140;
+const CARD_H = 190;
+const WIDE_CARD_W = 220;
+const WIDE_CARD_H = 130;
 
-const CARD_COLORS = [
-  { bg: '#E8F5E9', accent: Colors.primary },
-  { bg: '#E3F2FD', accent: Colors.blue },
-  { bg: '#FFF8E1', accent: Colors.orange },
-  { bg: '#F3E5F5', accent: Colors.purple },
-  { bg: '#FCE4EC', accent: Colors.pink },
-  { bg: '#E0F7FA', accent: '#00BCD4' },
+/** 占位封面色 */
+const COVER_COLORS = [
+  '#D32F2F', '#1976D2', '#388E3C', '#F57C00', '#7B1FA2',
+  '#00796B', '#C2185B', '#455A64', '#E64A19', '#512DA8',
 ];
 
 export const HomeScreen: React.FC = () => {
   const {
-    designs, loading, refreshing, error, hasMore,
-    sortBy, category, searchKeyword,
+    designs, loading, refreshing, error,
+    category, searchKeyword,
     setFilter, setSearchKeyword, fetchDesigns,
   } = useDesignStore();
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeCatIdx = CAT_KEYS.indexOf(category || '');
 
   useEffect(() => { fetchDesigns(true); }, []);
 
   const onRefresh = useCallback(() => { fetchDesigns(true); }, [fetchDesigns]);
 
-  const onScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 100 && hasMore && !loading) {
-      fetchDesigns(false);
-    }
-  }, [hasMore, loading, fetchDesigns]);
-
-  const handleCategoryPress = useCallback((key: string) => {
-    setFilter(undefined, key || null);
+  const handleCat = useCallback((idx: number) => {
+    setFilter(undefined, CAT_KEYS[idx] || null);
   }, [setFilter]);
 
-  const handleSearchChange = useCallback((text: string) => {
+  const handleSearch = useCallback((text: string) => {
     setSearchKeyword(text);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => fetchDesigns(true), 500);
   }, [setSearchKeyword, fetchDesigns]);
 
-  const filteredDesigns = searchKeyword.trim()
-    ? designs.filter((d) =>
-        d.title.toLowerCase().includes(searchKeyword.trim().toLowerCase()) ||
-        d.description?.toLowerCase().includes(searchKeyword.trim().toLowerCase()))
+  // 按分组模拟：热门推荐 / 最新上架 / 精选合集
+  const filtered = searchKeyword.trim()
+    ? designs.filter((d) => d.title.toLowerCase().includes(searchKeyword.trim().toLowerCase()))
     : designs;
 
-  const leftCol: DesignItem[] = [];
-  const rightCol: DesignItem[] = [];
-  filteredDesigns.forEach((item, i) => (i % 2 === 0 ? leftCol : rightCol).push(item));
+  const hotDesigns = filtered.slice(0, 8);
+  const newDesigns = filtered.slice(3, 11);
+  const pickDesigns = filtered.slice(5, 15);
 
   return (
     <View style={styles.container}>
-      {/* 顶部 */}
-      <View style={styles.topBar}>
-        <Text style={styles.logo}>🧩</Text>
-        <Text style={styles.logoText}>BeadForge</Text>
-        <View style={styles.topBarRight}>
-          <TouchableOpacity style={styles.streakBadge}>
-            <Text style={styles.streakText}>🔥 7</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.black} />}
+      >
+        {/* 顶部分类标签 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
+          {CATEGORIES.map((name, idx) => (
+            <TouchableOpacity
+              key={name}
+              onPress={() => handleCat(idx)}
+              style={[styles.catItem, activeCatIdx === idx && styles.catItemActive]}
+            >
+              <Text style={[styles.catText, activeCatIdx === idx && styles.catTextActive]}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-      {/* 搜索 */}
-      <View style={styles.searchWrap}>
-        <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+        {/* 搜索栏 */}
+        <View style={styles.searchWrap}>
           <TextInput
             style={styles.searchInput}
-            placeholder="搜索拼豆图案..."
-            placeholderTextColor={Colors.grayLight}
+            placeholder="搜索拼豆图案"
+            placeholderTextColor={Colors.gray}
             value={searchKeyword}
-            onChangeText={handleSearchChange}
+            onChangeText={handleSearch}
             returnKeyType="search"
           />
           {searchKeyword.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange('')} style={styles.clearBtn}>
+            <TouchableOpacity onPress={() => handleSearch('')} style={styles.clearBtn}>
               <Text style={styles.clearText}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
-      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        onMomentumScrollEnd={onScrollEnd}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
-      >
-        {/* Banner */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bannerList}>
-          {BANNERS.map((b) => (
-            <TouchableOpacity key={b.id} activeOpacity={0.85} style={styles.bannerOuter}>
-              <View style={[styles.bannerShadow, { backgroundColor: b.shadowBg }]} />
-              <View style={[styles.bannerCard, { backgroundColor: b.bg }]}>
-                <View style={styles.bannerText}>
-                  <Text style={styles.bannerTitle}>{b.title}</Text>
-                  <Text style={styles.bannerSubtitle}>{b.subtitle}</Text>
-                </View>
-                <Text style={styles.bannerEmoji}>{b.emoji}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* 分类 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
-          {CATEGORIES.map((cat) => {
-            const active = (category || '') === cat.key;
-            return (
-              <TouchableOpacity
-                key={cat.key}
-                onPress={() => handleCategoryPress(cat.key)}
-                style={[styles.catChip, active && styles.catChipActive]}
-              >
-                <Text style={styles.catIcon}>{cat.icon}</Text>
-                <Text style={[styles.catLabel, active && styles.catLabelActive]}>{cat.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* 排序 */}
-        <View style={styles.sortRow}>
-          {['latest', 'popular'].map((key) => (
-            <TouchableOpacity
-              key={key}
-              onPress={() => setFilter(key)}
-              style={[styles.sortChip, sortBy === key && styles.sortChipActive]}
-            >
-              <Text style={[styles.sortText, sortBy === key && styles.sortTextActive]}>
-                {key === 'latest' ? '🕐 最新' : '❤️ 最热'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* 状态 */}
+        {/* Loading / Error */}
         {loading && designs.length === 0 && <StateView loading />}
         {error && designs.length === 0 && <StateView error={error} onRetry={onRefresh} />}
-        {!loading && !error && filteredDesigns.length === 0 && (
-          <StateView empty emptyText="还没有作品，快来创作吧" emptyIcon="🎨" />
+        {!loading && !error && filtered.length === 0 && <StateView empty emptyText="暂无相关作品" />}
+
+        {filtered.length > 0 && (
+          <>
+            {/* 第一组: 热门推荐 - 大竖卡 */}
+            <SectionHeader title="时下最热门的拼豆图案" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
+              {hotDesigns.map((item) => (
+                <VerticalCard key={`hot-${item.id}`} item={item} />
+              ))}
+            </ScrollView>
+
+            {/* 第二组: 最新上架 - 宽横卡 */}
+            <SectionHeader title="最新上架" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
+              {newDesigns.map((item) => (
+                <WideCard key={`new-${item.id}`} item={item} />
+              ))}
+            </ScrollView>
+
+            {/* 第三组: 精选合集 - 大竖卡 */}
+            <SectionHeader title="大家都在拼的图案" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
+              {pickDesigns.map((item) => (
+                <VerticalCard key={`pick-${item.id}`} item={item} />
+              ))}
+            </ScrollView>
+          </>
         )}
 
-        {/* 瀑布流 */}
-        {filteredDesigns.length > 0 && (
-          <View style={styles.waterfall}>
-            <View style={styles.column}>
-              {leftCol.map((item) => <DesignCard key={item.id} item={item} />)}
-            </View>
-            <View style={styles.column}>
-              {rightCol.map((item) => <DesignCard key={item.id} item={item} />)}
-            </View>
-          </View>
-        )}
-
-        {loading && designs.length > 0 && <StateView loading />}
-        {!hasMore && designs.length > 0 && (
-          <Text style={styles.endText}>🎉 全部加载完毕</Text>
-        )}
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </View>
   );
 };
 
-/** 多邻国风卡片 - 3D 圆角 + 粗边框 */
-const DesignCard: React.FC<{ item: DesignItem }> = ({ item }) => {
-  const h = 140 + (item.id * 37) % 80;
-  const palette = CARD_COLORS[item.id % CARD_COLORS.length];
+/** 分区标题 */
+const SectionHeader: React.FC<{ title: string }> = ({ title }) => (
+  <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+  </View>
+);
 
+/** 竖向封面卡片（类似截图中的影视海报卡） */
+const VerticalCard: React.FC<{ item: DesignItem }> = ({ item }) => {
+  const bg = COVER_COLORS[item.id % COVER_COLORS.length];
   return (
-    <TouchableOpacity activeOpacity={0.85} style={styles.cardOuter}>
-      <View style={[styles.cardShadow, { height: h + 52 }]} />
-      <View style={styles.cardInner}>
-        <View style={[styles.cardImage, { height: h, backgroundColor: palette.bg }]}>
-          <Text style={styles.cardEmoji}>🧩</Text>
-        </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-          <View style={styles.cardFooter}>
-            <Text style={styles.cardAuthor}>{item.authorName || `创作者`}</Text>
-            <View style={styles.likeWrap}>
-              <Text style={styles.likeHeart}>❤️</Text>
-              <Text style={styles.likeNum}>{item.likeCount}</Text>
-            </View>
-          </View>
+    <TouchableOpacity activeOpacity={0.8} style={styles.vCard}>
+      <View style={[styles.vCardCover, { backgroundColor: bg }]}>
+        <Text style={styles.coverEmoji}>🧩</Text>
+      </View>
+      <Text style={styles.vCardTitle} numberOfLines={1}>{item.title}</Text>
+      <Text style={styles.vCardMeta} numberOfLines={1}>
+        {item.category || '拼豆'} · {item.authorName || '创作者'}
+      </Text>
+    </TouchableOpacity>
+  );
+};
+
+/** 宽横向卡片（类似截图中的宽横幅） */
+const WideCard: React.FC<{ item: DesignItem }> = ({ item }) => {
+  const bg = COVER_COLORS[(item.id + 3) % COVER_COLORS.length];
+  return (
+    <TouchableOpacity activeOpacity={0.8} style={styles.wCard}>
+      <View style={[styles.wCardCover, { backgroundColor: bg }]}>
+        <Text style={styles.coverEmojiLg}>🧩</Text>
+        {/* 底部渐变蒙层模拟 */}
+        <View style={styles.wCardOverlay}>
+          <Text style={styles.wCardTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.wCardMeta} numberOfLines={1}>
+            {item.category || '拼豆'} · ❤ {item.likeCount}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -228,116 +185,57 @@ const DesignCard: React.FC<{ item: DesignItem }> = ({ item }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.snow },
+  container: { flex: 1, backgroundColor: Colors.bg },
 
-  // TopBar
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.grayBg,
-  },
-  logo: { fontSize: 28 },
-  logoText: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.primary, marginLeft: Spacing.sm },
-  topBarRight: { marginLeft: 'auto' },
-  streakBadge: {
-    backgroundColor: Colors.yellow + '30',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    borderWidth: 2,
-    borderColor: Colors.yellow,
-  },
-  streakText: { fontSize: FontSize.md, fontWeight: '800', color: Colors.orangeDark },
+  // 分类标签
+  catRow: { paddingHorizontal: Spacing.md, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
+  catItem: { marginRight: Spacing.md },
+  catItemActive: { borderBottomWidth: 2, borderBottomColor: Colors.black, paddingBottom: 4 },
+  catText: { fontSize: FontSize.md, color: Colors.gray },
+  catTextActive: { color: Colors.black, fontWeight: '700' },
 
-  // Search
-  searchWrap: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.white },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.snow,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 2,
-    borderColor: Colors.grayBg,
-    paddingHorizontal: Spacing.md,
-    height: 44,
-  },
-  searchIcon: { fontSize: 16, marginRight: Spacing.sm },
-  searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.black, fontWeight: '600', padding: 0 },
-  clearBtn: { padding: Spacing.xs },
-  clearText: { fontSize: 16, color: Colors.grayLight, fontWeight: '700' },
-
-  // Banner
-  bannerList: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: 12 },
-  bannerOuter: { width: SCREEN_WIDTH * 0.75, position: 'relative', marginRight: 12 },
-  bannerShadow: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    height: 110, borderRadius: BorderRadius.xl,
-  },
-  bannerCard: {
-    height: 110, borderRadius: BorderRadius.xl, marginBottom: 5,
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg,
-    overflow: 'hidden',
-  },
-  bannerText: { flex: 1 },
-  bannerTitle: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.white },
-  bannerSubtitle: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.85)', marginTop: 4, fontWeight: '600' },
-  bannerEmoji: { fontSize: 48 },
-
-  // Categories
-  catList: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.sm },
-  catChip: {
+  // 搜索
+  searchWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.white,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: BorderRadius.full,
-    borderWidth: 2, borderColor: Colors.grayBg,
-    marginRight: Spacing.sm,
+    marginHorizontal: Spacing.md, marginBottom: Spacing.md,
+    backgroundColor: Colors.grayBg, borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md, height: 40,
   },
-  catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primaryDark },
-  catIcon: { fontSize: 16, marginRight: 4 },
-  catLabel: { fontSize: FontSize.md, fontWeight: '700', color: Colors.grayDark },
-  catLabelActive: { color: Colors.white },
+  searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.black, padding: 0 },
+  clearBtn: { padding: 4 },
+  clearText: { fontSize: 14, color: Colors.gray },
 
-  // Sort
-  sortRow: { flexDirection: 'row', paddingHorizontal: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.sm },
-  sortChip: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.white,
-    borderWidth: 2, borderColor: Colors.grayBg,
+  // Section
+  sectionHeader: { paddingHorizontal: Spacing.md, marginTop: Spacing.md, marginBottom: Spacing.sm },
+  sectionTitle: { fontSize: FontSize.title, fontWeight: '800', color: Colors.black },
+
+  // 横滑列表
+  hList: { paddingLeft: Spacing.md, paddingRight: Spacing.sm },
+
+  // 竖卡
+  vCard: { width: CARD_W, marginRight: 12 },
+  vCardCover: {
+    width: CARD_W, height: CARD_H,
+    borderRadius: BorderRadius.md, overflow: 'hidden',
+    justifyContent: 'center', alignItems: 'center',
   },
-  sortChipActive: { borderColor: Colors.blue, backgroundColor: Colors.blue + '15' },
-  sortText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.gray },
-  sortTextActive: { color: Colors.blue },
+  coverEmoji: { fontSize: 40, opacity: 0.5 },
+  vCardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.black, marginTop: 8 },
+  vCardMeta: { fontSize: FontSize.xs, color: Colors.gray, marginTop: 2 },
 
-  // Waterfall
-  waterfall: { flexDirection: 'row', paddingHorizontal: Spacing.md, gap: CARD_GAP },
-  column: { flex: 1, gap: CARD_GAP },
-
-  // Card
-  cardOuter: { position: 'relative' },
-  cardShadow: {
-    position: 'absolute', left: 0, right: 0, bottom: 0,
-    backgroundColor: Colors.shadowGray, borderRadius: BorderRadius.lg,
+  // 宽卡
+  wCard: { width: WIDE_CARD_W, marginRight: 12 },
+  wCardCover: {
+    width: WIDE_CARD_W, height: WIDE_CARD_H,
+    borderRadius: BorderRadius.md, overflow: 'hidden',
+    justifyContent: 'center', alignItems: 'center',
   },
-  cardInner: {
-    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
-    overflow: 'hidden', marginBottom: 4,
-    borderWidth: 2, borderColor: Colors.grayBg,
+  coverEmojiLg: { fontSize: 48, opacity: 0.4 },
+  wCardOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    paddingHorizontal: 10, paddingVertical: 8,
   },
-  cardImage: { width: '100%', justifyContent: 'center', alignItems: 'center' },
-  cardEmoji: { fontSize: 36, opacity: 0.5 },
-  cardInfo: { padding: 10 },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '800', color: Colors.dark },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  cardAuthor: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.gray },
-  likeWrap: { flexDirection: 'row', alignItems: 'center' },
-  likeHeart: { fontSize: 12, marginRight: 2 },
-  likeNum: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.gray },
-
-  endText: { textAlign: 'center', fontSize: FontSize.md, fontWeight: '700', color: Colors.grayLight, paddingVertical: Spacing.lg },
+  wCardTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
+  wCardMeta: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
 });

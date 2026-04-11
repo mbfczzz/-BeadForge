@@ -1,44 +1,42 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { CreateScreen } from '../screens/create/CreateScreen';
 import { PublishScreen } from '../screens/publish/PublishScreen';
 import { MarketScreen } from '../screens/market/MarketScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
-import { Colors, FontSize, BorderRadius } from '../theme';
+import { Colors, FontSize } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
-const TABS: { name: string; label: string; icon: string; component: React.ComponentType<any> }[] = [
-  { name: 'Home', label: '首页', icon: '🏠', component: HomeScreen },
+const TABS = [
+  { name: 'Home', label: '发现', icon: '◉', component: HomeScreen },
   { name: 'Create', label: '创作', icon: '✏️', component: CreateScreen },
-  { name: 'Publish', label: '发布', icon: '🚀', component: PublishScreen },
-  { name: 'Market', label: '市场', icon: '🛍️', component: MarketScreen },
-  { name: 'Profile', label: '个人', icon: '🦉', component: ProfileScreen },
+  { name: 'Publish', label: '发布', icon: '▲', component: PublishScreen },
+  { name: 'Market', label: '市场', icon: '◎', component: MarketScreen },
+  { name: 'Profile', label: '我的', icon: '☰', component: ProfileScreen },
 ];
 
 export const TabNavigator: React.FC = () => (
   <Tab.Navigator
     screenOptions={{
-      tabBarActiveTintColor: Colors.primary,
-      tabBarInactiveTintColor: Colors.grayLight,
-      tabBarLabelStyle: styles.tabLabel,
+      tabBarActiveTintColor: Colors.black,
+      tabBarInactiveTintColor: Colors.gray,
+      tabBarLabelStyle: styles.label,
       tabBarStyle: styles.tabBar,
       headerShown: false,
     }}
   >
-    {TABS.map((tab) => (
+    {TABS.map((t) => (
       <Tab.Screen
-        key={tab.name}
-        name={tab.name}
-        component={tab.component}
+        key={t.name}
+        name={t.name}
+        component={t.component}
         options={{
-          tabBarLabel: tab.label,
+          tabBarLabel: t.label,
           tabBarIcon: ({ focused }) => (
-            <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-              <Text style={[styles.icon, focused && styles.iconActive]}>{tab.icon}</Text>
-            </View>
+            <Text style={[styles.icon, { color: focused ? Colors.black : Colors.gray }]}>{t.icon}</Text>
           ),
         }}
       />
@@ -48,33 +46,14 @@ export const TabNavigator: React.FC = () => (
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 68,
-    paddingBottom: 8,
+    height: 56,
+    paddingBottom: 4,
     paddingTop: 4,
     backgroundColor: Colors.white,
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderTopColor: Colors.grayBg,
+    elevation: 0,
   },
-  tabLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconWrapActive: {
-    backgroundColor: Colors.primary + '18',
-  },
-  icon: {
-    fontSize: 20,
-    opacity: 0.5,
-  },
-  iconActive: {
-    opacity: 1,
-    fontSize: 22,
-  },
+  label: { fontSize: FontSize.xs, fontWeight: '500' },
+  icon: { fontSize: 20 },
 });

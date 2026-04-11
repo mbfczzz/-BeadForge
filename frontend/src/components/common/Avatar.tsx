@@ -6,45 +6,24 @@ interface Props {
   uri?: string | null;
   name?: string;
   size?: number;
-  borderColor?: string;
 }
 
-export const Avatar: React.FC<Props> = ({ uri, name, size = 48, borderColor = Colors.primary }) => {
-  const radius = size / 2;
-
+export const Avatar: React.FC<Props> = ({ uri, name, size = 48 }) => {
+  const r = size / 2;
   if (uri) {
-    return (
-      <View style={[styles.ring, { width: size + 6, height: size + 6, borderRadius: radius + 3, borderColor }]}>
-        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: radius }} />
-      </View>
-    );
+    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: r, backgroundColor: Colors.grayLight }} />;
   }
-
   const initial = (name || '?').charAt(0).toUpperCase();
-  const bgColors = [Colors.primary, Colors.blue, Colors.orange, Colors.purple, Colors.pink];
-  const bg = bgColors[(name || '').charCodeAt(0) % bgColors.length];
-
+  const colors = ['#FF6D00', '#2196F3', '#4CAF50', '#9C27B0', '#E91E63'];
+  const bg = colors[(name || '').charCodeAt(0) % colors.length];
   return (
-    <View style={[styles.ring, { width: size + 6, height: size + 6, borderRadius: radius + 3, borderColor }]}>
-      <View style={[styles.placeholder, { width: size, height: size, borderRadius: radius, backgroundColor: bg }]}>
-        <Text style={[styles.initial, { fontSize: size * 0.4 }]}>{initial}</Text>
-      </View>
+    <View style={[styles.ph, { width: size, height: size, borderRadius: r, backgroundColor: bg }]}>
+      <Text style={[styles.init, { fontSize: size * 0.38 }]}>{initial}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  ring: {
-    borderWidth: 3,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  initial: {
-    color: Colors.white,
-    fontWeight: '800',
-  },
+  ph: { justifyContent: 'center', alignItems: 'center' },
+  init: { color: Colors.white, fontWeight: '700' },
 });

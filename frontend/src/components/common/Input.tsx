@@ -12,46 +12,32 @@ interface Props {
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
 }
 
-/**
- * 多邻国风格输入框 - 粗圆角边框 + 聚焦高亮
- */
 export const Input: React.FC<Props> = ({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  secureTextEntry = false,
-  error,
-  keyboardType = 'default',
+  label, placeholder, value, onChangeText,
+  secureTextEntry = false, error, keyboardType = 'default',
 }) => {
   const [focused, setFocused] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const borderColor = error
-    ? Colors.red
-    : focused
-    ? Colors.blue
-    : Colors.grayBg;
+  const [showPwd, setShowPwd] = useState(false);
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrap, { borderColor, borderBottomColor: error ? Colors.redDark : focused ? Colors.blueDark : Colors.shadowGray }]}>
+      <View style={[styles.inputWrap, focused && styles.focused, error && styles.errBorder]}>
         <TextInput
           style={styles.input}
           placeholder={placeholder}
-          placeholderTextColor={Colors.grayLight}
+          placeholderTextColor={Colors.gray}
           value={value}
           onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry && !showPassword}
+          secureTextEntry={secureTextEntry && !showPwd}
           keyboardType={keyboardType}
           autoCapitalize="none"
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
         />
         {secureTextEntry && (
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eye}>
-            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+          <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={styles.eye}>
+            <Text style={styles.eyeText}>{showPwd ? '隐藏' : '显示'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -61,43 +47,17 @@ export const Input: React.FC<Props> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: Spacing.md,
-  },
-  label: {
-    fontSize: FontSize.sm,
-    color: Colors.gray,
-    marginBottom: Spacing.xs,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
+  container: { marginBottom: Spacing.md },
+  label: { fontSize: FontSize.md, color: Colors.grayDark, marginBottom: 6, fontWeight: '500' },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderBottomWidth: 4,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.white,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.grayBg, borderRadius: BorderRadius.md,
+    borderWidth: 1.5, borderColor: 'transparent',
   },
-  input: {
-    flex: 1,
-    height: 52,
-    paddingHorizontal: Spacing.md,
-    fontSize: FontSize.lg,
-    color: Colors.black,
-    fontWeight: '600',
-  },
-  eye: {
-    paddingHorizontal: Spacing.md,
-  },
-  eyeText: {
-    fontSize: 20,
-  },
-  error: {
-    color: Colors.red,
-    fontSize: FontSize.sm,
-    marginTop: Spacing.xs,
-    fontWeight: '600',
-  },
+  focused: { borderColor: Colors.black, backgroundColor: Colors.white },
+  errBorder: { borderColor: Colors.error },
+  input: { flex: 1, height: 48, paddingHorizontal: Spacing.md, fontSize: FontSize.lg, color: Colors.black },
+  eye: { paddingHorizontal: Spacing.md },
+  eyeText: { fontSize: FontSize.sm, color: Colors.gray },
+  error: { color: Colors.error, fontSize: FontSize.sm, marginTop: 4 },
 });
