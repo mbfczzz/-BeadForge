@@ -23,8 +23,9 @@ const TAB_H = wp(60) + BOTTOM_SAFE_H;
 const BG_L = ['#fef2f2','#fef9ee','#eef6ff','#f0fdf4','#fdf2f8','#fffbeb','#eef2ff','#fff7ed'];
 const BG_D = ['#352020','#352a18','#1a2535','#1a2a1c','#351a30','#35300a','#1a1a35','#352518'];
 
-const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','像素'];
-const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel'];
+const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','像素','节日','手办','建筑','游戏','国风'];
+const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel','festival','figure','building','game','chinese'];
+const CAT_FOLD_LIMIT = 10;
 
 const BANNERS = [
   { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#4b78ff' },
@@ -44,6 +45,7 @@ export const HomeScreen: React.FC = () => {
   const [showTop, setShowTop] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [catExpanded, setCatExpanded] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const bannerRef = useRef<ScrollView>(null);
   const fabAnim = useRef(new Animated.Value(0)).current;
@@ -126,9 +128,9 @@ export const HomeScreen: React.FC = () => {
           {BANNERS.map((_,i) => <View key={i} style={[$.dot, { backgroundColor: bannerIdx===i ? colors.text : colors.border }, bannerIdx===i && $.dotOn]} />)}
         </View>
 
-        {/* 分类标签 - 自动换行展开 */}
+        {/* 分类标签 - 超过10个折叠 */}
         <View style={$.catWrap}>
-          {CATS.map((name, idx) => {
+          {(catExpanded ? CATS : CATS.slice(0, CAT_FOLD_LIMIT)).map((name, idx) => {
             const on = activeCat === idx;
             return (
               <TouchableOpacity key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)} activeOpacity={0.6}
@@ -137,6 +139,13 @@ export const HomeScreen: React.FC = () => {
               </TouchableOpacity>
             );
           })}
+          {CATS.length > CAT_FOLD_LIMIT && (
+            <TouchableOpacity onPress={() => setCatExpanded(!catExpanded)} activeOpacity={0.6}
+              style={[$.cat, $.catToggle, { borderColor: colors.border }]}>
+              <Text style={[$.catT, { color: colors.textHint }]}>{catExpanded ? '收起' : `展开 +${CATS.length - CAT_FOLD_LIMIT}`}</Text>
+              <Feather name={catExpanded ? 'chevron-up' : 'chevron-down'} size={fp(12)} color={colors.textHint} style={{ marginLeft: wp(3) }} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 标题 */}
@@ -254,6 +263,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8),
   },
   cat: { paddingHorizontal: wp(15), paddingVertical: wp(6), borderRadius: BorderRadius.full, borderWidth: 1 },
+  catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', borderStyle: 'dashed' as any },
   catT: { fontSize: FontSize.sm, fontWeight: '500' },
 
   // 标题
