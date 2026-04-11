@@ -16,64 +16,47 @@ const Tab = createBottomTabNavigator();
 const TABS: { name: string; label: string; icon: keyof typeof Feather.glyphMap; component: React.ComponentType<any> }[] = [
   { name: 'Home', label: '发现', icon: 'compass', component: HomeScreen },
   { name: 'Market', label: '市场', icon: 'shopping-bag', component: MarketScreen },
-  { name: 'Create', label: '', icon: 'plus', component: CreateScreen },
+  { name: 'Create', label: '创作', icon: 'plus-circle', component: CreateScreen },
   { name: 'Publish', label: '动态', icon: 'send', component: PublishScreen },
   { name: 'Profile', label: '我的', icon: 'user', component: ProfileScreen },
 ];
 
 function CustomTabBar({ state, navigation }: any) {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, wp(6));
 
   return (
     <View style={[S.bar, {
-      paddingBottom: bottomPad,
-      backgroundColor: dark ? 'rgba(12,12,29,0.98)' : 'rgba(255,255,255,0.98)',
-      borderTopColor: dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+      paddingBottom: Math.max(insets.bottom, wp(5)),
+      backgroundColor: colors.navBg,
+      borderTopColor: colors.navBorder,
     }]}>
       {state.routes.map((route: any, idx: number) => {
         const tab = TABS[idx];
         const focused = state.index === idx;
-        const isCenter = idx === 2;
         const onPress = () => {
           const ev = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
           if (!focused && !ev.defaultPrevented) navigation.navigate(route.name);
         };
-
-        if (isCenter) return <CenterBtn key={route.key} focused={focused} onPress={onPress} accent={colors.accent} />;
-        return <TabBtn key={route.key} icon={tab.icon} label={tab.label} focused={focused} onPress={onPress} accent={colors.accent} hint={colors.textHint} />;
+        return <TabBtn key={route.key} icon={tab.icon} label={tab.label} focused={focused} onPress={onPress}
+          activeColor={colors.text} inactiveColor={colors.textHint} />;
       })}
     </View>
   );
 }
 
-const TabBtn = memo(({ icon, label, focused, onPress, accent, hint }: any) => {
-  const scl = useRef(new Animated.Value(1)).current;
+const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor }: any) => {
+  const opacity = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
+
   useEffect(() => {
-    Animated.spring(scl, { toValue: focused ? 1.08 : 1, useNativeDriver: true, speed: 25, bounciness: 12 }).start();
+    Animated.timing(opacity, { toValue: focused ? 1 : 0.5, duration: 200, useNativeDriver: true }).start();
   }, [focused]);
 
   return (
-    <TouchableOpacity style={S.tabBtn} onPress={onPress} activeOpacity={0.6}>
-      <Animated.View style={[S.tabInner, { transform: [{ scale: scl }] }]}>
-        <Feather name={icon} size={wp(21)} color={focused ? accent : hint} />
-        <Text style={[S.tabLabel, { color: focused ? accent : hint }]}>{label}</Text>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-});
-
-const CenterBtn = memo(({ focused, onPress, accent }: any) => {
-  const scl = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.spring(scl, { toValue: focused ? 0.92 : 1, useNativeDriver: true, speed: 22, bounciness: 10 }).start();
-  }, [focused]);
-
-  return (
-    <TouchableOpacity style={S.centerWrap} onPress={onPress} activeOpacity={0.75}>
-      <Animated.View style={[S.centerCircle, { backgroundColor: accent, transform: [{ scale: scl }] }]}>
-        <Feather name="plus" size={wp(24)} color="#FFF" />
+    <TouchableOpacity style={S.tab} onPress={onPress} activeOpacity={0.6}>
+      <Animated.View style={[S.tabInner, { opacity }]}>
+        <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
+        <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -87,22 +70,14 @@ export const TabNavigator: React.FC = () => (
 
 const S = StyleSheet.create({
   bar: {
-    flexDirection: 'row', alignItems: 'flex-start', paddingTop: wp(8),
-    borderTopWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row', paddingTop: wp(8),
+    borderTopWidth: 1,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.04, shadowRadius: 8 },
-      android: { elevation: 8 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 4 },
     }),
   },
-  tabBtn: { flex: 1, alignItems: 'center', paddingTop: wp(2) },
-  tabInner: { alignItems: 'center', height: wp(42), justifyContent: 'center' },
+  tab: { flex: 1, alignItems: 'center' },
+  tabInner: { alignItems: 'center' },
   tabLabel: { fontSize: fp(10), fontWeight: '500', marginTop: wp(3) },
-
-  centerWrap: { flex: 1, alignItems: 'center', marginTop: -wp(14) },
-  centerCircle: {
-    width: wp(48), height: wp(48), borderRadius: wp(16),
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#6366F1', shadowOffset: { width: 0, height: wp(3) },
-    shadowOpacity: 0.3, shadowRadius: wp(8), elevation: 6,
-  },
 });

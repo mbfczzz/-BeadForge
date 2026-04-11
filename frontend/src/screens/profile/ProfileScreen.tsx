@@ -59,7 +59,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* 用户卡片 */}
-      <View style={[S.profileCard, { backgroundColor: colors.surface }]}>
+      <View style={[S.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={S.avatarRow}>
           <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(68)} />
           <TouchableOpacity
@@ -85,7 +85,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* 菜单 */}
-      <View style={[S.menuCard, { backgroundColor: colors.surface }]}>
+      <View style={[S.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {MENU.map((item, idx) => (
           <PressableScale
             key={item.key}
@@ -122,13 +122,13 @@ export const ProfileScreen: React.FC = () => {
 const S = StyleSheet.create({
   root: { flex: 1 },
 
-  cover: { height: wp(130) },
+  cover: { height: wp(120) },
 
   profileCard: {
-    marginHorizontal: wp(16), marginTop: -wp(48),
-    borderRadius: wp(20), padding: wp(24),
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 6,
+    marginHorizontal: wp(15), marginTop: -wp(40),
+    borderRadius: BorderRadius.lg, borderWidth: 1, padding: wp(20),
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   editBtn: { borderRadius: wp(12), paddingHorizontal: wp(16), paddingVertical: wp(8) },
@@ -143,10 +143,10 @@ const S = StyleSheet.create({
   statL: { fontSize: fp(10), marginTop: wp(4) },
 
   menuCard: {
-    marginHorizontal: wp(16), marginTop: wp(16),
-    borderRadius: wp(20), overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
+    marginHorizontal: wp(15), marginTop: wp(15),
+    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(16), paddingHorizontal: wp(18) },
   menuIconW: {
@@ -157,9 +157,9 @@ const S = StyleSheet.create({
   menuLabel: { fontSize: fp(14), fontWeight: '600' },
   menuDesc: { fontSize: fp(10), marginTop: wp(3) },
 
-  logoutW: { paddingHorizontal: wp(16), paddingTop: wp(24) },
+  logoutW: { paddingHorizontal: wp(15), paddingTop: wp(20) },
   footer: {
     textAlign: 'center', fontSize: fp(10),
-    paddingTop: wp(16), paddingBottom: wp(65) + BOTTOM_SAFE_H + wp(20),
+    paddingTop: wp(15), paddingBottom: wp(60) + BOTTOM_SAFE_H + wp(15),
   },
 });
