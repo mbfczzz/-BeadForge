@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { Avatar, Button } from '../../components/common';
+import { Avatar, Button, PressableScale } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -88,11 +88,11 @@ export const ProfileScreen: React.FC = () => {
       {/* 菜单 */}
       <View style={[styles.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {MENU.map((item, idx) => (
-          <TouchableOpacity
+          <PressableScale
             key={item.key}
-            style={[styles.menuItem, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
             onPress={() => handleMenu(item.key)}
-            activeOpacity={0.6}
+            style={[styles.menuItem, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
+            scale={0.98}
           >
             <View style={[styles.menuIconWrap, { backgroundColor: colors.inputBg }]}>
               <Text style={styles.menuIcon}>{item.icon}</Text>
@@ -102,7 +102,7 @@ export const ProfileScreen: React.FC = () => {
               <Text style={[styles.menuDesc, { color: colors.textHint }]}>{item.desc}</Text>
             </View>
             <Text style={[styles.menuArrow, { color: colors.textHint }]}>›</Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 

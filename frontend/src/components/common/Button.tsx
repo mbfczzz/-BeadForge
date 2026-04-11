@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
 import { FontSize, BorderRadius, Spacing, useTheme } from '../../theme';
 
 interface Props {
@@ -15,46 +15,52 @@ export const Button: React.FC<Props> = ({
   title, onPress, loading = false, disabled = false, variant = 'primary', style,
 }) => {
   const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const onIn = useCallback(() => {
+    if (variant === 'text') return;
+    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start();
+  }, [scale, variant]);
+
+  const onOut = useCallback(() => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
+  }, [scale]);
+
   const isPrimary = variant === 'primary';
-  const isOutline = variant === 'outline';
   const isDanger = variant === 'danger';
+  const isOutline = variant === 'outline';
   const isText = variant === 'text';
 
   const bg = isPrimary ? colors.accent : isDanger ? colors.error : isOutline ? 'transparent' : 'transparent';
   const textColor = isPrimary || isDanger ? '#FFF' : isOutline ? colors.text : colors.accent;
-  const borderColor = isOutline ? colors.border : 'transparent';
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
+      onPressIn={onIn}
+      onPressOut={onOut}
       disabled={disabled || loading}
-      activeOpacity={0.7}
-      style={[
+    >
+      <Animated.View style={[
         styles.base,
-        { backgroundColor: bg, borderColor },
-        isOutline && styles.outline,
+        { backgroundColor: bg, borderRadius: BorderRadius.md, transform: [{ scale }] },
+        isOutline && { borderWidth: 1, borderColor: colors.border },
+        isText && { height: 'auto' as any, paddingVertical: Spacing.sm },
         (disabled || loading) && styles.disabled,
         style,
-      ]}
-    >
-      {loading ? (
-        <ActivityIndicator color={textColor} size="small" />
-      ) : (
-        <Text style={[styles.label, { color: textColor }]}>{title}</Text>
-      )}
-    </TouchableOpacity>
+      ]}>
+        {loading ? (
+          <ActivityIndicator color={textColor} size="small" />
+        ) : (
+          <Text style={[styles.label, { color: textColor }]}>{title}</Text>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  base: {
-    height: 46,
-    borderRadius: BorderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  outline: { borderWidth: 1 },
+  base: { height: 46, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg },
   disabled: { opacity: 0.4 },
   label: { fontSize: FontSize.lg, fontWeight: '600' },
 });
