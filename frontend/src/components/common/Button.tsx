@@ -1,28 +1,28 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
-import { Colors, FontSize, BorderRadius, Spacing } from '../../theme';
+import { FontSize, BorderRadius, Spacing, useTheme } from '../../theme';
 
 interface Props {
   title: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'accent' | 'outline' | 'text' | 'danger';
-  size?: 'large' | 'medium' | 'small';
+  variant?: 'primary' | 'outline' | 'text' | 'danger';
   style?: ViewStyle;
 }
 
 export const Button: React.FC<Props> = ({
-  title, onPress, loading = false, disabled = false,
-  variant = 'primary', size = 'large', style,
+  title, onPress, loading = false, disabled = false, variant = 'primary', style,
 }) => {
-  const h = size === 'large' ? 50 : size === 'medium' ? 42 : 34;
-  const fs = size === 'large' ? FontSize.lg : FontSize.md;
+  const { colors } = useTheme();
+  const isPrimary = variant === 'primary';
+  const isOutline = variant === 'outline';
+  const isDanger = variant === 'danger';
+  const isText = variant === 'text';
 
-  const bgMap = { primary: Colors.black, accent: Colors.accent, outline: Colors.white, text: 'transparent', danger: Colors.error };
-  const textMap = { primary: Colors.white, accent: Colors.white, outline: Colors.black, text: Colors.accent, danger: Colors.white };
-  const bg = bgMap[variant];
-  const textColor = textMap[variant];
+  const bg = isPrimary ? colors.accent : isDanger ? colors.error : isOutline ? 'transparent' : 'transparent';
+  const textColor = isPrimary || isDanger ? '#FFF' : isOutline ? colors.text : colors.accent;
+  const borderColor = isOutline ? colors.border : 'transparent';
 
   return (
     <TouchableOpacity
@@ -31,24 +31,30 @@ export const Button: React.FC<Props> = ({
       activeOpacity={0.7}
       style={[
         styles.base,
-        { height: h, backgroundColor: bg, borderRadius: h / 2 },
-        variant === 'outline' && styles.outline,
+        { backgroundColor: bg, borderColor },
+        isOutline && styles.outline,
         (disabled || loading) && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={textColor} />
+        <ActivityIndicator color={textColor} size="small" />
       ) : (
-        <Text style={[styles.label, { fontSize: fs, color: textColor }]}>{title}</Text>
+        <Text style={[styles.label, { color: textColor }]}>{title}</Text>
       )}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  base: { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg },
-  outline: { borderWidth: 1.5, borderColor: Colors.grayLight },
+  base: {
+    height: 46,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  outline: { borderWidth: 1 },
   disabled: { opacity: 0.4 },
-  label: { fontWeight: '600' },
+  label: { fontSize: FontSize.lg, fontWeight: '600' },
 });

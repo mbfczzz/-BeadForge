@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Button, Input } from '../../components/common';
-import { Colors, Spacing, FontSize } from '../../theme';
+import { Spacing, FontSize, useTheme } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onSwitchToLogin: () => void; }
 interface FormErrors { username?: string; password?: string; confirmPwd?: string; email?: string; }
 
 export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
+  const { colors } = useTheme();
   const [username, setUsername] = useState('');
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
@@ -40,10 +41,10 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>创建账号</Text>
-        <Text style={styles.subtitle}>加入 BeadForge 社区</Text>
+        <Text style={[styles.title, { color: colors.text }]}>创建账号</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>加入 BeadForge 社区</Text>
 
         <Input label="用户名" placeholder="字母、数字、下划线" value={username}
           onChangeText={(t) => { setUsername(t); clear('username'); }} error={errors.username} />
@@ -63,8 +64,8 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+  container: { flex: 1 },
   content: { flexGrow: 1, padding: Spacing.xl, paddingTop: Spacing.xxl },
-  title: { fontSize: FontSize.hero, fontWeight: '800', color: Colors.black },
-  subtitle: { fontSize: FontSize.md, color: Colors.gray, marginTop: 4, marginBottom: Spacing.xl },
+  title: { fontSize: FontSize.xxl, fontWeight: '700' },
+  subtitle: { fontSize: FontSize.md, marginTop: 4, marginBottom: Spacing.xl },
 });

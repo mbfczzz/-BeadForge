@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Image, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../theme';
 
 interface Props {
   uri?: string | null;
@@ -8,22 +7,20 @@ interface Props {
   size?: number;
 }
 
-export const Avatar: React.FC<Props> = ({ uri, name, size = 48 }) => {
+export const Avatar: React.FC<Props> = ({ uri, name, size = 40 }) => {
   const r = size / 2;
-  if (uri) {
-    return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: r, backgroundColor: Colors.grayLight }} />;
-  }
+  if (uri) return <Image source={{ uri }} style={{ width: size, height: size, borderRadius: r, backgroundColor: '#E0E0E0' }} />;
   const initial = (name || '?').charAt(0).toUpperCase();
-  const colors = ['#FF6D00', '#2196F3', '#4CAF50', '#9C27B0', '#E91E63'];
-  const bg = colors[(name || '').charCodeAt(0) % colors.length];
+  const bgs = ['#5B7FFF', '#FF6B6B', '#43A047', '#FF9800', '#9C27B0'];
+  const bg = bgs[(name || '').charCodeAt(0) % bgs.length];
   return (
     <View style={[styles.ph, { width: size, height: size, borderRadius: r, backgroundColor: bg }]}>
-      <Text style={[styles.init, { fontSize: size * 0.38 }]}>{initial}</Text>
+      <Text style={[styles.t, { fontSize: size * 0.4 }]}>{initial}</Text>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   ph: { justifyContent: 'center', alignItems: 'center' },
-  init: { color: Colors.white, fontWeight: '700' },
+  t: { color: '#FFF', fontWeight: '600' },
 });

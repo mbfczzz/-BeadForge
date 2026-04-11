@@ -1,41 +1,45 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { useAuthStore } from './src/store/useAuthStore';
-import { Colors } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
 
-export default function App() {
+function AppContent() {
   const loadToken = useAuthStore((s) => s.loadToken);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const { colors, dark } = useTheme();
 
   useEffect(() => { loadToken(); }, []);
 
   if (isLoading) {
     return (
-      <SafeAreaProvider>
-        <StatusBar style="dark" />
-        <View style={styles.splash}>
-          <Text style={styles.logo}>🧩</Text>
-          <ActivityIndicator color={Colors.black} style={{ marginTop: 24 }} />
-        </View>
-      </SafeAreaProvider>
+      <View style={[styles.splash, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
     );
   }
 
   return (
+    <NavigationContainer>
+      <StatusBar style={dark ? 'light' : 'dark'} />
+      <TabNavigator />
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <StatusBar style="dark" />
-        <TabNavigator />
-      </NavigationContainer>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: Colors.white, justifyContent: 'center', alignItems: 'center' },
-  logo: { fontSize: 72 },
+  splash: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

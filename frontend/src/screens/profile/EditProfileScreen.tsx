@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Avatar, Button, Input } from '../../components/common';
-import { Colors, Spacing, FontSize } from '../../theme';
+import { Spacing, FontSize, useTheme } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onBack: () => void; }
 
 export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
+  const { colors } = useTheme();
   const { user, updateProfile } = useAuthStore();
   const [nickname, setNickname] = useState(user?.nickname || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -25,16 +26,16 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.nav}>
-        <TouchableOpacity onPress={onBack}><Text style={styles.navBack}>取消</Text></TouchableOpacity>
-        <Text style={styles.navTitle}>编辑资料</Text>
-        <TouchableOpacity onPress={handleSave}><Text style={styles.navSave}>保存</Text></TouchableOpacity>
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+        <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>取消</Text></TouchableOpacity>
+        <Text style={[styles.navTitle, { color: colors.text }]}>编辑资料</Text>
+        <TouchableOpacity onPress={handleSave}><Text style={[styles.navSave, { color: colors.accent }]}>保存</Text></TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.avatarWrap}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={80} />
-          <Text style={styles.avatarHint}>更换头像</Text>
+          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} />
+          <Text style={[styles.avatarHint, { color: colors.accent }]}>更换头像</Text>
         </TouchableOpacity>
         <Input label="昵称" placeholder="输入昵称" value={nickname} onChangeText={setNickname} />
         <Input label="邮箱" placeholder="选填" value={email} onChangeText={setEmail} keyboardType="email-address" />
@@ -45,16 +46,15 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+  container: { flex: 1 },
   nav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, height: 48,
-    borderBottomWidth: 1, borderBottomColor: Colors.grayBg,
+    paddingHorizontal: Spacing.md, height: 48, borderBottomWidth: 1,
   },
-  navBack: { fontSize: FontSize.lg, color: Colors.grayDark },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.black },
-  navSave: { fontSize: FontSize.lg, color: Colors.accent, fontWeight: '600' },
+  navBack: { fontSize: FontSize.md },
+  navTitle: { fontSize: FontSize.lg, fontWeight: '600' },
+  navSave: { fontSize: FontSize.md, fontWeight: '600' },
   content: { padding: Spacing.xl },
   avatarWrap: { alignItems: 'center', marginBottom: Spacing.xl },
-  avatarHint: { fontSize: FontSize.sm, color: Colors.accent, marginTop: Spacing.sm },
+  avatarHint: { fontSize: FontSize.sm, marginTop: Spacing.sm },
 });

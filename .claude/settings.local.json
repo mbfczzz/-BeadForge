@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git clone:*)",
       "Bash(npm install:*)",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "WebFetch(domain:www.moely.link)"
     ]
   }
 }
