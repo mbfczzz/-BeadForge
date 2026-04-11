@@ -103,8 +103,8 @@ export const HomeScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {/* 搜索 + 分类 */}
-      <View style={[styles.filterArea, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+      {/* 搜索栏 */}
+      <View style={[styles.searchBar, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <View style={[
           styles.searchBox,
           { backgroundColor: colors.inputBg },
@@ -128,21 +128,6 @@ export const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           )}
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {NAV_ITEMS.map((name, idx) => {
-            const active = activeNav === idx;
-            return (
-              <TouchableOpacity
-                key={name}
-                onPress={() => setFilter(undefined, NAV_KEYS[idx] || null)}
-                style={[styles.chip, { backgroundColor: active ? colors.accent : colors.inputBg }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.chipText, { color: active ? '#FFF' : colors.textSecondary }]}>{name}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
       </View>
 
       <ScrollView
@@ -189,6 +174,23 @@ export const HomeScreen: React.FC = () => {
             ))}
           </View>
         </View>
+
+        {/* 分类标签 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          {NAV_ITEMS.map((name, idx) => {
+            const active = activeNav === idx;
+            return (
+              <TouchableOpacity
+                key={name}
+                onPress={() => setFilter(undefined, NAV_KEYS[idx] || null)}
+                style={[styles.chip, { backgroundColor: active ? colors.accent : colors.inputBg }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.chipText, { color: active ? '#FFF' : colors.textSecondary }]}>{name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
         {/* 标题栏 */}
         <View style={styles.sectionRow}>
@@ -297,10 +299,10 @@ const styles = StyleSheet.create({
   logoText: { fontSize: FontSize.lg, fontWeight: '700', marginLeft: 6 },
   themeBtn: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
 
-  filterArea: { paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 10, borderBottomWidth: 1 },
+  searchBar: { paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 10, borderBottomWidth: 1 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: BorderRadius.md, paddingHorizontal: 12, height: 36, marginBottom: 10,
+    borderRadius: BorderRadius.md, paddingHorizontal: 12, height: 36,
     borderWidth: 1.5, borderColor: 'transparent',
   },
   searchIcon: { fontSize: 13, marginRight: 6 },
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
   clearBtn: { padding: 2 },
   clearCircle: { width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
   clearX: { fontSize: 10, color: '#FFF', fontWeight: '700' },
-  chips: { gap: 6 },
+  chips: { gap: 6, paddingHorizontal: PAD, paddingVertical: 12 },
   chip: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: BorderRadius.full },
   chipText: { fontSize: FontSize.sm, fontWeight: '600' },
 
