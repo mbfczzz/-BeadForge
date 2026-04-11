@@ -172,6 +172,6 @@ const S = StyleSheet.create({
   logoutW: { paddingHorizontal: wp(14), paddingTop: wp(20) },
   footer: {
     textAlign: 'center', fontSize: fp(10),
-    paddingTop: wp(14), paddingBottom: wp(74) + BOTTOM_SAFE_H + wp(22),
+    paddingTop: wp(14), paddingBottom: wp(65) + BOTTOM_SAFE_H + wp(16),
   },
 });

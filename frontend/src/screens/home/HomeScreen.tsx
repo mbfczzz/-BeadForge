@@ -17,7 +17,7 @@ const GAP = wp(10);
 const PAD = wp(14);
 const CARD_W = getCardWidth(PAD, GAP, COL);
 const BW = getBannerWidth(PAD);
-const TAB_H = wp(74) + BOTTOM_SAFE_H;
+const TAB_H = wp(65) + BOTTOM_SAFE_H;
 
 const BG_L = ['#FFF0F2','#FFF6EC','#EBF5FF','#EEFAF2','#FFF0FA','#FFFDE7','#EEEEFF','#FFF5EE'];
 const BG_D = ['#281520','#282218','#132030','#152A1C','#281528','#28280F','#181830','#282018'];
