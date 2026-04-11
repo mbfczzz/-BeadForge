@@ -12,6 +12,9 @@ interface Props {
   keyboardType?: 'default' | 'email-address' | 'phone-pad';
 }
 
+/**
+ * 多邻国风格输入框 - 粗圆角边框 + 聚焦高亮
+ */
 export const Input: React.FC<Props> = ({
   label,
   placeholder,
@@ -21,12 +24,19 @@ export const Input: React.FC<Props> = ({
   error,
   keyboardType = 'default',
 }) => {
+  const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const borderColor = error
+    ? Colors.red
+    : focused
+    ? Colors.blue
+    : Colors.grayBg;
 
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrap, error && styles.inputError]}>
+      <View style={[styles.inputWrap, { borderColor, borderBottomColor: error ? Colors.redDark : focused ? Colors.blueDark : Colors.shadowGray }]}>
         <TextInput
           style={styles.input}
           placeholder={placeholder}
@@ -36,10 +46,12 @@ export const Input: React.FC<Props> = ({
           secureTextEntry={secureTextEntry && !showPassword}
           keyboardType={keyboardType}
           autoCapitalize="none"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
         />
         {secureTextEntry && (
           <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eye}>
-            <Text style={styles.eyeText}>{showPassword ? '隐藏' : '显示'}</Text>
+            <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -53,39 +65,39 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   label: {
-    fontSize: FontSize.md,
-    color: Colors.dark,
+    fontSize: FontSize.sm,
+    color: Colors.gray,
     marginBottom: Spacing.xs,
-    fontWeight: '500',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.grayLight,
-    borderRadius: BorderRadius.md,
+    borderWidth: 2,
+    borderBottomWidth: 4,
+    borderRadius: BorderRadius.lg,
     backgroundColor: Colors.white,
-  },
-  inputError: {
-    borderColor: Colors.error,
   },
   input: {
     flex: 1,
-    height: 48,
+    height: 52,
     paddingHorizontal: Spacing.md,
     fontSize: FontSize.lg,
     color: Colors.black,
+    fontWeight: '600',
   },
   eye: {
     paddingHorizontal: Spacing.md,
   },
   eyeText: {
-    fontSize: FontSize.sm,
-    color: Colors.gray,
+    fontSize: 20,
   },
   error: {
-    color: Colors.error,
+    color: Colors.red,
     fontSize: FontSize.sm,
     marginTop: Spacing.xs,
+    fontWeight: '600',
   },
 });

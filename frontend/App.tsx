@@ -5,14 +5,15 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { useAuthStore } from './src/store/useAuthStore';
-import { Colors } from './src/theme';
+import { Colors, FontSize } from './src/theme';
 
 function SplashScreen() {
   return (
     <View style={styles.splash}>
       <Text style={styles.splashEmoji}>🧩</Text>
       <Text style={styles.splashTitle}>BeadForge</Text>
-      <ActivityIndicator color={Colors.white} style={styles.splashLoader} />
+      <Text style={styles.splashSub}>拼豆创作平台</Text>
+      <ActivityIndicator color={Colors.white} size="large" style={styles.loader} />
     </View>
   );
 }
@@ -21,9 +22,7 @@ export default function App() {
   const loadToken = useAuthStore((s) => s.loadToken);
   const isLoading = useAuthStore((s) => s.isLoading);
 
-  useEffect(() => {
-    loadToken();
-  }, []);
+  useEffect(() => { loadToken(); }, []);
 
   if (isLoading) {
     return (
@@ -51,7 +50,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  splashEmoji: { fontSize: 64, marginBottom: 16 },
-  splashTitle: { fontSize: 32, fontWeight: '700', color: Colors.white },
-  splashLoader: { marginTop: 24 },
+  splashEmoji: { fontSize: 80, marginBottom: 16 },
+  splashTitle: { fontSize: FontSize.hero, fontWeight: '800', color: Colors.white },
+  splashSub: { fontSize: FontSize.lg, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 8 },
+  loader: { marginTop: 32 },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  FlatList,
   TouchableOpacity,
   Dimensions,
   RefreshControl,
@@ -18,11 +17,11 @@ import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_GAP = Spacing.sm;
+const CARD_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - Spacing.md * 2 - CARD_GAP) / 2;
 
 const CATEGORIES = [
-  { key: '', label: '推荐', icon: '🔥' },
+  { key: '', label: '全部', icon: '🔥' },
   { key: 'animal', label: '动物', icon: '🐱' },
   { key: 'character', label: '卡通', icon: '🎮' },
   { key: 'flower', label: '花卉', icon: '🌸' },
@@ -31,15 +30,19 @@ const CATEGORIES = [
   { key: 'abstract', label: '抽象', icon: '🎨' },
 ];
 
-const SORT_OPTIONS = [
-  { key: 'latest', label: '最新' },
-  { key: 'popular', label: '最热' },
+const BANNERS = [
+  { id: 1, title: '每周精选', subtitle: '编辑推荐的拼豆图案', emoji: '🏆', bg: Colors.primary, shadowBg: Colors.primaryDark },
+  { id: 2, title: '春日系列', subtitle: '花卉主题新品上线', emoji: '🌷', bg: Colors.blue, shadowBg: Colors.blueDark },
+  { id: 3, title: '像素合集', subtitle: '经典角色全收录', emoji: '👾', bg: Colors.orange, shadowBg: Colors.orangeDark },
 ];
 
-const BANNERS = [
-  { id: 1, title: '每周精选拼豆图案', subtitle: '编辑推荐', color: '#FF6B6B' },
-  { id: 2, title: '春日花卉系列', subtitle: '新品上线', color: '#4ECDC4' },
-  { id: 3, title: '像素风角色合集', subtitle: '热门专题', color: '#FFE66D' },
+const CARD_COLORS = [
+  { bg: '#E8F5E9', accent: Colors.primary },
+  { bg: '#E3F2FD', accent: Colors.blue },
+  { bg: '#FFF8E1', accent: Colors.orange },
+  { bg: '#F3E5F5', accent: Colors.purple },
+  { bg: '#FCE4EC', accent: Colors.pink },
+  { bg: '#E0F7FA', accent: '#00BCD4' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -51,20 +54,13 @@ export const HomeScreen: React.FC = () => {
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 首次加载
-  useEffect(() => {
-    fetchDesigns(true);
-  }, []);
+  useEffect(() => { fetchDesigns(true); }, []);
 
-  const onRefresh = useCallback(() => {
-    fetchDesigns(true);
-  }, [fetchDesigns]);
+  const onRefresh = useCallback(() => { fetchDesigns(true); }, [fetchDesigns]);
 
-  // 触底加载更多
   const onScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    const isBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
-    if (isBottom && hasMore && !loading) {
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 100 && hasMore && !loading) {
       fetchDesigns(false);
     }
   }, [hasMore, loading, fetchDesigns]);
@@ -73,55 +69,50 @@ export const HomeScreen: React.FC = () => {
     setFilter(undefined, key || null);
   }, [setFilter]);
 
-  const handleSortPress = useCallback((key: string) => {
-    setFilter(key);
-  }, [setFilter]);
-
-  // 搜索防抖
   const handleSearchChange = useCallback((text: string) => {
     setSearchKeyword(text);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => {
-      // TODO: 后端实现搜索接口后替换，目前走客户端过滤
-      fetchDesigns(true);
-    }, 500);
+    searchTimer.current = setTimeout(() => fetchDesigns(true), 500);
   }, [setSearchKeyword, fetchDesigns]);
 
-  // 搜索过滤（客户端）
   const filteredDesigns = searchKeyword.trim()
     ? designs.filter((d) =>
         d.title.toLowerCase().includes(searchKeyword.trim().toLowerCase()) ||
-        d.description?.toLowerCase().includes(searchKeyword.trim().toLowerCase())
-      )
+        d.description?.toLowerCase().includes(searchKeyword.trim().toLowerCase()))
     : designs;
 
-  // 分成两列（简单瀑布流）
-  const leftColumn: DesignItem[] = [];
-  const rightColumn: DesignItem[] = [];
-  filteredDesigns.forEach((item, i) => {
-    if (i % 2 === 0) leftColumn.push(item);
-    else rightColumn.push(item);
-  });
-
-  const showEmpty = !loading && !error && filteredDesigns.length === 0;
+  const leftCol: DesignItem[] = [];
+  const rightCol: DesignItem[] = [];
+  filteredDesigns.forEach((item, i) => (i % 2 === 0 ? leftCol : rightCol).push(item));
 
   return (
     <View style={styles.container}>
-      {/* 搜索栏 */}
-      <View style={styles.searchBar}>
-        <View style={styles.searchInput}>
+      {/* 顶部 */}
+      <View style={styles.topBar}>
+        <Text style={styles.logo}>🧩</Text>
+        <Text style={styles.logoText}>BeadForge</Text>
+        <View style={styles.topBarRight}>
+          <TouchableOpacity style={styles.streakBadge}>
+            <Text style={styles.streakText}>🔥 7</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 搜索 */}
+      <View style={styles.searchWrap}>
+        <View style={styles.searchBox}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            style={styles.searchText}
+            style={styles.searchInput}
             placeholder="搜索拼豆图案..."
-            placeholderTextColor={Colors.gray}
+            placeholderTextColor={Colors.grayLight}
             value={searchKeyword}
             onChangeText={handleSearchChange}
             returnKeyType="search"
           />
           {searchKeyword.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange('')}>
-              <Text style={styles.clearIcon}>✕</Text>
+            <TouchableOpacity onPress={() => handleSearchChange('')} style={styles.clearBtn}>
+              <Text style={styles.clearText}>✕</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -130,148 +121,105 @@ export const HomeScreen: React.FC = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         onMomentumScrollEnd={onScrollEnd}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />}
       >
         {/* Banner */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          pagingEnabled
-          style={styles.bannerWrap}
-          contentContainerStyle={styles.bannerContent}
-        >
-          {BANNERS.map((banner) => (
-            <TouchableOpacity
-              key={banner.id}
-              activeOpacity={0.85}
-              style={[styles.bannerCard, { backgroundColor: banner.color }]}
-            >
-              <Text style={styles.bannerSubtitle}>{banner.subtitle}</Text>
-              <Text style={styles.bannerTitle}>{banner.title}</Text>
-              <View style={styles.bannerDeco}>
-                <Text style={styles.bannerDecoText}>🧩</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bannerList}>
+          {BANNERS.map((b) => (
+            <TouchableOpacity key={b.id} activeOpacity={0.85} style={styles.bannerOuter}>
+              <View style={[styles.bannerShadow, { backgroundColor: b.shadowBg }]} />
+              <View style={[styles.bannerCard, { backgroundColor: b.bg }]}>
+                <View style={styles.bannerText}>
+                  <Text style={styles.bannerTitle}>{b.title}</Text>
+                  <Text style={styles.bannerSubtitle}>{b.subtitle}</Text>
+                </View>
+                <Text style={styles.bannerEmoji}>{b.emoji}</Text>
               </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* 分类标签 */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryList}
-        >
-          {CATEGORIES.map((cat) => (
-            <TouchableOpacity
-              key={cat.key}
-              onPress={() => handleCategoryPress(cat.key)}
-              style={[
-                styles.categoryChip,
-                (category || '') === cat.key && styles.categoryChipActive,
-              ]}
-            >
-              <Text style={styles.categoryIcon}>{cat.icon}</Text>
-              <Text
-                style={[
-                  styles.categoryLabel,
-                  (category || '') === cat.key && styles.categoryLabelActive,
-                ]}
+        {/* 分类 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
+          {CATEGORIES.map((cat) => {
+            const active = (category || '') === cat.key;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                onPress={() => handleCategoryPress(cat.key)}
+                style={[styles.catChip, active && styles.catChipActive]}
               >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.catIcon}>{cat.icon}</Text>
+                <Text style={[styles.catLabel, active && styles.catLabelActive]}>{cat.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* 排序切换 */}
+        {/* 排序 */}
         <View style={styles.sortRow}>
-          {SORT_OPTIONS.map((opt) => (
+          {['latest', 'popular'].map((key) => (
             <TouchableOpacity
-              key={opt.key}
-              onPress={() => handleSortPress(opt.key)}
-              style={styles.sortItem}
+              key={key}
+              onPress={() => setFilter(key)}
+              style={[styles.sortChip, sortBy === key && styles.sortChipActive]}
             >
-              <Text style={[styles.sortText, sortBy === opt.key && styles.sortTextActive]}>
-                {opt.label}
+              <Text style={[styles.sortText, sortBy === key && styles.sortTextActive]}>
+                {key === 'latest' ? '🕐 最新' : '❤️ 最热'}
               </Text>
-              {sortBy === opt.key && <View style={styles.sortIndicator} />}
             </TouchableOpacity>
           ))}
-          <View style={styles.sortSpacer} />
-          <Text style={styles.resultCount}>
-            {filteredDesigns.length > 0 ? `${filteredDesigns.length} 个作品` : ''}
-          </Text>
         </View>
 
-        {/* 状态视图 */}
+        {/* 状态 */}
         {loading && designs.length === 0 && <StateView loading />}
         {error && designs.length === 0 && <StateView error={error} onRetry={onRefresh} />}
-        {showEmpty && <StateView empty emptyText="还没有拼豆作品，快来创作第一个吧" />}
+        {!loading && !error && filteredDesigns.length === 0 && (
+          <StateView empty emptyText="还没有作品，快来创作吧" emptyIcon="🎨" />
+        )}
 
-        {/* 瀑布流卡片 */}
+        {/* 瀑布流 */}
         {filteredDesigns.length > 0 && (
           <View style={styles.waterfall}>
             <View style={styles.column}>
-              {leftColumn.map((item) => (
-                <DesignCard key={item.id} item={item} />
-              ))}
+              {leftCol.map((item) => <DesignCard key={item.id} item={item} />)}
             </View>
             <View style={styles.column}>
-              {rightColumn.map((item) => (
-                <DesignCard key={item.id} item={item} />
-              ))}
+              {rightCol.map((item) => <DesignCard key={item.id} item={item} />)}
             </View>
           </View>
         )}
 
-        {/* 底部加载状态 */}
-        {loading && designs.length > 0 && (
-          <View style={styles.loadingMore}>
-            <StateView loading />
-          </View>
-        )}
+        {loading && designs.length > 0 && <StateView loading />}
         {!hasMore && designs.length > 0 && (
-          <Text style={styles.noMoreText}>— 没有更多了 —</Text>
+          <Text style={styles.endText}>🎉 全部加载完毕</Text>
         )}
-
-        <View style={{ height: Spacing.lg }} />
+        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </View>
   );
 };
 
-/** 设计卡片 */
+/** 多邻国风卡片 - 3D 圆角 + 粗边框 */
 const DesignCard: React.FC<{ item: DesignItem }> = ({ item }) => {
-  // 根据 id 生成稳定的高度和颜色（真实图片加载前的占位）
-  const placeholderHeight = 150 + (item.id * 37) % 100;
-  const placeholderColors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#A8E6CF', '#DDA0DD', '#87CEEB'];
-  const bgColor = placeholderColors[item.id % placeholderColors.length];
+  const h = 140 + (item.id * 37) % 80;
+  const palette = CARD_COLORS[item.id % CARD_COLORS.length];
 
   return (
-    <TouchableOpacity activeOpacity={0.85} style={styles.card}>
-      {item.coverImage ? (
-        <View style={[styles.cardImage, { height: placeholderHeight }]}>
-          {/* Image 组件在有真实 coverImage 时使用 */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: bgColor }]} />
+    <TouchableOpacity activeOpacity={0.85} style={styles.cardOuter}>
+      <View style={[styles.cardShadow, { height: h + 52 }]} />
+      <View style={styles.cardInner}>
+        <View style={[styles.cardImage, { height: h, backgroundColor: palette.bg }]}>
           <Text style={styles.cardEmoji}>🧩</Text>
         </View>
-      ) : (
-        <View style={[styles.cardImage, { height: placeholderHeight, backgroundColor: bgColor }]}>
-          <Text style={styles.cardEmoji}>🧩</Text>
-        </View>
-      )}
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-        {item.description ? (
-          <Text style={styles.cardDesc} numberOfLines={2}>{item.description}</Text>
-        ) : null}
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardAuthor}>{item.authorName || `用户${item.userId}`}</Text>
-          <View style={styles.likeWrap}>
-            <Text style={styles.likeIcon}>♥</Text>
-            <Text style={styles.likeCount}>{item.likeCount}</Text>
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardAuthor}>{item.authorName || `创作者`}</Text>
+            <View style={styles.likeWrap}>
+              <Text style={styles.likeHeart}>❤️</Text>
+              <Text style={styles.likeNum}>{item.likeCount}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -280,103 +228,116 @@ const DesignCard: React.FC<{ item: DesignItem }> = ({ item }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.grayBg,
-  },
-  // 搜索
-  searchBar: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.md,
-    paddingBottom: Spacing.sm,
-    backgroundColor: Colors.white,
-  },
-  searchInput: {
+  container: { flex: 1, backgroundColor: Colors.snow },
+
+  // TopBar
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.grayBg,
-    borderRadius: BorderRadius.xl,
-    paddingHorizontal: Spacing.md,
-    height: 40,
-  },
-  searchIcon: { fontSize: 16, marginRight: Spacing.sm },
-  searchText: {
-    flex: 1,
-    fontSize: FontSize.md,
-    color: Colors.black,
-    padding: 0,
-  },
-  clearIcon: {
-    fontSize: 14,
-    color: Colors.gray,
-    padding: Spacing.xs,
-  },
-  // Banner
-  bannerWrap: { marginTop: Spacing.sm },
-  bannerContent: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
-  bannerCard: {
-    width: SCREEN_WIDTH - Spacing.md * 2,
-    height: 140,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.lg,
-    justifyContent: 'center',
-    marginRight: Spacing.sm,
-    overflow: 'hidden',
-  },
-  bannerSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: FontSize.sm, marginBottom: Spacing.xs },
-  bannerTitle: { color: Colors.white, fontSize: FontSize.xxl, fontWeight: '700' },
-  bannerDeco: { position: 'absolute', right: 20, bottom: 10, opacity: 0.3 },
-  bannerDecoText: { fontSize: 64 },
-  // 分类
-  categoryList: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: Spacing.sm },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full,
-    marginRight: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.grayBg,
   },
-  categoryChipActive: { backgroundColor: Colors.primary },
-  categoryIcon: { fontSize: 14, marginRight: 4 },
-  categoryLabel: { fontSize: FontSize.md, color: Colors.dark },
-  categoryLabelActive: { color: Colors.white, fontWeight: '600' },
-  // 排序
-  sortRow: {
+  logo: { fontSize: 28 },
+  logoText: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.primary, marginLeft: Spacing.sm },
+  topBarRight: { marginLeft: 'auto' },
+  streakBadge: {
+    backgroundColor: Colors.yellow + '30',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.full,
+    borderWidth: 2,
+    borderColor: Colors.yellow,
+  },
+  streakText: { fontSize: FontSize.md, fontWeight: '800', color: Colors.orangeDark },
+
+  // Search
+  searchWrap: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, backgroundColor: Colors.white },
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.snow,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 2,
+    borderColor: Colors.grayBg,
     paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
+    height: 44,
   },
-  sortItem: { alignItems: 'center', marginRight: Spacing.lg },
-  sortText: { fontSize: FontSize.md, color: Colors.gray },
-  sortTextActive: { color: Colors.primary, fontWeight: '600' },
-  sortIndicator: {
-    width: 16,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: Colors.primary,
-    marginTop: 4,
+  searchIcon: { fontSize: 16, marginRight: Spacing.sm },
+  searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.black, fontWeight: '600', padding: 0 },
+  clearBtn: { padding: Spacing.xs },
+  clearText: { fontSize: 16, color: Colors.grayLight, fontWeight: '700' },
+
+  // Banner
+  bannerList: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.md, gap: 12 },
+  bannerOuter: { width: SCREEN_WIDTH * 0.75, position: 'relative', marginRight: 12 },
+  bannerShadow: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    height: 110, borderRadius: BorderRadius.xl,
   },
-  sortSpacer: { flex: 1 },
-  resultCount: { fontSize: FontSize.xs, color: Colors.grayLight },
-  // 瀑布流
+  bannerCard: {
+    height: 110, borderRadius: BorderRadius.xl, marginBottom: 5,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg,
+    overflow: 'hidden',
+  },
+  bannerText: { flex: 1 },
+  bannerTitle: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.white },
+  bannerSubtitle: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.85)', marginTop: 4, fontWeight: '600' },
+  bannerEmoji: { fontSize: 48 },
+
+  // Categories
+  catList: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm, gap: Spacing.sm },
+  catChip: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    borderWidth: 2, borderColor: Colors.grayBg,
+    marginRight: Spacing.sm,
+  },
+  catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primaryDark },
+  catIcon: { fontSize: 16, marginRight: 4 },
+  catLabel: { fontSize: FontSize.md, fontWeight: '700', color: Colors.grayDark },
+  catLabelActive: { color: Colors.white },
+
+  // Sort
+  sortRow: { flexDirection: 'row', paddingHorizontal: Spacing.md, marginBottom: Spacing.sm, gap: Spacing.sm },
+  sortChip: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    borderWidth: 2, borderColor: Colors.grayBg,
+  },
+  sortChipActive: { borderColor: Colors.blue, backgroundColor: Colors.blue + '15' },
+  sortText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.gray },
+  sortTextActive: { color: Colors.blue },
+
+  // Waterfall
   waterfall: { flexDirection: 'row', paddingHorizontal: Spacing.md, gap: CARD_GAP },
   column: { flex: 1, gap: CARD_GAP },
-  // 卡片
-  card: { backgroundColor: Colors.white, borderRadius: BorderRadius.md, overflow: 'hidden' },
+
+  // Card
+  cardOuter: { position: 'relative' },
+  cardShadow: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    backgroundColor: Colors.shadowGray, borderRadius: BorderRadius.lg,
+  },
+  cardInner: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    overflow: 'hidden', marginBottom: 4,
+    borderWidth: 2, borderColor: Colors.grayBg,
+  },
   cardImage: { width: '100%', justifyContent: 'center', alignItems: 'center' },
-  cardEmoji: { fontSize: 40, opacity: 0.4 },
-  cardInfo: { padding: Spacing.sm },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '600', color: Colors.black, marginBottom: 2 },
-  cardDesc: { fontSize: FontSize.xs, color: Colors.gray, marginBottom: Spacing.xs, lineHeight: 16 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardAuthor: { fontSize: FontSize.xs, color: Colors.gray },
+  cardEmoji: { fontSize: 36, opacity: 0.5 },
+  cardInfo: { padding: 10 },
+  cardTitle: { fontSize: FontSize.md, fontWeight: '800', color: Colors.dark },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  cardAuthor: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.gray },
   likeWrap: { flexDirection: 'row', alignItems: 'center' },
-  likeIcon: { color: Colors.primary, fontSize: 12, marginRight: 2 },
-  likeCount: { fontSize: FontSize.xs, color: Colors.gray },
-  // 底部
-  loadingMore: { paddingVertical: Spacing.md },
-  noMoreText: { textAlign: 'center', color: Colors.grayLight, fontSize: FontSize.sm, paddingVertical: Spacing.lg },
+  likeHeart: { fontSize: 12, marginRight: 2 },
+  likeNum: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.gray },
+
+  endText: { textAlign: 'center', fontSize: FontSize.md, fontWeight: '700', color: Colors.grayLight, paddingVertical: Spacing.lg },
 });

@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git clone:*)"
+      "Bash(git clone:*)",
+      "Bash(npm install:*)",
+      "Bash(npx expo:*)"
     ]
   }
 }

@@ -17,24 +17,13 @@ import { MyDesignsScreen } from './MyDesignsScreen';
 
 type SubPage = 'none' | 'editProfile' | 'myDesigns';
 
-const MENU_SECTIONS = [
-  {
-    title: '我的创作',
-    items: [
-      { key: 'myDesigns', label: '我的作品', icon: '🎨' },
-      { key: 'myDrafts', label: '草稿箱', icon: '📝' },
-      { key: 'myFavorites', label: '我的收藏', icon: '⭐' },
-      { key: 'myLikes', label: '我的点赞', icon: '♥️' },
-    ],
-  },
-  {
-    title: '其他',
-    items: [
-      { key: 'settings', label: '设置', icon: '⚙️' },
-      { key: 'feedback', label: '意见反馈', icon: '💬' },
-      { key: 'about', label: '关于', icon: 'ℹ️' },
-    ],
-  },
+const MENU_ITEMS = [
+  { key: 'myDesigns', label: '我的作品', icon: '🎨', color: Colors.primary },
+  { key: 'myDrafts', label: '草稿箱', icon: '📝', color: Colors.orange },
+  { key: 'myFavorites', label: '我的收藏', icon: '⭐', color: Colors.yellow },
+  { key: 'myLikes', label: '我的点赞', icon: '❤️', color: Colors.pink },
+  { key: 'settings', label: '设置', icon: '⚙️', color: Colors.gray },
+  { key: 'about', label: '关于', icon: 'ℹ️', color: Colors.blue },
 ];
 
 export const ProfileScreen: React.FC = () => {
@@ -42,168 +31,159 @@ export const ProfileScreen: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [subPage, setSubPage] = useState<SubPage>('none');
 
-  useEffect(() => {
-    if (token) fetchStats();
-  }, [token]);
+  useEffect(() => { if (token) fetchStats(); }, [token]);
 
-  // 未登录
   if (!token) {
-    if (authMode === 'register') {
-      return <RegisterScreen onSwitchToLogin={() => setAuthMode('login')} />;
-    }
-    return <LoginScreen onSwitchToRegister={() => setAuthMode('register')} />;
+    return authMode === 'register'
+      ? <RegisterScreen onSwitchToLogin={() => setAuthMode('login')} />
+      : <LoginScreen onSwitchToRegister={() => setAuthMode('register')} />;
   }
 
-  // 子页面
-  if (subPage === 'editProfile') {
-    return <EditProfileScreen onBack={() => setSubPage('none')} />;
-  }
-  if (subPage === 'myDesigns') {
-    return <MyDesignsScreen onBack={() => setSubPage('none')} />;
-  }
+  if (subPage === 'editProfile') return <EditProfileScreen onBack={() => setSubPage('none')} />;
+  if (subPage === 'myDesigns') return <MyDesignsScreen onBack={() => setSubPage('none')} />;
 
   const handleLogout = () => {
-    Alert.alert('退出登录', '确定要退出登录吗？', [
+    Alert.alert('退出登录', '确定要退出吗？', [
       { text: '取消', style: 'cancel' },
       { text: '确定', style: 'destructive', onPress: logout },
     ]);
   };
 
-  const handleMenuPress = (key: string) => {
-    switch (key) {
-      case 'myDesigns':
-      case 'myDrafts':
-        setSubPage('myDesigns');
-        break;
-      case 'myFavorites':
-        Alert.alert('提示', '收藏功能即将上线');
-        break;
-      case 'myLikes':
-        Alert.alert('提示', '点赞列表即将上线');
-        break;
-      case 'settings':
-        Alert.alert('提示', '设置功能即将上线');
-        break;
-      case 'feedback':
-        Alert.alert('意见反馈', '如有问题请联系 beadforge@example.com');
-        break;
-      case 'about':
-        Alert.alert('关于 BeadForge', 'v1.0.0\n一款拼豆设计与分享应用');
-        break;
-    }
+  const handleMenu = (key: string) => {
+    if (key === 'myDesigns' || key === 'myDrafts') setSubPage('myDesigns');
+    else if (key === 'about') Alert.alert('🧩 BeadForge', 'v1.0.0\n一款拼豆设计与分享应用');
+    else Alert.alert('🚧 开发中', '该功能即将上线');
   };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* 头部 */}
-      <View style={styles.header}>
-        <View style={styles.headerBg} />
-        <View style={styles.profileCard}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} />
-          <View style={styles.profileInfo}>
-            <Text style={styles.nickname}>{user?.nickname || user?.username}</Text>
-            <Text style={styles.username}>@{user?.username}</Text>
-            {user?.email ? <Text style={styles.email}>{user.email}</Text> : null}
+      {/* 头部卡片 */}
+      <View style={styles.headerCard}>
+        <View style={styles.headerShadow} />
+        <View style={styles.headerInner}>
+          <View style={styles.profileRow}>
+            <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} borderColor={Colors.yellow} />
+            <View style={styles.profileInfo}>
+              <Text style={styles.nickname}>{user?.nickname || user?.username}</Text>
+              <Text style={styles.username}>@{user?.username}</Text>
+            </View>
+            <TouchableOpacity style={styles.editBtn} onPress={() => setSubPage('editProfile')}>
+              <Text style={styles.editBtnText}>编辑</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.editBtn} onPress={() => setSubPage('editProfile')}>
-            <Text style={styles.editBtnText}>编辑资料</Text>
-          </TouchableOpacity>
-        </View>
 
-        {/* 统计 */}
-        <View style={styles.statsRow}>
-          <StatItem label="作品" value={stats.designCount} />
-          <View style={styles.statsDivider} />
-          <StatItem label="获赞" value={stats.likeCount} />
-          <View style={styles.statsDivider} />
-          <StatItem label="粉丝" value={stats.followerCount} />
-          <View style={styles.statsDivider} />
-          <StatItem label="关注" value={stats.followingCount} />
+          {/* 统计 */}
+          <View style={styles.statsRow}>
+            <StatBadge icon="🎨" value={stats.designCount} label="作品" color={Colors.primary} />
+            <StatBadge icon="❤️" value={stats.likeCount} label="获赞" color={Colors.pink} />
+            <StatBadge icon="👥" value={stats.followerCount} label="粉丝" color={Colors.blue} />
+            <StatBadge icon="👀" value={stats.followingCount} label="关注" color={Colors.purple} />
+          </View>
         </View>
       </View>
 
       {/* 菜单 */}
-      {MENU_SECTIONS.map((section) => (
-        <View key={section.title} style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>{section.title}</Text>
-          <View style={styles.menuCard}>
-            {section.items.map((item, index) => (
-              <TouchableOpacity
-                key={item.key}
-                style={[styles.menuItem, index > 0 && styles.menuItemBorder]}
-                onPress={() => handleMenuPress(item.key)}
-                activeOpacity={0.6}
-              >
+      <View style={styles.menuSection}>
+        {MENU_ITEMS.map((item) => (
+          <TouchableOpacity key={item.key} style={styles.menuOuter} onPress={() => handleMenu(item.key)} activeOpacity={0.7}>
+            <View style={[styles.menuShadow, { backgroundColor: Colors.shadowGray }]} />
+            <View style={styles.menuInner}>
+              <View style={[styles.menuIconWrap, { backgroundColor: item.color + '20' }]}>
                 <Text style={styles.menuIcon}>{item.icon}</Text>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-                <Text style={styles.menuArrow}>›</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      ))}
+              </View>
+              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Text style={styles.menuArrow}>›</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
+      {/* 退出 */}
       <View style={styles.logoutWrap}>
-        <Button title="退出登录" onPress={handleLogout} variant="outline" />
+        <Button title="退出登录" onPress={handleLogout} variant="danger" />
       </View>
     </ScrollView>
   );
 };
 
-const StatItem: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+const StatBadge: React.FC<{ icon: string; value: number; label: string; color: string }> = ({
+  icon, value, label, color,
+}) => (
   <View style={styles.statItem}>
-    <Text style={styles.statValue}>{value}</Text>
+    <View style={[styles.statBadge, { backgroundColor: color + '18', borderColor: color + '40' }]}>
+      <Text style={styles.statIcon}>{icon}</Text>
+      <Text style={[styles.statValue, { color }]}>{value}</Text>
+    </View>
     <Text style={styles.statLabel}>{label}</Text>
   </View>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.grayBg },
-  header: { backgroundColor: Colors.white, paddingBottom: Spacing.lg, marginBottom: Spacing.sm },
-  headerBg: { height: 100, backgroundColor: Colors.primary },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    marginTop: -36,
+  container: { flex: 1, backgroundColor: Colors.snow },
+
+  // Header
+  headerCard: { margin: Spacing.md, position: 'relative' },
+  headerShadow: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    height: '100%', backgroundColor: Colors.primaryDark,
+    borderRadius: BorderRadius.xl,
   },
-  profileInfo: { flex: 1, marginLeft: Spacing.md, marginTop: 36 },
-  nickname: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.black },
-  username: { fontSize: FontSize.sm, color: Colors.gray, marginTop: 2 },
-  email: { fontSize: FontSize.xs, color: Colors.grayLight, marginTop: 2 },
+  headerInner: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: 5,
+  },
+  profileRow: { flexDirection: 'row', alignItems: 'center' },
+  profileInfo: { flex: 1, marginLeft: Spacing.md },
+  nickname: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.white },
+  username: { fontSize: FontSize.sm, fontWeight: '600', color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   editBtn: {
-    marginTop: 36,
-    borderWidth: 1,
-    borderColor: Colors.grayLight,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 16, paddingVertical: 6,
     borderRadius: BorderRadius.full,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
   },
-  editBtnText: { fontSize: FontSize.sm, color: Colors.gray },
+  editBtnText: { color: Colors.white, fontWeight: '800', fontSize: FontSize.sm },
+
+  // Stats
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
+    flexDirection: 'row', justifyContent: 'space-between',
     marginTop: Spacing.lg,
-    paddingHorizontal: Spacing.lg,
   },
   statItem: { alignItems: 'center', flex: 1 },
-  statValue: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.black },
-  statLabel: { fontSize: FontSize.xs, color: Colors.gray, marginTop: 2 },
-  statsDivider: { width: 1, height: 24, backgroundColor: Colors.grayBg },
-  menuSection: { marginBottom: Spacing.sm },
-  menuSectionTitle: {
-    fontSize: FontSize.sm, color: Colors.gray,
-    marginLeft: Spacing.lg, marginBottom: Spacing.sm, marginTop: Spacing.sm,
-  },
-  menuCard: { backgroundColor: Colors.white, marginHorizontal: Spacing.md, borderRadius: BorderRadius.md },
-  menuItem: {
+  statBadge: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: Spacing.md, paddingHorizontal: Spacing.md,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: BorderRadius.md, borderWidth: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  menuItemBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.grayBg },
-  menuIcon: { fontSize: 20, width: 32 },
-  menuLabel: { flex: 1, fontSize: FontSize.lg, color: Colors.black },
-  menuArrow: { fontSize: 22, color: Colors.grayLight },
+  statIcon: { fontSize: 14, marginRight: 4 },
+  statValue: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.white },
+  statLabel: { fontSize: FontSize.xs, fontWeight: '700', color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+
+  // Menu
+  menuSection: { paddingHorizontal: Spacing.md, gap: 10, marginTop: Spacing.sm },
+  menuOuter: { position: 'relative' },
+  menuShadow: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    height: 56, borderRadius: BorderRadius.lg,
+  },
+  menuInner: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: 12, paddingHorizontal: Spacing.md,
+    marginBottom: 3,
+    borderWidth: 2, borderColor: Colors.grayBg,
+  },
+  menuIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+  },
+  menuIcon: { fontSize: 18 },
+  menuLabel: { flex: 1, fontSize: FontSize.lg, fontWeight: '700', color: Colors.dark },
+  menuArrow: { fontSize: 24, fontWeight: '700', color: Colors.grayLight },
+
   logoutWrap: { padding: Spacing.xl, paddingBottom: Spacing.xxl },
 });

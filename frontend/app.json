@@ -18,6 +18,9 @@
         "backgroundColor": "#FF6B6B"
       },
       "package": "com.beadforge.app"
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

@@ -1,30 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Colors, FontSize, Spacing } from '../../theme';
+import { Button } from './Button';
 
 interface Props {
   loading?: boolean;
   error?: string | null;
   empty?: boolean;
   emptyText?: string;
+  emptyIcon?: string;
   onRetry?: () => void;
 }
 
-/**
- * 通用状态视图 - Loading / Error / Empty
- */
 export const StateView: React.FC<Props> = ({
   loading,
   error,
   empty,
   emptyText = '暂无数据',
+  emptyIcon = '🦉',
   onRetry,
 }) => {
   if (loading) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.text}>加载中...</Text>
+        <Text style={styles.loadingText}>加载中...</Text>
       </View>
     );
   }
@@ -32,12 +32,13 @@ export const StateView: React.FC<Props> = ({
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.icon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.icon}>😵</Text>
+        <Text style={styles.title}>出错啦！</Text>
+        <Text style={styles.message}>{error}</Text>
         {onRetry && (
-          <TouchableOpacity style={styles.retryBtn} onPress={onRetry}>
-            <Text style={styles.retryText}>点击重试</Text>
-          </TouchableOpacity>
+          <View style={styles.retryWrap}>
+            <Button title="重试" onPress={onRetry} variant="blue" size="medium" />
+          </View>
         )}
       </View>
     );
@@ -46,8 +47,8 @@ export const StateView: React.FC<Props> = ({
   if (empty) {
     return (
       <View style={styles.container}>
-        <Text style={styles.icon}>📭</Text>
-        <Text style={styles.text}>{emptyText}</Text>
+        <Text style={styles.icon}>{emptyIcon}</Text>
+        <Text style={styles.title}>{emptyText}</Text>
       </View>
     );
   }
@@ -60,31 +61,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.xxl,
-  },
-  icon: {
-    fontSize: 48,
-    marginBottom: Spacing.md,
-  },
-  text: {
-    fontSize: FontSize.md,
-    color: Colors.gray,
-    marginTop: Spacing.sm,
-  },
-  errorText: {
-    fontSize: FontSize.md,
-    color: Colors.error,
-    textAlign: 'center',
     paddingHorizontal: Spacing.xl,
   },
-  retryBtn: {
-    marginTop: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: 20,
-    backgroundColor: Colors.primary,
+  icon: {
+    fontSize: 64,
+    marginBottom: Spacing.md,
   },
-  retryText: {
-    color: Colors.white,
+  title: {
+    fontSize: FontSize.xl,
+    fontWeight: '800',
+    color: Colors.dark,
+    textAlign: 'center',
+  },
+  message: {
     fontSize: FontSize.md,
+    color: Colors.gray,
+    textAlign: 'center',
+    marginTop: Spacing.sm,
+  },
+  loadingText: {
+    fontSize: FontSize.md,
+    color: Colors.gray,
+    marginTop: Spacing.md,
+    fontWeight: '700',
+  },
+  retryWrap: {
+    marginTop: Spacing.lg,
+    width: 160,
   },
 });

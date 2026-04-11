@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { Button, Input } from '../../components/common';
-import { Colors, Spacing, FontSize } from '../../theme';
+import { Colors, Spacing, FontSize, BorderRadius } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props {
@@ -30,44 +30,47 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
     try {
       await login({ username: username.trim(), password });
     } catch (e: any) {
-      Alert.alert('登录失败', e.message);
+      Alert.alert('😵 登录失败', e.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.logoWrap}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoEmoji}>🧩</Text>
+        {/* 吉祥物区域 */}
+        <View style={styles.mascotWrap}>
+          <View style={styles.mascotCircle}>
+            <Text style={styles.mascotEmoji}>🧩</Text>
           </View>
-          <Text style={styles.appName}>BeadForge</Text>
-          <Text style={styles.slogan}>创造你的拼豆世界</Text>
         </View>
+
+        <Text style={styles.title}>欢迎回来！</Text>
+        <Text style={styles.subtitle}>登录继续你的拼豆之旅</Text>
 
         <View style={styles.form}>
           <Input
             label="用户名"
-            placeholder="请输入用户名"
+            placeholder="输入你的用户名"
             value={username}
             onChangeText={(t) => { setUsername(t); setErrors((e) => ({ ...e, username: undefined })); }}
             error={errors.username}
           />
           <Input
             label="密码"
-            placeholder="请输入密码"
+            placeholder="输入密码"
             value={password}
             onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }}
             secureTextEntry
             error={errors.password}
           />
-          <Button title="登 录" onPress={handleLogin} loading={loading} style={styles.btn} />
-          <Button title="没有账号？立即注册" onPress={onSwitchToRegister} variant="text" />
+
+          <View style={styles.btnGroup}>
+            <Button title="登 录" onPress={handleLogin} loading={loading} />
+            <View style={{ height: 12 }} />
+            <Button title="创建新账号" onPress={onSwitchToRegister} variant="outline" />
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -77,14 +80,22 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
   content: { flexGrow: 1, justifyContent: 'center', padding: Spacing.xl },
-  logoWrap: { alignItems: 'center', marginBottom: Spacing.xxl },
-  logoCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md,
+  mascotWrap: { alignItems: 'center', marginBottom: Spacing.lg },
+  mascotCircle: {
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: Colors.primary + '20',
+    borderWidth: 4, borderColor: Colors.primary,
+    justifyContent: 'center', alignItems: 'center',
   },
-  logoEmoji: { fontSize: 40 },
-  appName: { fontSize: FontSize.title, fontWeight: '700', color: Colors.black },
-  slogan: { fontSize: FontSize.md, color: Colors.gray, marginTop: Spacing.xs },
-  form: { gap: Spacing.xs },
-  btn: { marginTop: Spacing.sm },
+  mascotEmoji: { fontSize: 48 },
+  title: {
+    fontSize: FontSize.title, fontWeight: '800', color: Colors.dark,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: FontSize.md, fontWeight: '600', color: Colors.gray,
+    textAlign: 'center', marginTop: Spacing.xs, marginBottom: Spacing.xl,
+  },
+  form: {},
+  btnGroup: { marginTop: Spacing.md },
 });
