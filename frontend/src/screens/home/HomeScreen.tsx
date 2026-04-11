@@ -14,7 +14,7 @@ import { DesignItem } from '../../api/design';
 import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall, BOTTOM_SAFE_H } from '../../utils/responsive';
 
 const COL = getColumnCount();
-const GAP = wp(10);
+const GAP = wp(12);
 const PAD = wp(16);
 const CARD_W = getCardWidth(PAD, GAP, COL);
 const BW = getBannerWidth(PAD);
@@ -115,7 +115,7 @@ export const HomeScreen: React.FC = () => {
         <ScrollView ref={bannerRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
           snapToInterval={BW+GAP} decelerationRate="fast"
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW+GAP)))}
-          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12) }}
+          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(16) }}
         >
           {BANNERS.map((b) => (
             <PressableScale key={b.id} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
@@ -218,70 +218,91 @@ const Card = memo(({ item }: { item: DesignItem }) => {
   );
 });
 
+/**
+ * 8pt 网格间距系统:
+ * 8  - 元素内部紧凑间距
+ * 16 - 元素间标准间距
+ * 24 - 区块间间距
+ * 32 - 大区块分隔
+ */
 const $ = StyleSheet.create({
   root: { flex: 1 },
 
-  header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(14) },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(14) },
+  // ---- 顶部区 ----
+  header: { paddingHorizontal: PAD, paddingTop: wp(12), paddingBottom: wp(16) },
+  headerTop: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: wp(16),
+  },
   logoT: { fontSize: fp(22), fontWeight: '800', letterSpacing: -0.5 },
   iconBtn: {
-    width: wp(36), height: wp(36), borderRadius: wp(18),
+    width: wp(40), height: wp(40), borderRadius: wp(20),
     justifyContent: 'center', alignItems: 'center',
   },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(8),
-    height: wp(42), borderRadius: wp(21), paddingHorizontal: wp(14),
+    flexDirection: 'row', alignItems: 'center', gap: wp(10),
+    height: wp(44), borderRadius: wp(22), paddingHorizontal: wp(16),
     borderWidth: 1.5, borderColor: 'transparent',
   },
   searchInput: { flex: 1, fontSize: fp(14), padding: 0 },
 
+  // ---- Banner 轮播 ----
   banner: {
-    height: wp(140), borderRadius: wp(18), overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(20),
+    height: wp(150), borderRadius: wp(20), overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(24),
   },
   bannerContent: { flex: 1, zIndex: 1 },
-  bannerTitle: { fontSize: fp(20), fontWeight: '800', color: '#FFF' },
-  bannerSub: { fontSize: fp(11), color: 'rgba(255,255,255,0.75)', marginTop: wp(4), lineHeight: fp(17) },
+  bannerTitle: { fontSize: fp(21), fontWeight: '800', color: '#FFF' },
+  bannerSub: { fontSize: fp(12), color: 'rgba(255,255,255,0.75)', marginTop: wp(6), lineHeight: fp(18) },
   bannerTag: {
-    alignSelf: 'flex-start', marginTop: wp(14),
-    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: wp(14), paddingVertical: wp(6),
-    borderRadius: wp(14),
+    alignSelf: 'flex-start', marginTop: wp(16),
+    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: wp(16), paddingVertical: wp(8),
+    borderRadius: wp(16),
   },
-  bannerTagT: { fontSize: fp(11), color: '#FFF', fontWeight: '600' },
+  bannerTagT: { fontSize: fp(12), color: '#FFF', fontWeight: '600' },
   bannerArt: {
     width: wp(110), alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)', padding: wp(10), borderRadius: wp(14),
-    marginLeft: wp(8),
+    backgroundColor: 'rgba(255,255,255,0.1)', padding: wp(12), borderRadius: wp(16),
+    marginLeft: wp(12),
   },
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(12), gap: wp(5) },
+  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(16), gap: wp(6) },
   dot: { width: wp(6), height: wp(6), borderRadius: wp(3) },
-  dotOn: { width: wp(18) },
+  dotOn: { width: wp(20) },
 
-  catRow: { paddingHorizontal: PAD, paddingTop: wp(14), paddingBottom: wp(6), gap: wp(8) },
-  catChip: { paddingHorizontal: wp(16), paddingVertical: wp(7), borderRadius: wp(18) },
+  // ---- 分类标签 ----
+  catRow: { paddingHorizontal: PAD, paddingTop: wp(20), paddingBottom: wp(8), gap: wp(8) },
+  catChip: { paddingHorizontal: wp(18), paddingVertical: wp(8), borderRadius: wp(20) },
   catT: { fontSize: fp(13), fontWeight: '600' },
 
-  secRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: PAD, marginTop: wp(10), marginBottom: wp(12) },
+  // ---- 作品广场标题 ----
+  secRow: {
+    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
+    paddingHorizontal: PAD, marginTop: wp(16), marginBottom: wp(16),
+  },
   secTitle: { fontSize: fp(18), fontWeight: '700' },
-  secCount: { fontSize: fp(11) },
+  secCount: { fontSize: fp(12) },
 
-  grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
-  col: { flex: 1, gap: GAP },
+  // ---- 瀑布流网格 ----
+  grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: wp(12) },
+  col: { flex: 1, gap: wp(12) },
 
-  card: { borderRadius: wp(14), overflow: 'hidden', borderWidth: 1 },
+  // ---- 卡片 ----
+  card: { borderRadius: wp(16), overflow: 'hidden', borderWidth: 1 },
   cardCover: { justifyContent: 'center', alignItems: 'center' },
-  cardBody: { padding: wp(10) },
-  cardTitle: { fontSize: fp(13), fontWeight: '600', marginBottom: wp(6) },
+  cardBody: { padding: wp(12), paddingTop: wp(10) },
+  cardTitle: { fontSize: fp(13), fontWeight: '600', marginBottom: wp(8) },
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardAuthor: { fontSize: fp(11) },
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
   likeN: { fontSize: fp(11) },
 
-  endT: { textAlign: 'center', fontSize: fp(12), paddingVertical: wp(20) },
+  // ---- 底部 ----
+  endT: { textAlign: 'center', fontSize: fp(12), paddingVertical: wp(24) },
 
+  // ---- FAB ----
   fab: { position: 'absolute', right: wp(16) },
   fabBtn: {
-    width: wp(42), height: wp(42), borderRadius: wp(14),
+    width: wp(44), height: wp(44), borderRadius: wp(14),
     justifyContent: 'center', alignItems: 'center',
     shadowColor: '#6366F1', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,

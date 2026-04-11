@@ -122,45 +122,44 @@ export const ProfileScreen: React.FC = () => {
 const S = StyleSheet.create({
   root: { flex: 1 },
 
-  cover: { height: wp(120) },
+  cover: { height: wp(130) },
 
   profileCard: {
-    marginHorizontal: wp(14), marginTop: -wp(44),
-    borderRadius: wp(18), borderWidth: 1, padding: wp(22),
-    // 双层阴影: 接触阴影 + 扩散阴影
+    marginHorizontal: wp(16), marginTop: -wp(48),
+    borderRadius: wp(20), borderWidth: 1, padding: wp(24),
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 5,
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 5,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  editBtn: { borderRadius: wp(10), paddingHorizontal: wp(16), paddingVertical: wp(8) },
+  editBtn: { borderRadius: wp(12), paddingHorizontal: wp(16), paddingVertical: wp(8) },
   editBtnT: { color: '#FFF', fontSize: fp(12), fontWeight: '700' },
-  nick: { fontSize: fp(22), fontWeight: '800', marginTop: wp(14) },
-  uname: { fontSize: fp(12), marginTop: wp(3) },
-  email: { fontSize: fp(11), marginTop: wp(6) },
+  nick: { fontSize: fp(22), fontWeight: '800', marginTop: wp(16) },
+  uname: { fontSize: fp(12), marginTop: wp(4) },
+  email: { fontSize: fp(11), marginTop: wp(8) },
 
-  statsRow: { flexDirection: 'row', marginTop: wp(18), paddingTop: wp(16), borderTopWidth: 1 },
+  statsRow: { flexDirection: 'row', marginTop: wp(24), paddingTop: wp(20), borderTopWidth: 1 },
   statItem: { flex: 1, alignItems: 'center' },
   statV: { fontSize: fp(22), fontWeight: '800' },
-  statL: { fontSize: fp(10), marginTop: wp(3) },
+  statL: { fontSize: fp(10), marginTop: wp(4) },
 
   menuCard: {
-    marginHorizontal: wp(14), marginTop: wp(14),
-    borderRadius: wp(18), borderWidth: 1, overflow: 'hidden',
+    marginHorizontal: wp(16), marginTop: wp(16),
+    borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
   },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(14), paddingHorizontal: wp(16) },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(16), paddingHorizontal: wp(18) },
   menuIconW: {
-    width: wp(38), height: wp(38), borderRadius: wp(11),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(12),
+    width: wp(40), height: wp(40), borderRadius: wp(12),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(14),
   },
   menuTextW: { flex: 1 },
   menuLabel: { fontSize: fp(14), fontWeight: '600' },
-  menuDesc: { fontSize: fp(10), marginTop: wp(2) },
+  menuDesc: { fontSize: fp(10), marginTop: wp(3) },
 
-  logoutW: { paddingHorizontal: wp(14), paddingTop: wp(20) },
+  logoutW: { paddingHorizontal: wp(16), paddingTop: wp(24) },
   footer: {
     textAlign: 'center', fontSize: fp(10),
-    paddingTop: wp(14), paddingBottom: wp(65) + BOTTOM_SAFE_H + wp(16),
+    paddingTop: wp(16), paddingBottom: wp(65) + BOTTOM_SAFE_H + wp(20),
   },
 });
