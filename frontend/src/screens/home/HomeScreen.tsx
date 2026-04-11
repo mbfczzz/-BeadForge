@@ -231,7 +231,7 @@ export const HomeScreen: React.FC = () => {
         {!hasMore && designs.length > 0 && (
           <Text style={[styles.endText, { color: colors.textHint }]}>— 已加载全部 {filtered.length} 个作品 —</Text>
         )}
-        <View style={{ height: 40 }} />
+        <View style={{ height: 90 }} />
       </ScrollView>
 
       {/* 回顶部 FAB */}

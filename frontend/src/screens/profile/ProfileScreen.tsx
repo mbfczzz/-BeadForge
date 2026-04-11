@@ -157,5 +157,5 @@ const styles = StyleSheet.create({
   menuArrow: { fontSize: 20 },
 
   logoutWrap: { paddingHorizontal: 12, paddingTop: Spacing.lg },
-  footer: { textAlign: 'center', fontSize: FontSize.xs, paddingVertical: Spacing.lg },
+  footer: { textAlign: 'center', fontSize: FontSize.xs, paddingTop: Spacing.md, paddingBottom: 90 },
 });
