@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { Avatar, Button, PressableScale } from '../../components/common';
-import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -13,13 +13,13 @@ import { MyDesignsScreen } from './MyDesignsScreen';
 
 type SubPage = 'none' | 'editProfile' | 'myDesigns';
 
-const MENU = [
-  { key: 'myDesigns', label: '我的作品', icon: '🎨', desc: '管理已创作的拼豆图案' },
-  { key: 'myDrafts', label: '草稿箱', icon: '📝', desc: '未完成的创作' },
-  { key: 'myFavorites', label: '我的收藏', icon: '⭐', desc: '收藏的优质图案' },
-  { key: 'myLikes', label: '我的点赞', icon: '❤️', desc: '点赞过的作品' },
-  { key: 'settings', label: '设置', icon: '⚙️', desc: '偏好和账号设置' },
-  { key: 'about', label: '关于', icon: 'ℹ️', desc: 'BeadForge v1.0.0' },
+const MENU: { key: string; label: string; icon: keyof typeof Feather.glyphMap; desc: string }[] = [
+  { key: 'myDesigns', label: '我的作品', icon: 'grid', desc: '管理已创作的拼豆图案' },
+  { key: 'myDrafts', label: '草稿箱', icon: 'edit-3', desc: '未完成的创作' },
+  { key: 'myFavorites', label: '我的收藏', icon: 'bookmark', desc: '收藏的优质图案' },
+  { key: 'myLikes', label: '我的点赞', icon: 'heart', desc: '点赞过的作品' },
+  { key: 'settings', label: '设置', icon: 'settings', desc: '偏好和账号设置' },
+  { key: 'about', label: '关于', icon: 'info', desc: 'BeadForge v1.0.0' },
 ];
 
 export const ProfileScreen: React.FC = () => {
@@ -56,16 +56,6 @@ export const ProfileScreen: React.FC = () => {
       {/* 封面 */}
       <View style={[S.cover, { backgroundColor: colors.accent }]}>
         <SafeAreaView edges={['top']} />
-        <View style={S.coverDeco}>
-          <View style={{ opacity: 0.1, transform: [{ rotate: '15deg' }] }}>
-            <BeadGrid pixels={ALL_PATTERNS[4]} beadSize={wp(7)} gap={wp(2)} round />
-          </View>
-        </View>
-        <View style={S.coverDeco2}>
-          <View style={{ opacity: 0.08, transform: [{ rotate: '-10deg' }] }}>
-            <BeadGrid pixels={ALL_PATTERNS[6]} beadSize={wp(5)} gap={wp(1.5)} round />
-          </View>
-        </View>
       </View>
 
       {/* 用户卡片 */}
@@ -81,7 +71,7 @@ export const ProfileScreen: React.FC = () => {
         </View>
         <Text style={[S.nick, { color: colors.text }]}>{user?.nickname || user?.username}</Text>
         <Text style={[S.uname, { color: colors.textHint }]}>@{user?.username}</Text>
-        {user?.email && <Text style={[S.email, { color: colors.textSecondary }]}>📮 {user.email}</Text>}
+        {user?.email && <Text style={[S.email, { color: colors.textSecondary }]}>{user.email}</Text>}
 
         {/* 统计 */}
         <View style={[S.statsRow, { borderTopColor: colors.divider }]}>
@@ -104,13 +94,13 @@ export const ProfileScreen: React.FC = () => {
             scale={0.985}
           >
             <View style={[S.menuIconW, { backgroundColor: colors.accentLight }]}>
-              <Text style={S.menuIcon}>{item.icon}</Text>
+              <Feather name={item.icon} size={wp(17)} color={colors.accent} />
             </View>
             <View style={S.menuTextW}>
               <Text style={[S.menuLabel, { color: colors.text }]}>{item.label}</Text>
               <Text style={[S.menuDesc, { color: colors.textHint }]}>{item.desc}</Text>
             </View>
-            <Text style={[S.menuArrow, { color: colors.textHint }]}>›</Text>
+            <Feather name="chevron-right" size={wp(16)} color={colors.textHint} />
           </PressableScale>
         ))}
       </View>
@@ -132,9 +122,7 @@ export const ProfileScreen: React.FC = () => {
 const S = StyleSheet.create({
   root: { flex: 1 },
 
-  cover: { height: wp(130) },
-  coverDeco: { position: 'absolute', right: wp(15), top: wp(20) },
-  coverDeco2: { position: 'absolute', left: wp(15), bottom: wp(10) },
+  cover: { height: wp(120) },
 
   profileCard: {
     marginHorizontal: wp(14), marginTop: -wp(44),
@@ -166,11 +154,9 @@ const S = StyleSheet.create({
     width: wp(38), height: wp(38), borderRadius: wp(11),
     justifyContent: 'center', alignItems: 'center', marginRight: wp(12),
   },
-  menuIcon: { fontSize: fp(17) },
   menuTextW: { flex: 1 },
   menuLabel: { fontSize: fp(14), fontWeight: '600' },
   menuDesc: { fontSize: fp(10), marginTop: wp(2) },
-  menuArrow: { fontSize: fp(20) },
 
   logoutW: { paddingHorizontal: wp(14), paddingTop: wp(20) },
   footer: {

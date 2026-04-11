@@ -5,6 +5,7 @@ import {
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { StateView, PressableScale, CardSkeleton } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
@@ -14,30 +15,22 @@ import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall,
 
 const COL = getColumnCount();
 const GAP = wp(10);
-const PAD = wp(14);
+const PAD = wp(16);
 const CARD_W = getCardWidth(PAD, GAP, COL);
 const BW = getBannerWidth(PAD);
 const TAB_H = wp(65) + BOTTOM_SAFE_H;
 
-const BG_L = ['#FFF0F2','#FFF6EC','#EBF5FF','#EEFAF2','#FFF0FA','#FFFDE7','#EEEEFF','#FFF5EE'];
-const BG_D = ['#281520','#282218','#132030','#152A1C','#281528','#28280F','#181830','#282018'];
+const BG_L = ['#FEF1F2','#FEF6EC','#EBF5FF','#ECFDF5','#FDF2F8','#FFFBEB','#EEF2FF','#FFF7ED'];
+const BG_D = ['#2A1822','#2A2418','#152030','#15261C','#2A1530','#2A2810','#1A1A35','#2A2018'];
 
-const CATS = [
-  { key: '', label: '全部' },
-  { key: 'animal', label: '动物' },
-  { key: 'character', label: '卡通' },
-  { key: 'flower', label: '花卉' },
-  { key: 'food', label: '美食' },
-  { key: 'scenery', label: '风景' },
-  { key: 'abstract', label: '抽象' },
-  { key: 'pixel', label: '像素' },
-];
+const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','像素'];
+const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel'];
 
 const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#6366F1', bgD: '#4338CA' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列', pi: 1, bg: '#F97316', bgD: '#C2410C' },
-  { id: 3, title: '像素经典', sub: '经典游戏角色还原', pi: 2, bg: '#0EA5E9', bgD: '#0369A1' },
-  { id: 4, title: '花之物语', sub: '春日限定花卉系列', pi: 3, bg: '#D946EF', bgD: '#A21CAF' },
+  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#6366F1' },
+  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#F97316' },
+  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#0EA5E9' },
+  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#D946EF' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -54,24 +47,16 @@ export const HomeScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const bannerRef = useRef<ScrollView>(null);
   const fabAnim = useRef(new Animated.Value(0)).current;
-  const activeCat = CATS.findIndex((c) => c.key === (category || ''));
+  const activeCat = CAT_KEYS.indexOf(category || '');
 
   useEffect(() => { fetchDesigns(true); }, []);
-
   useEffect(() => {
     const t = setInterval(() => {
-      setBannerIdx((p) => {
-        const n = (p + 1) % BANNERS.length;
-        bannerRef.current?.scrollTo({ x: n * (BW + GAP), animated: true });
-        return n;
-      });
+      setBannerIdx((p) => { const n = (p+1)%BANNERS.length; bannerRef.current?.scrollTo({ x: n*(BW+GAP), animated: true }); return n; });
     }, 5000);
     return () => clearInterval(t);
   }, []);
-
-  useEffect(() => {
-    Animated.spring(fabAnim, { toValue: showTop ? 1 : 0, useNativeDriver: true, speed: 20 }).start();
-  }, [showTop]);
+  useEffect(() => { Animated.spring(fabAnim, { toValue: showTop?1:0, useNativeDriver: true, speed: 20 }).start(); }, [showTop]);
 
   const onRefresh = useCallback(() => fetchDesigns(true), []);
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -88,53 +73,27 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   const filtered = searchKeyword.trim()
-    ? designs.filter((d) => d.title.includes(searchKeyword.trim()) || d.description?.includes(searchKeyword.trim()))
+    ? designs.filter((d) => d.title.includes(searchKeyword.trim()))
     : designs;
-
   const cols: DesignItem[][] = Array.from({ length: COL }, () => []);
   filtered.forEach((item, i) => cols[i % COL].push(item));
   const isFirstLoad = loading && designs.length === 0;
-  const beadBanner = isSmall ? 8 : wp(11);
 
   return (
-    <SafeAreaView style={[S.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* —— 顶部区 —— */}
-      <View style={[S.header, { backgroundColor: colors.navBg }]}>
-        {/* Logo + 主题切换 */}
-        <View style={S.headerRow}>
-          <View style={S.logoWrap}>
-            {/* 拼豆 Logo 标识 */}
-            <View style={[S.logoMark, { backgroundColor: colors.accent }]}>
-              <View style={S.logoGrid}>
-                {[0,1,2,3,4,5,6,7,8].map((i) => (
-                  <View key={i} style={[S.logoDot, {
-                    backgroundColor: i % 3 === 1 || i === 4 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)',
-                  }]} />
-                ))}
-              </View>
-            </View>
-            <View>
-              <Text style={[S.logoName, { color: colors.text }]}>BeadForge</Text>
-              <Text style={[S.logoSub, { color: colors.textHint }]}>拼豆创作平台</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[S.themeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
-            onPress={toggle}
-            activeOpacity={0.7}
-          >
-            <View style={[S.themeDot, { backgroundColor: dark ? '#FCD34D' : '#6366F1' }]}>
-              <View style={[S.themeDotInner, { backgroundColor: dark ? 'transparent' : colors.inputBg, left: dark ? undefined : wp(5) }]} />
-            </View>
+    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
+      {/* 顶部 */}
+      <View style={[$.header, { backgroundColor: colors.navBg }]}>
+        <View style={$.headerTop}>
+          <Text style={[$.logoT, { color: colors.text }]}>BeadForge</Text>
+          <TouchableOpacity style={[$.iconBtn, { backgroundColor: colors.inputBg }]} onPress={toggle}>
+            <Feather name={dark ? 'sun' : 'moon'} size={wp(18)} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-
-        {/* 搜索框 */}
-        <View style={[S.searchBox, { backgroundColor: colors.inputBg }, searchFocused && { borderColor: colors.accent }]}>
-          <Text style={[S.searchIcon, { color: searchFocused ? colors.accent : colors.textHint }]}>⌕</Text>
+        <View style={[$.searchBox, { backgroundColor: colors.inputBg }, searchFocused && { borderColor: colors.accent }]}>
+          <Feather name="search" size={wp(16)} color={searchFocused ? colors.accent : colors.textHint} />
           <TextInput
-            style={[S.searchInput, { color: colors.text }]}
-            placeholder="搜索图案、作者..."
+            style={[$.searchInput, { color: colors.text }]}
+            placeholder="搜索图案"
             placeholderTextColor={colors.textHint}
             value={searchKeyword}
             onChangeText={handleSearch}
@@ -143,306 +102,188 @@ export const HomeScreen: React.FC = () => {
           />
           {searchKeyword.length > 0 && (
             <TouchableOpacity onPress={() => handleSearch('')}>
-              <View style={[S.clearBtn, { backgroundColor: colors.textHint }]}>
-                <Text style={S.clearX}>✕</Text>
-              </View>
+              <Feather name="x" size={wp(16)} color={colors.textHint} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* —— 内容区 —— */}
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={60}
+      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={60}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
       >
-        {/* Banner 轮播 */}
-        <View style={S.bannerWrap}>
-          <ScrollView
-            ref={bannerRef}
-            horizontal pagingEnabled showsHorizontalScrollIndicator={false}
-            snapToInterval={BW + GAP} decelerationRate="fast"
-            onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + GAP)))}
-            contentContainerStyle={{ paddingHorizontal: PAD }}
-          >
-            {BANNERS.map((b) => (
-              <PressableScale key={b.id} style={[S.banner, { width: BW, marginRight: GAP }]}>
-                {/* 双色背景 */}
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: b.bg, borderRadius: wp(16) }]} />
-                <View style={[S.bannerAccent, { backgroundColor: b.bgD }]} />
-                {/* 文字 */}
-                <View style={S.bannerText}>
-                  <View style={S.bannerBadge}>
-                    <Text style={S.bannerBadgeT}>HOT</Text>
-                  </View>
-                  <Text style={S.bannerTitle}>{b.title}</Text>
-                  <Text style={S.bannerSub}>{b.sub}</Text>
+        {/* Banner */}
+        <ScrollView ref={bannerRef} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+          snapToInterval={BW+GAP} decelerationRate="fast"
+          onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW+GAP)))}
+          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12) }}
+        >
+          {BANNERS.map((b) => (
+            <PressableScale key={b.id} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
+              <View style={$.bannerContent}>
+                <Text style={$.bannerTitle}>{b.title}</Text>
+                <Text style={$.bannerSub}>{b.sub}</Text>
+                <View style={$.bannerTag}>
+                  <Text style={$.bannerTagT}>查看 →</Text>
                 </View>
-                {/* 拼豆图案 */}
-                <View style={S.bannerArt}>
-                  <View style={S.bannerArtInner}>
-                    <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={beadBanner} gap={wp(1.5)} round />
-                  </View>
-                </View>
-              </PressableScale>
-            ))}
-          </ScrollView>
-          {/* 指示器 */}
-          <View style={S.dots}>
-            {BANNERS.map((_, i) => (
-              <Animated.View key={i} style={[
-                S.dot,
-                { backgroundColor: bannerIdx === i ? colors.accent : colors.border },
-                bannerIdx === i && S.dotActive,
-              ]} />
-            ))}
-          </View>
+              </View>
+              <View style={$.bannerArt}>
+                <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={isSmall ? 7 : wp(9)} gap={wp(1.5)} round glossy={false} />
+              </View>
+            </PressableScale>
+          ))}
+        </ScrollView>
+        <View style={$.dots}>
+          {BANNERS.map((_, i) => (
+            <View key={i} style={[$.dot, { backgroundColor: bannerIdx===i ? colors.accent : colors.border }, bannerIdx===i && $.dotOn]} />
+          ))}
         </View>
 
-        {/* 分类标签 */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.catRow}>
-          {CATS.map((c, idx) => {
+        {/* 分类 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={$.catRow}>
+          {CATS.map((name, idx) => {
             const on = activeCat === idx;
             return (
-              <TouchableOpacity
-                key={c.key}
-                onPress={() => setFilter(undefined, c.key || null)}
-                style={[S.catChip, {
-                  backgroundColor: on ? colors.accent : colors.surface,
-                  borderColor: on ? colors.accent : colors.border,
-                }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[S.catLabel, { color: on ? '#FFF' : colors.textSecondary }]}>{c.label}</Text>
+              <TouchableOpacity key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)} activeOpacity={0.7}
+                style={[$.catChip, on ? { backgroundColor: colors.accent } : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+                <Text style={[$.catT, { color: on ? '#FFF' : colors.textSecondary }]}>{name}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* 作品广场 标题 */}
-        <View style={S.sectionRow}>
-          <View style={[S.sectionDot, { backgroundColor: colors.accent }]} />
-          <Text style={[S.sectionTitle, { color: colors.text }]}>作品广场</Text>
-          {filtered.length > 0 && (
-            <View style={[S.badge, { backgroundColor: colors.accentLight }]}>
-              <Text style={[S.badgeT, { color: colors.accent }]}>{filtered.length}</Text>
-            </View>
-          )}
+        {/* 作品广场 */}
+        <View style={$.secRow}>
+          <Text style={[$.secTitle, { color: colors.text }]}>作品广场</Text>
+          {filtered.length > 0 && <Text style={[$.secCount, { color: colors.textHint }]}>{filtered.length} 个作品</Text>}
         </View>
 
-        {/* 骨架屏 */}
         {isFirstLoad && (
-          <View style={S.grid}>
+          <View style={$.grid}>
             {Array.from({ length: COL }).map((_, ci) => (
-              <View key={ci} style={S.col}>
-                {[0,1,2].map((j) => <CardSkeleton key={j} height={wp(130 + j * 28)} />)}
-              </View>
+              <View key={ci} style={$.col}>{[0,1,2].map((j) => <CardSkeleton key={j} height={wp(130+j*28)} />)}</View>
             ))}
           </View>
         )}
-
         {error && designs.length === 0 && <StateView error={error} onRetry={onRefresh} />}
         {!loading && !error && filtered.length === 0 && <StateView empty emptyText="暂无相关作品" />}
 
-        {/* 瀑布流 */}
         {filtered.length > 0 && (
-          <View style={S.grid}>
+          <View style={$.grid}>
             {cols.map((col, ci) => (
-              <View key={ci} style={S.col}>
-                {col.map((item) => <Card key={item.id} item={item} />)}
-              </View>
+              <View key={ci} style={$.col}>{col.map((item) => <Card key={item.id} item={item} />)}</View>
             ))}
           </View>
         )}
 
         {loading && designs.length > 0 && <StateView loading />}
-        {!hasMore && designs.length > 0 && (
-          <Text style={[S.endT, { color: colors.textHint }]}>— 已全部加载 —</Text>
-        )}
+        {!hasMore && designs.length > 0 && <Text style={[$.endT, { color: colors.textHint }]}>— 到底了 —</Text>}
         <View style={{ height: TAB_H }} />
       </ScrollView>
 
-      {/* FAB */}
-      <Animated.View style={[S.fab, {
-        bottom: TAB_H + wp(6),
-        opacity: fabAnim,
-        transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({ inputRange: [0,1], outputRange: [20,0] }) }],
-      }]}>
-        <TouchableOpacity
-          style={[S.fabBtn, { backgroundColor: colors.accent }]}
-          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-          activeOpacity={0.8}
-        >
-          <Text style={S.fabIcon}>↑</Text>
+      <Animated.View style={[$.fab, { bottom: TAB_H+wp(6), opacity: fabAnim, transform: [{ scale: fabAnim }] }]}>
+        <TouchableOpacity style={[$.fabBtn, { backgroundColor: colors.accent }]}
+          onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} activeOpacity={0.8}>
+          <Feather name="arrow-up" size={wp(18)} color="#FFF" />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
   );
 };
 
-/** ---- 卡片 ---- */
 const Card = memo(({ item }: { item: DesignItem }) => {
   const { colors, dark } = useTheme();
   const pat = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
-  const h = wp(115) + (item.id * 37) % wp(75);
+  const h = wp(110) + (item.id * 31) % wp(70);
   const bg = (dark ? BG_D : BG_L)[item.id % BG_L.length];
   const bs = Math.max(Math.floor(CARD_W / (pat[0]?.length || 9)) - 1, wp(4));
 
   return (
-    <PressableScale style={[S.card, { backgroundColor: colors.cardBg }]} scale={0.97}>
-      <View style={[S.cardCover, { height: h, backgroundColor: bg }]}>
+    <PressableScale style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} scale={0.97}>
+      <View style={[$.cardCover, { height: h, backgroundColor: bg }]}>
         <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
       </View>
-      <View style={S.cardBody}>
-        <Text style={[S.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-        <Text style={[S.cardDesc, { color: colors.textHint }]} numberOfLines={1}>{item.description}</Text>
-        <View style={S.cardFooter}>
-          <View style={[S.cardAvatar, { backgroundColor: colors.accent + '20' }]}>
-            <Text style={{ fontSize: fp(9), color: colors.accent }}>
-              {(item.authorName || '?').charAt(0)}
-            </Text>
-          </View>
-          <Text style={[S.cardAuthor, { color: colors.textSecondary }]} numberOfLines={1}>
+      <View style={$.cardBody}>
+        <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+        <View style={$.cardMeta}>
+          <Text style={[$.cardAuthor, { color: colors.textHint }]}>
             {item.authorName || '创作者'}
           </Text>
-          <Text style={[S.cardLike, { color: colors.textHint }]}>♡ {item.likeCount}</Text>
+          <View style={$.likeRow}>
+            <Feather name="heart" size={wp(11)} color={colors.textHint} />
+            <Text style={[$.likeN, { color: colors.textHint }]}>{item.likeCount}</Text>
+          </View>
         </View>
       </View>
     </PressableScale>
   );
 });
 
-/** ---- Styles ---- */
-const S = StyleSheet.create({
+const $ = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header - 微妙底边分隔
-  header: {
-    paddingHorizontal: PAD, paddingTop: wp(6), paddingBottom: wp(12),
-    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
-  },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(12) },
-  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: wp(10) },
-  logoMark: {
-    width: wp(34), height: wp(34), borderRadius: wp(10),
+  header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(14) },
+  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(14) },
+  logoT: { fontSize: fp(22), fontWeight: '800', letterSpacing: -0.5 },
+  iconBtn: {
+    width: wp(36), height: wp(36), borderRadius: wp(18),
     justifyContent: 'center', alignItems: 'center',
-  },
-  logoGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    width: wp(18), height: wp(18), gap: wp(2),
-  },
-  logoDot: { width: wp(4), height: wp(4), borderRadius: wp(2) },
-  logoName: { fontSize: fp(17), fontWeight: '800', letterSpacing: 0.5 },
-  logoSub: { fontSize: fp(9), marginTop: wp(1), letterSpacing: 0.3 },
-  themeBtn: {
-    width: wp(38), height: wp(38), borderRadius: wp(12),
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1,
-  },
-  themeDot: { width: wp(18), height: wp(18), borderRadius: wp(9) },
-  themeDotInner: {
-    position: 'absolute', top: wp(2),
-    width: wp(13), height: wp(13), borderRadius: wp(7),
   },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(42), borderRadius: wp(12), paddingHorizontal: wp(14),
+    flexDirection: 'row', alignItems: 'center', gap: wp(8),
+    height: wp(42), borderRadius: wp(21), paddingHorizontal: wp(14),
     borderWidth: 1.5, borderColor: 'transparent',
   },
-  searchIcon: { fontSize: fp(14), marginRight: wp(8) },
-  searchInput: { flex: 1, fontSize: FontSize.md, padding: 0 },
-  clearBtn: {
-    width: wp(20), height: wp(20), borderRadius: wp(10),
-    justifyContent: 'center', alignItems: 'center',
-  },
-  clearX: { fontSize: fp(10), color: '#FFF', fontWeight: '800' },
+  searchInput: { flex: 1, fontSize: fp(14), padding: 0 },
 
-  // Banner
-  bannerWrap: { marginBottom: wp(4) },
   banner: {
-    height: wp(150), borderRadius: wp(16), overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center',
+    height: wp(140), borderRadius: wp(18), overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(20),
   },
-  bannerAccent: {
-    position: 'absolute', right: -wp(30), top: -wp(30),
-    width: wp(180), height: wp(180), borderRadius: wp(90), opacity: 0.35,
+  bannerContent: { flex: 1, zIndex: 1 },
+  bannerTitle: { fontSize: fp(20), fontWeight: '800', color: '#FFF' },
+  bannerSub: { fontSize: fp(11), color: 'rgba(255,255,255,0.75)', marginTop: wp(4), lineHeight: fp(17) },
+  bannerTag: {
+    alignSelf: 'flex-start', marginTop: wp(14),
+    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: wp(14), paddingVertical: wp(6),
+    borderRadius: wp(14),
   },
-  bannerText: { flex: 1, paddingLeft: wp(20), zIndex: 1 },
-  bannerBadge: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(6), marginBottom: wp(8),
+  bannerTagT: { fontSize: fp(11), color: '#FFF', fontWeight: '600' },
+  bannerArt: {
+    width: wp(110), alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)', padding: wp(10), borderRadius: wp(14),
+    marginLeft: wp(8),
   },
-  bannerBadgeT: { fontSize: fp(9), color: '#FFF', fontWeight: '700', letterSpacing: 1.5 },
-  bannerTitle: { fontSize: fp(22), fontWeight: '800', color: '#FFF' },
-  bannerSub: { fontSize: fp(12), color: 'rgba(255,255,255,0.8)', marginTop: wp(4), lineHeight: fp(18) },
-  bannerArt: { width: wp(130), alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  bannerArtInner: {
-    backgroundColor: 'rgba(255,255,255,0.12)', padding: wp(12),
-    borderRadius: wp(16), borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
-    // 内部磨砂感
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 6,
-  },
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(12), gap: wp(6) },
+  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(12), gap: wp(5) },
   dot: { width: wp(6), height: wp(6), borderRadius: wp(3) },
-  dotActive: { width: wp(22) },
+  dotOn: { width: wp(18) },
 
-  // Categories
-  catRow: { paddingHorizontal: PAD, paddingVertical: wp(10), gap: wp(8) },
-  catChip: {
-    paddingHorizontal: wp(16), paddingVertical: wp(8),
-    borderRadius: wp(20), borderWidth: 1,
-  },
-  catLabel: { fontSize: fp(13), fontWeight: '600' },
+  catRow: { paddingHorizontal: PAD, paddingTop: wp(14), paddingBottom: wp(6), gap: wp(8) },
+  catChip: { paddingHorizontal: wp(16), paddingVertical: wp(7), borderRadius: wp(18) },
+  catT: { fontSize: fp(13), fontWeight: '600' },
 
-  // Section
-  sectionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(8),
-    paddingHorizontal: PAD, marginTop: wp(4), marginBottom: wp(12),
-  },
-  sectionDot: { width: wp(4), height: wp(18), borderRadius: wp(2) },
-  sectionTitle: { fontSize: fp(18), fontWeight: '700', flex: 1 },
-  badge: { paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(10) },
-  badgeT: { fontSize: fp(11), fontWeight: '700' },
+  secRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: PAD, marginTop: wp(10), marginBottom: wp(12) },
+  secTitle: { fontSize: fp(18), fontWeight: '700' },
+  secCount: { fontSize: fp(11) },
 
-  // Grid
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
   col: { flex: 1, gap: GAP },
 
-  // Card - 双层阴影+微边框 = 真实纸面质感
-  card: {
-    borderRadius: wp(14), overflow: 'hidden',
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.04)',
-    // 第一层阴影: 贴近的接触阴影
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
-  },
-  cardCover: {
-    justifyContent: 'center', alignItems: 'center',
-    // 封面区底部内阴影感
-    borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.04)',
-  },
-  cardBody: { padding: wp(10), paddingTop: wp(9) },
-  cardTitle: { fontSize: fp(13), fontWeight: '700', marginBottom: wp(3), letterSpacing: 0.2 },
-  cardDesc: { fontSize: fp(10), marginBottom: wp(8), lineHeight: fp(16), opacity: 0.7 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center' },
-  cardAvatar: {
-    width: wp(20), height: wp(20), borderRadius: wp(10),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(6),
-  },
-  cardAuthor: { fontSize: fp(10), flex: 1, fontWeight: '500' },
-  cardLike: { fontSize: fp(10), fontWeight: '500' },
+  card: { borderRadius: wp(14), overflow: 'hidden', borderWidth: 1 },
+  cardCover: { justifyContent: 'center', alignItems: 'center' },
+  cardBody: { padding: wp(10) },
+  cardTitle: { fontSize: fp(13), fontWeight: '600', marginBottom: wp(6) },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cardAuthor: { fontSize: fp(11) },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
+  likeN: { fontSize: fp(11) },
 
-  endT: { textAlign: 'center', fontSize: FontSize.sm, paddingVertical: Spacing.lg },
+  endT: { textAlign: 'center', fontSize: fp(12), paddingVertical: wp(20) },
 
-  fab: { position: 'absolute', right: wp(14) },
+  fab: { position: 'absolute', right: wp(16) },
   fabBtn: {
-    width: wp(44), height: wp(44), borderRadius: wp(14),
+    width: wp(42), height: wp(42), borderRadius: wp(14),
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 6,
   },
-  fabIcon: { fontSize: fp(18), color: '#FFF', fontWeight: '800' },
 });
