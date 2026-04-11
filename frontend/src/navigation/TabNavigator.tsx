@@ -53,17 +53,16 @@ const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor
     Animated.timing(opacity, { toValue: focused ? 1 : 0.5, duration: 200, useNativeDriver: true }).start();
   }, [focused]);
 
-  const onHoverIn = useCallback(() => {
+  const hoverIn = useCallback(() => {
     Animated.spring(liftY, { toValue: -wp(2), useNativeDriver: true, speed: 22, bounciness: 6 }).start();
   }, [liftY]);
-  const onHoverOut = useCallback(() => {
+  const hoverOut = useCallback(() => {
     Animated.spring(liftY, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
   }, [liftY]);
 
   return (
-    <Pressable style={[S.tab, { cursor: 'pointer' } as any]} onPress={onPress}
-      onHoverIn={Platform.OS === 'web' ? onHoverIn : undefined}
-      onHoverOut={Platform.OS === 'web' ? onHoverOut : undefined}>
+    // @ts-ignore
+    <Pressable style={S.tab} onPress={onPress} onHoverIn={hoverIn} onHoverOut={hoverOut}>
       <Animated.View style={[S.tabInner, { opacity, transform: [{ translateY: liftY }] }]}>
         <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
         <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
