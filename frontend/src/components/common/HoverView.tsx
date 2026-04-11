@@ -1,5 +1,5 @@
-import React, { useRef, useCallback } from 'react';
-import { Animated, Pressable, ViewStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Pressable, ViewStyle, Platform } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
@@ -9,55 +9,35 @@ interface Props {
   hoverLift?: number;
 }
 
+/**
+ * Hover 交互组件 - state 驱动 + RN Web CSS transition
+ */
 export const HoverView: React.FC<Props> = ({
   children, onPress, style,
-  hoverScale = 1, hoverLift = 2,
+  hoverScale = 1.02, hoverLift = 3,
 }) => {
-  const lift = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
-  const pressScale = useRef(new Animated.Value(1)).current;
+  const [hovered, setHovered] = useState(false);
+  const [pressed, setPressed] = useState(false);
 
-  const doEnter = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(lift, { toValue: -hoverLift, useNativeDriver: true, speed: 22, bounciness: 6 }),
-      Animated.spring(scale, { toValue: hoverScale, useNativeDriver: true, speed: 22, bounciness: 6 }),
-    ]).start();
-  }, [lift, scale, hoverLift, hoverScale]);
-
-  const doLeave = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(lift, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }),
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 16, bounciness: 4 }),
-    ]).start();
-  }, [lift, scale]);
-
-  const doIn = useCallback(() => {
-    Animated.spring(pressScale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }).start();
-  }, [pressScale]);
-
-  const doOut = useCallback(() => {
-    Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 8 }).start();
-  }, [pressScale]);
+  const tx = pressed ? 0 : hovered ? -hoverLift : 0;
+  const sc = pressed ? 0.97 : hovered ? hoverScale : 1;
 
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={doIn}
-      onPressOut={doOut}
-      // @ts-ignore - RN Web supports these
-      onHoverIn={doEnter}
-      onHoverOut={doLeave}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      // @ts-ignore
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
     >
-      {({ pressed }: any) => (
-        <Animated.View style={[style, {
-          transform: [
-            { translateY: lift },
-            { scale: Animated.multiply(scale, pressScale) },
-          ],
-        }]}>
-          {children}
-        </Animated.View>
-      )}
+      <View style={[
+        style,
+        { transform: [{ translateY: tx }, { scale: sc }] },
+        Platform.OS === 'web' && { transitionDuration: '0.25s', transitionTimingFunction: 'cubic-bezier(0.4,0,0.2,1)' } as any,
+      ]}>
+        {children}
+      </View>
     </Pressable>
   );
 };

@@ -1,7 +1,9 @@
-import React, { useRef, useCallback } from 'react';
-import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform } from 'react-native';
-import { FontSize, BorderRadius, Spacing, useTheme } from '../../theme';
+import React, { useState } from 'react';
+import { View, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform } from 'react-native';
+import { FontSize, BorderRadius } from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 import { wp, fp } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 
 interface Props {
   title: string;
@@ -16,23 +18,8 @@ export const Button: React.FC<Props> = ({
   title, onPress, loading = false, disabled = false, variant = 'primary', style,
 }) => {
   const { colors } = useTheme();
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  const onIn = useCallback(() => {
-    if (variant === 'text') return;
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }),
-      Animated.timing(opacity, { toValue: 0.85, duration: 100, useNativeDriver: true }),
-    ]).start();
-  }, [scale, opacity, variant]);
-
-  const onOut = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 8 }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  }, [scale, opacity]);
+  const [pressed, setPressed] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
@@ -42,21 +29,27 @@ export const Button: React.FC<Props> = ({
   const bg = isPrimary ? colors.accent : isDanger ? colors.error : isOutline ? colors.surface : 'transparent';
   const textColor = isPrimary || isDanger ? '#FFF' : isOutline ? colors.text : colors.accent;
 
+  const sc = pressed ? 0.97 : hovered ? 1.01 : 1;
+  const op = pressed ? 0.85 : 1;
+
   return (
     <Pressable
       onPress={onPress}
-      onPressIn={onIn}
-      onPressOut={onOut}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      // @ts-ignore
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       disabled={disabled || loading}
-      android_ripple={!isText && Platform.OS === 'android' ? { color: 'rgba(255,255,255,0.15)' } : undefined}
     >
-      <Animated.View style={[
+      <View style={[
         S.base,
-        { backgroundColor: bg, transform: [{ scale }], opacity },
-        (isPrimary || isDanger) && S.elevated,
-        isOutline && S.outlineShadow,
+        { backgroundColor: bg, transform: [{ scale: sc }], opacity: op },
+        (isPrimary || isDanger) && shadow(3, 8, 0.2, colors.accent, 4),
+        isOutline && shadow(1, 4, 0.06, '#000', 2),
         isText && S.textOnly,
         (disabled || loading) && S.disabled,
+        Platform.OS === 'web' && { transitionDuration: '0.2s' } as any,
         style,
       ]}>
         {loading ? (
@@ -64,23 +57,15 @@ export const Button: React.FC<Props> = ({
         ) : (
           <Text style={[S.label, { color: textColor }]}>{title}</Text>
         )}
-      </Animated.View>
+      </View>
     </Pressable>
   );
 };
 
 const S = StyleSheet.create({
   base: {
-    height: wp(48), borderRadius: wp(14),
+    height: wp(48), borderRadius: wp(10),
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: wp(24),
-  },
-  elevated: {
-    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
-  },
-  outlineShadow: {
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
   textOnly: { height: 'auto' as any, paddingVertical: wp(8) },
   disabled: { opacity: 0.4 },

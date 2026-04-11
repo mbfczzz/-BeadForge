@@ -5,6 +5,7 @@ import { Button, Input } from '../../components/common';
 import { BeadGrid, HEART_PATTERN } from '../../components/common/BeadGrid';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onSwitchToRegister: () => void; }
@@ -93,8 +94,7 @@ const s = StyleSheet.create({
   formCard: {
     marginHorizontal: wp(15), marginTop: -wp(28),
     borderRadius: wp(10), borderWidth: 1, padding: wp(22), paddingTop: wp(26),
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    ...shadow(2, 8, 0.08, '#000', 4),
   },
   formTitle: { fontSize: fp(22), fontWeight: '700', marginBottom: wp(4) },
   formSub: { fontSize: fp(13), marginBottom: wp(20), lineHeight: fp(19) },

@@ -1,5 +1,5 @@
-import React, { memo, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Platform } from 'react-native';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -46,27 +46,27 @@ function CustomTabBar({ state, navigation }: any) {
 }
 
 const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor }: any) => {
-  const opacity = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
-  const liftY = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, { toValue: focused ? 1 : 0.5, duration: 200, useNativeDriver: true }).start();
-  }, [focused]);
-
-  const hoverIn = useCallback(() => {
-    Animated.spring(liftY, { toValue: -wp(2), useNativeDriver: true, speed: 22, bounciness: 6 }).start();
-  }, [liftY]);
-  const hoverOut = useCallback(() => {
-    Animated.spring(liftY, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
-  }, [liftY]);
+  const [hovered, setHovered] = useState(false);
+  const color = focused ? activeColor : inactiveColor;
+  const op = focused ? 1 : hovered ? 0.7 : 0.5;
+  const ty = hovered ? -wp(2) : 0;
 
   return (
-    // @ts-ignore
-    <Pressable style={S.tab} onPress={onPress} onHoverIn={hoverIn} onHoverOut={hoverOut}>
-      <Animated.View style={[S.tabInner, { opacity, transform: [{ translateY: liftY }] }]}>
-        <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
-        <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
-      </Animated.View>
+    <Pressable
+      style={S.tab}
+      onPress={onPress}
+      // @ts-ignore
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+    >
+      <View style={[
+        S.tabInner,
+        { opacity: op, transform: [{ translateY: ty }] },
+        Platform.OS === 'web' && { transitionDuration: '0.2s' } as any,
+      ]}>
+        <Feather name={icon} size={wp(20)} color={color} />
+        <Text style={[S.tabLabel, { color }]}>{label}</Text>
+      </View>
     </Pressable>
   );
 });
@@ -82,6 +82,7 @@ const S = StyleSheet.create({
     flexDirection: 'row', paddingTop: wp(8),
     borderTopWidth: 1,
     ...Platform.select({
+      web: { boxShadow: '0 -1px 4px rgba(0,0,0,0.05)' } as any,
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.05, shadowRadius: 4 },
       android: { elevation: 4 },
     }),

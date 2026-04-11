@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 
 interface Props {
   pixels: string[][];
@@ -29,11 +29,10 @@ export const BeadGrid = memo<Props>(({ pixels, beadSize = 8, gap = 1, round = tr
             <View key={x} style={{
               width: beadSize, height: beadSize, borderRadius: r,
               backgroundColor: color,
-              // 底部微阴影增加立体感
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 0.5 },
-              shadowOpacity: 0.15,
-              shadowRadius: 0.5,
+              ...(Platform.OS === 'web'
+                ? { boxShadow: '0 0.5px 1px rgba(0,0,0,0.15)' }
+                : { shadowColor: '#000', shadowOffset: { width: 0, height: 0.5 }, shadowOpacity: 0.15, shadowRadius: 0.5 }
+              ) as any,
             }}>
               {/* 高光点 */}
               {glossy && beadSize >= 6 && (

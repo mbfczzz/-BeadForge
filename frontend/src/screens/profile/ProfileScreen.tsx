@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { Avatar, Button, PressableScale, HoverView } from '../../components/common';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LoginScreen } from './LoginScreen';
 import { RegisterScreen } from './RegisterScreen';
@@ -129,8 +130,7 @@ const S = StyleSheet.create({
   profileCard: {
     marginHorizontal: wp(15), marginTop: -wp(40),
     borderRadius: BorderRadius.lg, borderWidth: 1, padding: wp(20),
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    ...shadow(2, 8, 0.08, '#000', 4),
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   editBtn: { borderRadius: wp(12), paddingHorizontal: wp(16), paddingVertical: wp(8) },
@@ -147,8 +147,7 @@ const S = StyleSheet.create({
   menuCard: {
     marginHorizontal: wp(15), marginTop: wp(15),
     borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    ...shadow(1, 4, 0.06, '#000', 2),
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(16), paddingHorizontal: wp(18) },
   menuIconW: {

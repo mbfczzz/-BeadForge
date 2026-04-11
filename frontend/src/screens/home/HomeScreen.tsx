@@ -12,6 +12,7 @@ import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
 import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 
 const COL = getColumnCount();
 const GAP = wp(10);
@@ -279,12 +280,11 @@ const $ = StyleSheet.create({
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
   col: { flex: 1, gap: GAP },
 
-  // 卡片 - 1px边框 + 微阴影，小圆角10px
+  // 卡片
   card: {
     borderRadius: BorderRadius.lg, overflow: 'hidden',
     borderWidth: 1,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+    ...shadow(1, 4, 0.08, '#000', 2),
   },
   cardCover: { justifyContent: 'center', alignItems: 'center' },
   cardBody: { padding: wp(10) },
@@ -302,7 +302,6 @@ const $ = StyleSheet.create({
     width: wp(40), height: wp(40), borderRadius: wp(20),
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+    ...shadow(2, 6, 0.1, '#000', 3),
   },
 });
