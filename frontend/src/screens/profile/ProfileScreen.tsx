@@ -92,6 +92,7 @@ export const ProfileScreen: React.FC = () => {
             onPress={() => handleMenu(item.key)}
             style={[S.menuItem, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider + '60' }]}
             scale={0.985}
+            dataClass="menu"
           >
             <View style={[S.menuIconW, { backgroundColor: colors.accentLight }]}>
               <Feather name={item.icon} size={wp(17)} color={colors.accent} />

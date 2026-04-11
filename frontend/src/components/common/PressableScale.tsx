@@ -6,12 +6,13 @@ interface Props {
   onPress?: () => void;
   style?: ViewStyle;
   scale?: number;
+  dataClass?: string;
 }
 
 /**
- * 按压交互组件 - 缩放 + 透明度 + 弹性回弹
+ * 按压交互组件 - 缩放+透明度+弹性回弹+Web hover
  */
-export const PressableScale: React.FC<Props> = ({ children, onPress, style, scale = 0.97 }) => {
+export const PressableScale: React.FC<Props> = ({ children, onPress, style, scale = 0.97, dataClass }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
@@ -29,12 +30,16 @@ export const PressableScale: React.FC<Props> = ({ children, onPress, style, scal
     ]).start();
   }, [scaleAnim, opacityAnim]);
 
+  // Web dataSet for CSS hover
+  const webProps = dataClass ? { dataSet: { class: dataClass } } : {};
+
   return (
     <Pressable
       onPress={onPress}
       onPressIn={onIn}
       onPressOut={onOut}
-      android_ripple={Platform.OS === 'android' ? { color: 'rgba(99,102,241,0.08)', borderless: false } : undefined}
+      android_ripple={Platform.OS === 'android' ? { color: 'rgba(0,0,0,0.06)', borderless: false } : undefined}
+      {...webProps as any}
     >
       <Animated.View style={[style, { transform: [{ scale: scaleAnim }], opacity: opacityAnim }]}>
         {children}

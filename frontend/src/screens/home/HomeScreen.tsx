@@ -86,7 +86,7 @@ export const HomeScreen: React.FC = () => {
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <Text style={[$.navTitle, { color: colors.text }]}>BeadForge</Text>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} activeOpacity={0.6}>
+        <TouchableOpacity onPress={toggle} {...{ dataSet: { class: 'nav-btn' } }} style={[$.navBtn, { backgroundColor: colors.inputBg }]} activeOpacity={0.6}>
           <Feather name={dark ? 'sun' : 'moon'} size={fp(16)} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -113,7 +113,7 @@ export const HomeScreen: React.FC = () => {
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x/(BW+GAP)))}
           contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(10) }}>
           {BANNERS.map((b) => (
-            <TouchableOpacity key={b.id} activeOpacity={0.85} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
+            <TouchableOpacity key={b.id} activeOpacity={0.85} {...{ dataSet: { class: 'banner' } }} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
               <View style={$.bannerInner}>
                 <Text style={$.bannerT}>{b.title}</Text>
                 <Text style={$.bannerS}>{b.sub}</Text>
@@ -134,6 +134,7 @@ export const HomeScreen: React.FC = () => {
             const on = activeCat === idx;
             return (
               <TouchableOpacity key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)} activeOpacity={0.6}
+                {...{ dataSet: { class: 'cat' } }}
                 style={[$.cat, { backgroundColor: on ? colors.text : colors.surface, borderColor: on ? colors.text : colors.border }]}>
                 <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary }]}>{name}</Text>
               </TouchableOpacity>
@@ -182,7 +183,8 @@ export const HomeScreen: React.FC = () => {
       {/* FAB */}
       <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabAnim.interpolate({ inputRange:[0,1], outputRange:[wp(20),0] }) }] }]}>
         <TouchableOpacity style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} activeOpacity={0.7}>
+          onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} activeOpacity={0.7}
+          {...{ dataSet: { class: 'fab' } } as any}>
           <Feather name="chevron-up" size={fp(18)} color={colors.textSecondary} />
         </TouchableOpacity>
       </Animated.View>
@@ -199,7 +201,7 @@ const Card = memo(({ item }: { item: DesignItem }) => {
   const bs = Math.max(Math.floor(CARD_W / (pat[0]?.length||9)) - 1, wp(3));
 
   return (
-    <PressableScale style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} scale={0.98}>
+    <PressableScale style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} scale={0.98} dataClass="card">
       <View style={[$.cardCover, { height: h, backgroundColor: bg }]}>
         <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
       </View>

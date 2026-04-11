@@ -6,6 +6,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ThemeProvider, useTheme } from './src/theme';
+import { injectWebHoverStyles } from './src/utils/webHover';
+
+// 启动时注入 Web hover CSS
+injectWebHoverStyles();
 
 function AppContent() {
   const loadToken = useAuthStore((s) => s.loadToken);

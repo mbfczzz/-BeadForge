@@ -53,7 +53,7 @@ const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor
   }, [focused]);
 
   return (
-    <TouchableOpacity style={S.tab} onPress={onPress} activeOpacity={0.6}>
+    <TouchableOpacity style={S.tab} onPress={onPress} activeOpacity={0.6} {...{ dataSet: { class: 'tab' } } as any}>
       <Animated.View style={[S.tabInner, { opacity }]}>
         <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
         <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
