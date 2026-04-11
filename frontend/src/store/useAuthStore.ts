@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY, setOnUnauthorized } from '../api/client';
-import { authApi, LoginParams, RegisterParams, UserInfo } from '../api/auth';
-import { userApi, UserStats } from '../api/user';
+import { TOKEN_KEY } from '../api/client';
+import { LoginParams, RegisterParams, UserInfo } from '../api/auth';
+import { UserStats } from '../api/user';
 
 interface AuthState {
   token: string | null;
@@ -21,68 +21,79 @@ interface AuthState {
 
 const EMPTY_STATS: UserStats = { designCount: 0, likeCount: 0, followerCount: 0, followingCount: 0 };
 
-export const useAuthStore = create<AuthState>((set, get) => {
-  // 注入 401 回调
-  setOnUnauthorized(() => get().logout());
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-  return {
-    token: null,
-    user: null,
-    stats: EMPTY_STATS,
-    isLoading: true,
+/**
+ * Mock 模式 - 不连后端，本地模拟登录/注册
+ */
+export const useAuthStore = create<AuthState>((set, get) => ({
+  token: null,
+  user: null,
+  stats: EMPTY_STATS,
+  isLoading: true,
 
-    login: async (params) => {
-      const res = await authApi.login(params);
-      const { token, user } = res.data;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      set({ token, user });
-      get().fetchStats().catch(() => {});
-    },
+  login: async (params) => {
+    await delay(500);
+    // Mock: 任意用户名密码都可登录
+    const user: UserInfo = {
+      id: 1,
+      username: params.username,
+      nickname: params.username,
+      avatar: null,
+      email: null,
+      phone: null,
+    };
+    const token = 'mock-token-' + Date.now();
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    set({ token, user });
+    get().fetchStats();
+  },
 
-    register: async (params) => {
-      const res = await authApi.register(params);
-      const { token, user } = res.data;
-      await AsyncStorage.setItem(TOKEN_KEY, token);
-      set({ token, user });
-    },
+  register: async (params) => {
+    await delay(500);
+    const user: UserInfo = {
+      id: 1,
+      username: params.username,
+      nickname: params.nickname || params.username,
+      avatar: null,
+      email: params.email || null,
+      phone: null,
+    };
+    const token = 'mock-token-' + Date.now();
+    await AsyncStorage.setItem(TOKEN_KEY, token);
+    set({ token, user });
+  },
 
-    logout: async () => {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      set({ token: null, user: null, stats: EMPTY_STATS });
-    },
+  logout: async () => {
+    await AsyncStorage.removeItem(TOKEN_KEY);
+    set({ token: null, user: null, stats: EMPTY_STATS });
+  },
 
-    loadToken: async () => {
-      try {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
-        if (token) {
-          set({ token });
-          await get().fetchProfile();
-          get().fetchStats().catch(() => {});
-        }
-      } catch {
-        await get().logout();
-      } finally {
-        set({ isLoading: false });
+  loadToken: async () => {
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (token) {
+        set({
+          token,
+          user: { id: 1, username: 'beadlover', nickname: '拼豆爱好者', avatar: null, email: 'hi@beadforge.com', phone: null },
+        });
+        get().fetchStats();
       }
-    },
+    } catch {}
+    set({ isLoading: false });
+  },
 
-    fetchProfile: async () => {
-      const res = await userApi.getProfile();
-      set({ user: res.data });
-    },
+  fetchProfile: async () => {},
 
-    fetchStats: async () => {
-      try {
-        const res = await userApi.getStats();
-        set({ stats: res.data });
-      } catch {
-        // stats 接口可能暂未实现，静默失败
-      }
-    },
+  fetchStats: async () => {
+    await delay(300);
+    set({ stats: { designCount: 12, likeCount: 328, followerCount: 56, followingCount: 23 } });
+  },
 
-    updateProfile: async (data) => {
-      const res = await userApi.updateProfile(data);
-      set({ user: res.data });
-    },
-  };
-});
+  updateProfile: async (data) => {
+    await delay(400);
+    set((state) => ({
+      user: state.user ? { ...state.user, ...data } as UserInfo : null,
+    }));
+  },
+}));
