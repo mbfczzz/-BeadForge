@@ -1,6 +1,7 @@
 import React, { useRef, useCallback } from 'react';
-import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
+import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform } from 'react-native';
 import { FontSize, BorderRadius, Spacing, useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
 
 interface Props {
   title: string;
@@ -16,22 +17,29 @@ export const Button: React.FC<Props> = ({
 }) => {
   const { colors } = useTheme();
   const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   const onIn = useCallback(() => {
     if (variant === 'text') return;
-    Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 50 }).start();
-  }, [scale, variant]);
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, speed: 40, bounciness: 0 }),
+      Animated.timing(opacity, { toValue: 0.85, duration: 100, useNativeDriver: true }),
+    ]).start();
+  }, [scale, opacity, variant]);
 
   const onOut = useCallback(() => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 6 }).start();
-  }, [scale]);
+    Animated.parallel([
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 8 }),
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [scale, opacity]);
 
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
   const isOutline = variant === 'outline';
   const isText = variant === 'text';
 
-  const bg = isPrimary ? colors.accent : isDanger ? colors.error : isOutline ? 'transparent' : 'transparent';
+  const bg = isPrimary ? colors.accent : isDanger ? colors.error : isOutline ? colors.surface : 'transparent';
   const textColor = isPrimary || isDanger ? '#FFF' : isOutline ? colors.text : colors.accent;
 
   return (
@@ -40,27 +48,41 @@ export const Button: React.FC<Props> = ({
       onPressIn={onIn}
       onPressOut={onOut}
       disabled={disabled || loading}
+      android_ripple={!isText && Platform.OS === 'android' ? { color: 'rgba(255,255,255,0.15)' } : undefined}
     >
       <Animated.View style={[
-        styles.base,
-        { backgroundColor: bg, borderRadius: BorderRadius.md, transform: [{ scale }] },
-        isOutline && { borderWidth: 1, borderColor: colors.border },
-        isText && { height: 'auto' as any, paddingVertical: Spacing.sm },
-        (disabled || loading) && styles.disabled,
+        S.base,
+        { backgroundColor: bg, transform: [{ scale }], opacity },
+        (isPrimary || isDanger) && S.elevated,
+        isOutline && S.outlineShadow,
+        isText && S.textOnly,
+        (disabled || loading) && S.disabled,
         style,
       ]}>
         {loading ? (
           <ActivityIndicator color={textColor} size="small" />
         ) : (
-          <Text style={[styles.label, { color: textColor }]}>{title}</Text>
+          <Text style={[S.label, { color: textColor }]}>{title}</Text>
         )}
       </Animated.View>
     </Pressable>
   );
 };
 
-const styles = StyleSheet.create({
-  base: { height: 46, justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.lg },
+const S = StyleSheet.create({
+  base: {
+    height: wp(48), borderRadius: wp(14),
+    justifyContent: 'center', alignItems: 'center', paddingHorizontal: wp(24),
+  },
+  elevated: {
+    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+  },
+  outlineShadow: {
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
+  },
+  textOnly: { height: 'auto' as any, paddingVertical: wp(8) },
   disabled: { opacity: 0.4 },
-  label: { fontSize: FontSize.lg, fontWeight: '600' },
+  label: { fontSize: fp(15), fontWeight: '600' },
 });

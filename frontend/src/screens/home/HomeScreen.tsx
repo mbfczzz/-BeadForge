@@ -89,7 +89,7 @@ export const HomeScreen: React.FC = () => {
             <Feather name={dark ? 'sun' : 'moon'} size={wp(18)} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-        <View style={[$.searchBox, { backgroundColor: colors.inputBg }, searchFocused && { borderColor: colors.accent }]}>
+        <View style={[$.searchBox, { backgroundColor: colors.inputBg }, searchFocused && { borderColor: colors.accent, shadowColor: colors.accent, shadowOpacity: 0.15, shadowRadius: 8 }]}>
           <Feather name="search" size={wp(16)} color={searchFocused ? colors.accent : colors.textHint} />
           <TextInput
             style={[$.searchInput, { color: colors.text }]}
@@ -144,7 +144,7 @@ export const HomeScreen: React.FC = () => {
             const on = activeCat === idx;
             return (
               <TouchableOpacity key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)} activeOpacity={0.7}
-                style={[$.catChip, on ? { backgroundColor: colors.accent } : { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+                style={[$.catChip, { backgroundColor: on ? colors.accent : colors.surface }]}>
                 <Text style={[$.catT, { color: on ? '#FFF' : colors.textSecondary }]}>{name}</Text>
               </TouchableOpacity>
             );
@@ -198,7 +198,7 @@ const Card = memo(({ item }: { item: DesignItem }) => {
   const bs = Math.max(Math.floor(CARD_W / (pat[0]?.length || 9)) - 1, wp(4));
 
   return (
-    <PressableScale style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} scale={0.97}>
+    <PressableScale style={[$.card, { backgroundColor: colors.cardBg }]} scale={0.96}>
       <View style={[$.cardCover, { height: h, backgroundColor: bg }]}>
         <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
       </View>
@@ -271,7 +271,11 @@ const $ = StyleSheet.create({
 
   // ---- 分类标签 ----
   catRow: { paddingHorizontal: PAD, paddingTop: wp(20), paddingBottom: wp(8), gap: wp(8) },
-  catChip: { paddingHorizontal: wp(18), paddingVertical: wp(8), borderRadius: wp(20) },
+  catChip: {
+    paddingHorizontal: wp(18), paddingVertical: wp(8), borderRadius: wp(20),
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+  },
   catT: { fontSize: fp(13), fontWeight: '600' },
 
   // ---- 作品广场标题 ----
@@ -286,8 +290,12 @@ const $ = StyleSheet.create({
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: wp(12) },
   col: { flex: 1, gap: wp(12) },
 
-  // ---- 卡片 ----
-  card: { borderRadius: wp(16), overflow: 'hidden', borderWidth: 1 },
+  // ---- 卡片 ---- 去掉硬边框，用阴影代替
+  card: {
+    borderRadius: wp(16), overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 3,
+  },
   cardCover: { justifyContent: 'center', alignItems: 'center' },
   cardBody: { padding: wp(12), paddingTop: wp(10) },
   cardTitle: { fontSize: fp(13), fontWeight: '600', marginBottom: wp(8) },

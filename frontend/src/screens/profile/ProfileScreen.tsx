@@ -59,7 +59,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* 用户卡片 */}
-      <View style={[S.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[S.profileCard, { backgroundColor: colors.surface }]}>
         <View style={S.avatarRow}>
           <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(68)} />
           <TouchableOpacity
@@ -74,7 +74,7 @@ export const ProfileScreen: React.FC = () => {
         {user?.email && <Text style={[S.email, { color: colors.textSecondary }]}>{user.email}</Text>}
 
         {/* 统计 */}
-        <View style={[S.statsRow, { borderTopColor: colors.divider }]}>
+        <View style={[S.statsRow, { borderTopColor: colors.divider + '80' }]}>
           {STATS.map((s) => (
             <TouchableOpacity key={s.l} style={S.statItem} activeOpacity={0.7}>
               <Text style={[S.statV, { color: s.c }]}>{s.v}</Text>
@@ -85,12 +85,12 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* 菜单 */}
-      <View style={[S.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[S.menuCard, { backgroundColor: colors.surface }]}>
         {MENU.map((item, idx) => (
           <PressableScale
             key={item.key}
             onPress={() => handleMenu(item.key)}
-            style={[S.menuItem, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.divider }]}
+            style={[S.menuItem, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider + '60' }]}
             scale={0.985}
           >
             <View style={[S.menuIconW, { backgroundColor: colors.accentLight }]}>
@@ -126,9 +126,9 @@ const S = StyleSheet.create({
 
   profileCard: {
     marginHorizontal: wp(16), marginTop: -wp(48),
-    borderRadius: wp(20), borderWidth: 1, padding: wp(24),
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 6, elevation: 5,
+    borderRadius: wp(20), padding: wp(24),
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 6,
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   editBtn: { borderRadius: wp(12), paddingHorizontal: wp(16), paddingVertical: wp(8) },
@@ -144,9 +144,9 @@ const S = StyleSheet.create({
 
   menuCard: {
     marginHorizontal: wp(16), marginTop: wp(16),
-    borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04, shadowRadius: 4, elevation: 2,
+    borderRadius: wp(20), overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 12, elevation: 3,
   },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(16), paddingHorizontal: wp(18) },
   menuIconW: {

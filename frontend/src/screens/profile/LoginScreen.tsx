@@ -92,10 +92,9 @@ const s = StyleSheet.create({
 
   formCard: {
     marginHorizontal: wp(16), marginTop: -wp(28),
-    borderRadius: wp(18), borderWidth: 1,
-    padding: wp(24), paddingTop: wp(28),
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 5,
+    borderRadius: wp(20), padding: wp(24), paddingTop: wp(28),
+    shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1, shadowRadius: 20, elevation: 6,
   },
   formTitle: { fontSize: fp(22), fontWeight: '700', marginBottom: wp(4) },
   formSub: { fontSize: fp(13), marginBottom: wp(20), lineHeight: fp(19) },

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { FontSize, BorderRadius, useTheme } from '../../theme';
+import { FontSize, useTheme } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
 
 interface Props {
@@ -20,25 +20,32 @@ export const Input: React.FC<Props> = ({
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
-  const borderAnim = useRef(new Animated.Value(0)).current;
+  const focusAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(borderAnim, {
-      toValue: focused ? 1 : 0, duration: 200, useNativeDriver: false,
-    }).start();
+    Animated.timing(focusAnim, { toValue: focused ? 1 : 0, duration: 200, useNativeDriver: false }).start();
   }, [focused]);
 
-  const borderColor = error
-    ? colors.error
-    : (borderAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [colors.border, colors.accent],
-      }) as any);
+  const bgColor = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.inputBg, colors.surface],
+  });
+
+  const shadowOp = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.12],
+  });
 
   return (
     <View style={S.wrap}>
-      {label && <Text style={[S.label, { color: focused ? colors.accent : colors.textSecondary }]}>{label}</Text>}
-      <Animated.View style={[S.box, { backgroundColor: colors.inputBg, borderColor }]}>
+      {label && (
+        <Text style={[S.label, { color: focused ? colors.accent : colors.textSecondary }]}>{label}</Text>
+      )}
+      <Animated.View style={[
+        S.box,
+        { backgroundColor: bgColor, shadowOpacity: shadowOp, shadowColor: colors.accent },
+        error && { shadowColor: colors.error, shadowOpacity: 0.15 },
+      ]}>
         <TextInput
           style={[S.input, { color: colors.text }]}
           placeholder={placeholder}
@@ -63,14 +70,17 @@ export const Input: React.FC<Props> = ({
 };
 
 const S = StyleSheet.create({
-  wrap: { marginBottom: wp(14) },
-  label: { fontSize: fp(12), marginBottom: wp(6), fontWeight: '600' },
+  wrap: { marginBottom: wp(16) },
+  label: { fontSize: fp(12), marginBottom: wp(8), fontWeight: '600' },
   box: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: wp(12), borderWidth: 1.5,
+    borderRadius: wp(14),
+    // 无边框，用阴影替代
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8, elevation: 2,
   },
-  input: { flex: 1, height: wp(48), paddingHorizontal: wp(14), fontSize: fp(15) },
+  input: { flex: 1, height: wp(50), paddingHorizontal: wp(16), fontSize: fp(15) },
   eye: { paddingHorizontal: wp(14) },
   eyeT: { fontSize: fp(12), fontWeight: '500' },
-  err: { fontSize: fp(11), marginTop: wp(4), fontWeight: '500' },
+  err: { fontSize: fp(11), marginTop: wp(6), fontWeight: '500' },
 });
