@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
-import { StateView, PressableScale, CardSkeleton } from '../../components/common';
+import { StateView, PressableScale, CardSkeleton, HoverView } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
@@ -86,9 +86,9 @@ export const HomeScreen: React.FC = () => {
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <Text style={[$.navTitle, { color: colors.text }]}>BeadForge</Text>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity onPress={toggle} {...{ dataSet: { class: 'nav-btn' } }} style={[$.navBtn, { backgroundColor: colors.inputBg }]} activeOpacity={0.6}>
+        <HoverView onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
           <Feather name={dark ? 'sun' : 'moon'} size={fp(16)} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </HoverView>
       </View>
 
       <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={80}
@@ -113,7 +113,7 @@ export const HomeScreen: React.FC = () => {
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x/(BW+GAP)))}
           contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(10) }}>
           {BANNERS.map((b) => (
-            <TouchableOpacity key={b.id} activeOpacity={0.85} {...{ dataSet: { class: 'banner' } }} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
+            <HoverView key={b.id} hoverScale={1.02} hoverLift={4} style={[$.banner, { width: BW, backgroundColor: b.bg, marginRight: GAP }]}>
               <View style={$.bannerInner}>
                 <Text style={$.bannerT}>{b.title}</Text>
                 <Text style={$.bannerS}>{b.sub}</Text>
@@ -121,7 +121,7 @@ export const HomeScreen: React.FC = () => {
               <View style={$.bannerArt}>
                 <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={isSmall?7:wp(8)} gap={wp(1)} round glossy={false} />
               </View>
-            </TouchableOpacity>
+            </HoverView>
           ))}
         </ScrollView>
         <View style={$.dots}>
@@ -133,19 +133,19 @@ export const HomeScreen: React.FC = () => {
           {(catExpanded ? CATS : CATS.slice(0, CAT_FOLD_LIMIT)).map((name, idx) => {
             const on = activeCat === idx;
             return (
-              <TouchableOpacity key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)} activeOpacity={0.6}
-                {...{ dataSet: { class: 'cat' } }}
+              <HoverView key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)}
+                hoverScale={1.05} hoverLift={1}
                 style={[$.cat, { backgroundColor: on ? colors.text : colors.surface, borderColor: on ? colors.text : colors.border }]}>
                 <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary }]}>{name}</Text>
-              </TouchableOpacity>
+              </HoverView>
             );
           })}
           {CATS.length > CAT_FOLD_LIMIT && (
-            <TouchableOpacity onPress={() => setCatExpanded(!catExpanded)} activeOpacity={0.6}
+            <HoverView onPress={() => setCatExpanded(!catExpanded)} hoverScale={1.05} hoverLift={1}
               style={[$.cat, $.catToggle, { borderColor: colors.border }]}>
               <Text style={[$.catT, { color: colors.textHint }]}>{catExpanded ? '收起' : `展开 +${CATS.length - CAT_FOLD_LIMIT}`}</Text>
               <Feather name={catExpanded ? 'chevron-up' : 'chevron-down'} size={fp(12)} color={colors.textHint} style={{ marginLeft: wp(3) }} />
-            </TouchableOpacity>
+            </HoverView>
           )}
         </View>
 
@@ -182,11 +182,10 @@ export const HomeScreen: React.FC = () => {
 
       {/* FAB */}
       <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabAnim.interpolate({ inputRange:[0,1], outputRange:[wp(20),0] }) }] }]}>
-        <TouchableOpacity style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} activeOpacity={0.7}
-          {...{ dataSet: { class: 'fab' } } as any}>
+        <HoverView style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} hoverScale={1.12} hoverLift={2}>
           <Feather name="chevron-up" size={fp(18)} color={colors.textSecondary} />
-        </TouchableOpacity>
+        </HoverView>
       </Animated.View>
     </SafeAreaView>
   );

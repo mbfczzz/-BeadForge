@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -47,14 +47,25 @@ function CustomTabBar({ state, navigation }: any) {
 
 const TabBtn = memo(({ icon, label, focused, onPress, activeColor, inactiveColor }: any) => {
   const opacity = useRef(new Animated.Value(focused ? 1 : 0.5)).current;
+  const liftY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(opacity, { toValue: focused ? 1 : 0.5, duration: 200, useNativeDriver: true }).start();
   }, [focused]);
 
+  const onEnter = useCallback(() => {
+    Animated.spring(liftY, { toValue: -wp(2), useNativeDriver: true, speed: 22, bounciness: 6 }).start();
+  }, [liftY]);
+  const onLeave = useCallback(() => {
+    Animated.spring(liftY, { toValue: 0, useNativeDriver: true, speed: 16, bounciness: 4 }).start();
+  }, [liftY]);
+
+  const webProps = Platform.OS === 'web' ? { onMouseEnter: onEnter, onMouseLeave: onLeave } : {};
+
   return (
-    <TouchableOpacity style={S.tab} onPress={onPress} activeOpacity={0.6} {...{ dataSet: { class: 'tab' } } as any}>
-      <Animated.View style={[S.tabInner, { opacity }]}>
+    <TouchableOpacity style={[S.tab, { cursor: 'pointer' } as any]} onPress={onPress} activeOpacity={0.6}
+      {...webProps as any}>
+      <Animated.View style={[S.tabInner, { opacity, transform: [{ translateY: liftY }] }]}>
         <Feather name={icon} size={wp(20)} color={focused ? activeColor : inactiveColor} />
         <Text style={[S.tabLabel, { color: focused ? activeColor : inactiveColor }]}>{label}</Text>
       </Animated.View>

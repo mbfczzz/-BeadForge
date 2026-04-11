@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Avatar, Button, PressableScale } from '../../components/common';
+import { Avatar, Button, PressableScale, HoverView } from '../../components/common';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -62,12 +62,13 @@ export const ProfileScreen: React.FC = () => {
       <View style={[S.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={S.avatarRow}>
           <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(68)} />
-          <TouchableOpacity
+          <HoverView
             style={[S.editBtn, { backgroundColor: colors.accent }]}
             onPress={() => setSubPage('editProfile')}
+            hoverScale={1.06} hoverLift={0}
           >
             <Text style={S.editBtnT}>编辑资料</Text>
-          </TouchableOpacity>
+          </HoverView>
         </View>
         <Text style={[S.nick, { color: colors.text }]}>{user?.nickname || user?.username}</Text>
         <Text style={[S.uname, { color: colors.textHint }]}>@{user?.username}</Text>

@@ -8,15 +8,12 @@ import { useAuthStore } from './src/store/useAuthStore';
 import { ThemeProvider, useTheme } from './src/theme';
 import { injectWebHoverStyles } from './src/utils/webHover';
 
-// 启动时注入 Web hover CSS
-injectWebHoverStyles();
-
 function AppContent() {
   const loadToken = useAuthStore((s) => s.loadToken);
   const isLoading = useAuthStore((s) => s.isLoading);
   const { colors, dark } = useTheme();
 
-  useEffect(() => { loadToken(); }, []);
+  useEffect(() => { loadToken(); injectWebHoverStyles(); }, []);
 
   if (isLoading) {
     return (
