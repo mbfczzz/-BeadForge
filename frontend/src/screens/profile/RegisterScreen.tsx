@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input } from '../../components/common';
 import { Spacing, FontSize, useTheme } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -41,7 +42,8 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.text }]}>创建账号</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>加入 BeadForge 社区</Text>
@@ -60,6 +62,7 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
         <Button title="已有账号？登录" onPress={onSwitchToLogin} variant="text" />
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 

@@ -1,26 +1,28 @@
+import { wp, fp } from '../utils/responsive';
+
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: wp(4),
+  sm: wp(8),
+  md: wp(16),
+  lg: wp(24),
+  xl: wp(32),
+  xxl: wp(48),
 };
 
 export const FontSize = {
-  xs: 11,
-  sm: 12,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  xxl: 22,
-  title: 20,
+  xs: fp(11),
+  sm: fp(12),
+  md: fp(14),
+  lg: fp(16),
+  xl: fp(18),
+  xxl: fp(22),
+  title: fp(20),
 };
 
 export const BorderRadius = {
-  sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 20,
+  sm: wp(6),
+  md: wp(10),
+  lg: wp(14),
+  xl: wp(20),
   full: 9999,
 };

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { StateView } from '../../components/common';
 import { BeadGrid, HEART_PATTERN, CAT_PATTERN, MUSHROOM_PATTERN, FLOWER_PATTERN, STAR_PATTERN } from '../../components/common/BeadGrid';
@@ -31,7 +32,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>← 返回</Text></TouchableOpacity>
         <Text style={[styles.navTitle, { color: colors.text }]}>我的作品</Text>
@@ -47,7 +48,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
         onEndReachedThreshold={0.3}
         ListEmptyComponent={myLoading ? <StateView loading /> : <StateView empty emptyText="还没有作品" />}
       />
-    </View>
+    </SafeAreaView>
   );
 };
 

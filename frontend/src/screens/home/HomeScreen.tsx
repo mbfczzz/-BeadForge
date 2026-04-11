@@ -1,20 +1,26 @@
 import React, { useEffect, useCallback, useRef, useState, memo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Dimensions, RefreshControl, TextInput, Animated,
+  RefreshControl, TextInput, Animated,
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { StateView, PressableScale, CardSkeleton } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
+import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall, BOTTOM_SAFE_H } from '../../utils/responsive';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const COL_COUNT = SCREEN_W > 600 ? 4 : SCREEN_W > 400 ? 3 : 2;
-const GAP = 8;
-const PAD = 12;
-const CARD_W = (SCREEN_W - PAD * 2 - GAP * (COL_COUNT - 1)) / COL_COUNT;
+const COL_COUNT = getColumnCount();
+const GAP = wp(8);
+const PAD = wp(12);
+const CARD_W = getCardWidth(PAD, GAP, COL_COUNT);
+const BANNER_W = getBannerWidth(PAD);
+const BANNER_H = wp(140);
+const NAV_H = wp(48);
+const SEARCH_H = wp(36);
+const TAB_BOTTOM = wp(74) + BOTTOM_SAFE_H;
 
 const CARD_BGS_L = ['#FFF0F2','#FFF8ED','#EDFAFF','#F0FFF4','#FFF0FA','#FFFDE7','#F0F0FF','#FFF5EE'];
 const CARD_BGS_D = ['#2A1520','#2A2518','#152028','#182A1C','#2A1528','#2A2A15','#1A1A30','#2A2018'];
@@ -52,14 +58,13 @@ export const HomeScreen: React.FC = () => {
     const t = setInterval(() => {
       setBannerIdx((prev) => {
         const next = (prev + 1) % BANNERS.length;
-        bannerRef.current?.scrollTo({ x: next * (SCREEN_W - PAD * 2 + GAP), animated: true });
+        bannerRef.current?.scrollTo({ x: next * (BANNER_W + GAP), animated: true });
         return next;
       });
     }, 5000);
     return () => clearInterval(t);
   }, []);
 
-  // FAB 动画
   useEffect(() => {
     Animated.spring(fabAnim, { toValue: showTop ? 1 : 0, useNativeDriver: true, speed: 20 }).start();
   }, [showTop, fabAnim]);
@@ -88,22 +93,22 @@ export const HomeScreen: React.FC = () => {
   const columns: DesignItem[][] = Array.from({ length: COL_COUNT }, () => []);
   filtered.forEach((item, i) => columns[i % COL_COUNT].push(item));
 
-  const bannerW = SCREEN_W - PAD * 2;
   const isFirstLoad = loading && designs.length === 0;
+  const beadSizeBanner = isSmall ? 8 : wp(10);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* 导航 */}
       <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <Text style={[styles.logo, { color: colors.accent }]}>🧩</Text>
         <Text style={[styles.logoText, { color: colors.text }]}>BeadForge</Text>
         <View style={{ flex: 1 }} />
         <TouchableOpacity style={[styles.themeBtn, { backgroundColor: colors.inputBg }]} onPress={toggle}>
-          <Text style={{ fontSize: 15 }}>{dark ? '☀️' : '🌙'}</Text>
+          <Text style={{ fontSize: fp(15) }}>{dark ? '☀️' : '🌙'}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 搜索栏 */}
+      {/* 搜索 */}
       <View style={[styles.searchBar, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <View style={[
           styles.searchBox,
@@ -142,12 +147,12 @@ export const HomeScreen: React.FC = () => {
           <ScrollView
             ref={bannerRef}
             horizontal pagingEnabled showsHorizontalScrollIndicator={false}
-            snapToInterval={bannerW + GAP} decelerationRate="fast"
-            onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (bannerW + GAP)))}
+            snapToInterval={BANNER_W + GAP} decelerationRate="fast"
+            onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BANNER_W + GAP)))}
             contentContainerStyle={{ paddingHorizontal: PAD }}
           >
             {BANNERS.map((b) => (
-              <PressableScale key={b.id} style={[styles.banner, { width: bannerW, backgroundColor: b.c1, marginRight: GAP }]}>
+              <PressableScale key={b.id} style={[styles.banner, { width: BANNER_W, backgroundColor: b.c1, marginRight: GAP }]}>
                 <View style={[StyleSheet.absoluteFill, styles.bannerGrad, { backgroundColor: b.c2, opacity: 0.4 }]} />
                 <View style={styles.bannerLeft}>
                   <Text style={styles.bannerTitle}>{b.title}</Text>
@@ -158,7 +163,7 @@ export const HomeScreen: React.FC = () => {
                 </View>
                 <View style={styles.bannerRight}>
                   <View style={styles.bannerArt}>
-                    <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={10} gap={1.5} round />
+                    <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={beadSizeBanner} gap={wp(1.5)} round />
                   </View>
                 </View>
               </PressableScale>
@@ -175,7 +180,7 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* 分类标签 */}
+        {/* 分类 */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           {NAV_ITEMS.map((name, idx) => {
             const active = activeNav === idx;
@@ -192,7 +197,7 @@ export const HomeScreen: React.FC = () => {
           })}
         </ScrollView>
 
-        {/* 标题栏 */}
+        {/* 标题 */}
         <View style={styles.sectionRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>作品广场</Text>
           {filtered.length > 0 && (
@@ -202,12 +207,11 @@ export const HomeScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 骨架屏加载 */}
         {isFirstLoad && (
           <View style={styles.grid}>
             {Array.from({ length: COL_COUNT }).map((_, ci) => (
               <View key={ci} style={styles.column}>
-                {[0,1,2].map((j) => <CardSkeleton key={j} height={140 + j * 30} />)}
+                {[0,1,2].map((j) => <CardSkeleton key={j} height={wp(140 + j * 30)} />)}
               </View>
             ))}
           </View>
@@ -216,7 +220,6 @@ export const HomeScreen: React.FC = () => {
         {error && designs.length === 0 && <StateView error={error} onRetry={onRefresh} />}
         {!loading && !error && filtered.length === 0 && <StateView empty emptyText="暂无相关作品" />}
 
-        {/* 瀑布流 */}
         {filtered.length > 0 && (
           <View style={styles.grid}>
             {columns.map((col, ci) => (
@@ -231,11 +234,12 @@ export const HomeScreen: React.FC = () => {
         {!hasMore && designs.length > 0 && (
           <Text style={[styles.endText, { color: colors.textHint }]}>— 已加载全部 {filtered.length} 个作品 —</Text>
         )}
-        <View style={{ height: 90 }} />
+        <View style={{ height: TAB_BOTTOM }} />
       </ScrollView>
 
-      {/* 回顶部 FAB */}
+      {/* FAB */}
       <Animated.View style={[styles.fab, {
+        bottom: TAB_BOTTOM + wp(8),
         opacity: fabAnim,
         transform: [{ scale: fabAnim }, { translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
       }]}>
@@ -247,23 +251,21 @@ export const HomeScreen: React.FC = () => {
           <Text style={[styles.fabIcon, { color: colors.textSecondary }]}>↑</Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+    </SafeAreaView>
   );
 };
 
-/** 画廊卡片 - 按压缩放 + memo */
 const GalleryCard = memo(({ item }: { item: DesignItem }) => {
   const { colors, dark } = useTheme();
   const pattern = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
-  const cardH = 120 + (item.id * 37) % 80;
+  const cardH = wp(120) + (item.id * 37) % wp(80);
   const bg = (dark ? CARD_BGS_D : CARD_BGS_L)[item.id % CARD_BGS_L.length];
-  const beadSize = Math.max(Math.floor(CARD_W / (pattern[0]?.length || 9)) - 1, 4);
+  const beadSize = Math.max(Math.floor(CARD_W / (pattern[0]?.length || 9)) - 1, wp(4));
 
   return (
     <PressableScale style={[styles.card, { backgroundColor: colors.cardBg }]} scale={0.96}>
       <View style={[styles.cardCover, { height: cardH, backgroundColor: bg }]}>
         <BeadGrid pixels={pattern} beadSize={beadSize} gap={1} round />
-        {/* 底部渐变蒙层 */}
         <View style={styles.cardGrad} />
       </View>
       <View style={styles.cardInfo}>
@@ -273,7 +275,7 @@ const GalleryCard = memo(({ item }: { item: DesignItem }) => {
             @{item.authorName || '创作者'}
           </Text>
           <View style={styles.cardLike}>
-            <Text style={{ fontSize: 10 }}>❤</Text>
+            <Text style={{ fontSize: fp(10) }}>❤</Text>
             <Text style={[styles.likeNum, { color: colors.textHint }]}>{item.likeCount}</Text>
           </View>
         </View>
@@ -293,54 +295,55 @@ const styles = StyleSheet.create({
 
   nav: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: PAD, height: 48, borderBottomWidth: 1,
+    paddingHorizontal: PAD, height: NAV_H, borderBottomWidth: 1,
   },
-  logo: { fontSize: 22 },
-  logoText: { fontSize: FontSize.lg, fontWeight: '700', marginLeft: 6 },
-  themeBtn: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
+  logo: { fontSize: fp(22) },
+  logoText: { fontSize: FontSize.lg, fontWeight: '700', marginLeft: wp(6) },
+  themeBtn: { width: wp(34), height: wp(34), borderRadius: wp(17), justifyContent: 'center', alignItems: 'center' },
 
-  searchBar: { paddingHorizontal: PAD, paddingTop: 8, paddingBottom: 10, borderBottomWidth: 1 },
+  searchBar: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(10), borderBottomWidth: 1 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: BorderRadius.md, paddingHorizontal: 12, height: 36,
+    borderRadius: BorderRadius.md, paddingHorizontal: wp(12), height: SEARCH_H,
     borderWidth: 1.5, borderColor: 'transparent',
   },
-  searchIcon: { fontSize: 13, marginRight: 6 },
+  searchIcon: { fontSize: fp(13), marginRight: wp(6) },
   searchInput: { flex: 1, fontSize: FontSize.md, padding: 0 },
-  clearBtn: { padding: 2 },
-  clearCircle: { width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center' },
-  clearX: { fontSize: 10, color: '#FFF', fontWeight: '700' },
-  chips: { gap: 6, paddingHorizontal: PAD, paddingVertical: 12 },
-  chip: { paddingHorizontal: 14, paddingVertical: 5, borderRadius: BorderRadius.full },
-  chipText: { fontSize: FontSize.sm, fontWeight: '600' },
+  clearBtn: { padding: wp(2) },
+  clearCircle: { width: wp(18), height: wp(18), borderRadius: wp(9), justifyContent: 'center', alignItems: 'center' },
+  clearX: { fontSize: fp(10), color: '#FFF', fontWeight: '700' },
 
-  bannerArea: { marginTop: 12, marginBottom: 4 },
+  bannerArea: { marginTop: wp(12), marginBottom: wp(4) },
   banner: {
-    height: 140, borderRadius: BorderRadius.lg, overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center', paddingLeft: 20,
+    height: BANNER_H, borderRadius: BorderRadius.lg, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', paddingLeft: wp(20),
   },
   bannerGrad: { borderTopRightRadius: 200, borderBottomLeftRadius: 200 },
   bannerLeft: { flex: 1, zIndex: 1 },
   bannerTitle: { fontSize: FontSize.xxl, fontWeight: '800', color: '#FFF' },
-  bannerDesc: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+  bannerDesc: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.85)', marginTop: wp(4) },
   bannerBtn: {
-    alignSelf: 'flex-start', marginTop: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 14, paddingVertical: 5,
+    alignSelf: 'flex-start', marginTop: wp(12),
+    backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: wp(14), paddingVertical: wp(5),
     borderRadius: BorderRadius.full, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
   },
   bannerBtnText: { fontSize: FontSize.xs, color: '#FFF', fontWeight: '600' },
-  bannerRight: { width: 120, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
-  bannerArt: { backgroundColor: 'rgba(255,255,255,0.15)', padding: 10, borderRadius: BorderRadius.lg },
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: 10, gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  dotActive: { width: 20, borderRadius: 3 },
+  bannerRight: { width: wp(120), alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  bannerArt: { backgroundColor: 'rgba(255,255,255,0.15)', padding: wp(10), borderRadius: BorderRadius.lg },
+  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(10), gap: wp(5) },
+  dot: { width: wp(6), height: wp(6), borderRadius: wp(3) },
+  dotActive: { width: wp(20), borderRadius: wp(3) },
+
+  chips: { gap: wp(6), paddingHorizontal: PAD, paddingVertical: wp(12) },
+  chip: { paddingHorizontal: wp(14), paddingVertical: wp(5), borderRadius: BorderRadius.full },
+  chipText: { fontSize: FontSize.sm, fontWeight: '600' },
 
   sectionRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: PAD, marginTop: 16, marginBottom: 10, gap: 8,
+    paddingHorizontal: PAD, marginBottom: wp(10), gap: wp(8),
   },
   sectionTitle: { fontSize: FontSize.title, fontWeight: '700' },
-  countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full },
+  countBadge: { paddingHorizontal: wp(8), paddingVertical: wp(2), borderRadius: BorderRadius.full },
   countText: { fontSize: FontSize.xs, fontWeight: '700' },
 
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
@@ -353,28 +356,28 @@ const styles = StyleSheet.create({
   },
   cardCover: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   cardGrad: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 30,
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: wp(30),
     backgroundColor: 'rgba(0,0,0,0.04)',
   },
-  cardInfo: { padding: 8, paddingTop: 6 },
-  cardTitle: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: 3 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  cardInfo: { padding: wp(8), paddingTop: wp(6) },
+  cardTitle: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: wp(3) },
+  cardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(4) },
   cardAuthor: { fontSize: FontSize.xs, flex: 1 },
-  cardLike: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cardLike: { flexDirection: 'row', alignItems: 'center', gap: wp(2) },
   likeNum: { fontSize: FontSize.xs },
   cardBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  tag: { paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 4 },
-  tagT: { fontSize: 10 },
-  cardId: { fontSize: 10 },
+  tag: { paddingHorizontal: wp(6), paddingVertical: wp(1.5), borderRadius: wp(4) },
+  tagT: { fontSize: fp(10) },
+  cardId: { fontSize: fp(10) },
 
   endText: { textAlign: 'center', fontSize: FontSize.sm, paddingVertical: Spacing.lg },
 
-  fab: { position: 'absolute', right: 14, bottom: 16 },
+  fab: { position: 'absolute', right: wp(14) },
   fabBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: wp(40), height: wp(40), borderRadius: wp(20),
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12, shadowRadius: 8, elevation: 5,
   },
-  fabIcon: { fontSize: 16, fontWeight: '700' },
+  fabIcon: { fontSize: fp(16), fontWeight: '700' },
 });

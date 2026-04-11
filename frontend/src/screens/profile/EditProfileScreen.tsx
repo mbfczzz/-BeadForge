@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Button, Input } from '../../components/common';
 import { Spacing, FontSize, useTheme } from '../../theme';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -26,7 +27,8 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>取消</Text></TouchableOpacity>
         <Text style={[styles.navTitle, { color: colors.text }]}>编辑资料</Text>
@@ -42,6 +44,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
         <Input label="手机号" placeholder="选填" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 

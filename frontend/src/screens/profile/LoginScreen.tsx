@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input } from '../../components/common';
 import { Spacing, FontSize, useTheme } from '../../theme';
+import { fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onSwitchToRegister: () => void; }
@@ -32,7 +34,8 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[styles.logo, { color: colors.accent }]}>🧩</Text>
         <Text style={[styles.title, { color: colors.text }]}>登录 BeadForge</Text>
@@ -48,13 +51,14 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'center', padding: Spacing.xl },
-  logo: { fontSize: 56, textAlign: 'center', marginBottom: Spacing.md },
+  logo: { fontSize: fp(56), textAlign: 'center', marginBottom: Spacing.md },
   title: { fontSize: FontSize.xxl, fontWeight: '700', textAlign: 'center' },
   subtitle: { fontSize: FontSize.md, textAlign: 'center', marginTop: 6, marginBottom: Spacing.xl },
   form: {},

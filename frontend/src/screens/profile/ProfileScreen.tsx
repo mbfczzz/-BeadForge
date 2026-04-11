@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Button, PressableScale } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
+import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 import { LoginScreen } from './LoginScreen';
 import { RegisterScreen } from './RegisterScreen';
@@ -157,5 +159,5 @@ const styles = StyleSheet.create({
   menuArrow: { fontSize: 20 },
 
   logoutWrap: { paddingHorizontal: 12, paddingTop: Spacing.lg },
-  footer: { textAlign: 'center', fontSize: FontSize.xs, paddingTop: Spacing.md, paddingBottom: 90 },
+  footer: { textAlign: 'center', fontSize: FontSize.xs, paddingTop: Spacing.md, paddingBottom: wp(74) + BOTTOM_SAFE_H + wp(20) },
 });
