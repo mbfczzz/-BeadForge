@@ -21,11 +21,11 @@ export const FontSize = {
   title: fp(18),
 };
 
-/** moely 圆角 - 小圆角风格 */
+/** moely 圆角 - 柔和圆角风格 */
 export const BorderRadius = {
-  sm: wp(4),
-  md: wp(8),
-  lg: wp(10),
-  xl: wp(15),
+  sm: wp(6),
+  md: wp(10),
+  lg: wp(14),
+  xl: wp(18),
   full: wp(50),
 };

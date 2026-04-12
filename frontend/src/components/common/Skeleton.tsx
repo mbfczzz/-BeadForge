@@ -50,7 +50,7 @@ export const CardSkeleton: React.FC<{ height?: number }> = ({ height = 180 }) =>
 };
 
 const sk = StyleSheet.create({
-  card: { borderRadius: BorderRadius.md, overflow: 'hidden', marginBottom: wp(8) },
-  info: { padding: wp(10) },
+  card: { borderRadius: BorderRadius.lg, overflow: 'hidden', marginBottom: wp(10) },
+  info: { paddingHorizontal: wp(12), paddingTop: wp(10), paddingBottom: wp(12) },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: wp(10) },
 });

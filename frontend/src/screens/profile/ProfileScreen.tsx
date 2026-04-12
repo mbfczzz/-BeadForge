@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Avatar, Button, PressableScale, HoverView } from '../../components/common';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
@@ -14,13 +14,13 @@ import { MyDesignsScreen } from './MyDesignsScreen';
 
 type SubPage = 'none' | 'editProfile' | 'myDesigns';
 
-const MENU: { key: string; label: string; icon: keyof typeof Feather.glyphMap; desc: string }[] = [
-  { key: 'myDesigns', label: '我的作品', icon: 'grid', desc: '管理已创作的拼豆图案' },
-  { key: 'myDrafts', label: '草稿箱', icon: 'edit-3', desc: '未完成的创作' },
-  { key: 'myFavorites', label: '我的收藏', icon: 'bookmark', desc: '收藏的优质图案' },
-  { key: 'myLikes', label: '我的点赞', icon: 'heart', desc: '点赞过的作品' },
-  { key: 'settings', label: '设置', icon: 'settings', desc: '偏好和账号设置' },
-  { key: 'about', label: '关于', icon: 'info', desc: 'BeadForge v1.0.0' },
+const MENU: { key: string; label: string; icon: string; desc: string }[] = [
+  { key: 'myDesigns', label: '我的作品', icon: 'view-grid-outline', desc: '管理已创作的拼豆图案' },
+  { key: 'myDrafts', label: '草稿箱', icon: 'file-edit-outline', desc: '未完成的创作' },
+  { key: 'myFavorites', label: '我的收藏', icon: 'star-outline', desc: '收藏的优质图案' },
+  { key: 'myLikes', label: '我的点赞', icon: 'heart-outline', desc: '点赞过的作品' },
+  { key: 'settings', label: '设置', icon: 'cog-outline', desc: '偏好和账号设置' },
+  { key: 'about', label: '关于', icon: 'information-outline', desc: 'BeadForge v1.0.0' },
 ];
 
 export const ProfileScreen: React.FC = () => {
@@ -54,19 +54,21 @@ export const ProfileScreen: React.FC = () => {
 
   return (
     <ScrollView style={[S.root, { backgroundColor: colors.bg }]} showsVerticalScrollIndicator={false}>
-      {/* 封面 */}
-      <View style={[S.cover, { backgroundColor: colors.accent }]}>
+      {/* 封面 - 渐变 */}
+      <View style={[S.cover, { backgroundColor: colors.accent },
+        Platform.OS === 'web' && { backgroundImage: `linear-gradient(135deg, ${colors.accentGradStart} 0%, ${colors.accentGradEnd} 100%)` } as any,
+      ]}>
         <SafeAreaView edges={['top']} />
       </View>
 
       {/* 用户卡片 */}
-      <View style={[S.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[S.profileCard, { backgroundColor: colors.surface }]}>
         <View style={S.avatarRow}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(68)} />
+          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(72)} />
           <HoverView
             style={[S.editBtn, { backgroundColor: colors.accent }]}
             onPress={() => setSubPage('editProfile')}
-            hoverScale={1.06} hoverLift={0}
+            hoverScale={1.06} hoverLift={0} dataClass="hover-btn"
           >
             <Text style={S.editBtnT}>编辑资料</Text>
           </HoverView>
@@ -87,7 +89,7 @@ export const ProfileScreen: React.FC = () => {
       </View>
 
       {/* 菜单 */}
-      <View style={[S.menuCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[S.menuCard, { backgroundColor: colors.surface }]}>
         {MENU.map((item, idx) => (
           <PressableScale
             key={item.key}
@@ -97,13 +99,13 @@ export const ProfileScreen: React.FC = () => {
             dataClass="menu"
           >
             <View style={[S.menuIconW, { backgroundColor: colors.accentLight }]}>
-              <Feather name={item.icon} size={wp(17)} color={colors.accent} />
+              <Icon name={item.icon as any} size={wp(22)} color={colors.accent} />
             </View>
             <View style={S.menuTextW}>
               <Text style={[S.menuLabel, { color: colors.text }]}>{item.label}</Text>
               <Text style={[S.menuDesc, { color: colors.textHint }]}>{item.desc}</Text>
             </View>
-            <Feather name="chevron-right" size={wp(16)} color={colors.textHint} />
+            <Icon name="chevron-right" size={wp(20)} color={colors.textHint} />
           </PressableScale>
         ))}
       </View>
@@ -125,42 +127,42 @@ export const ProfileScreen: React.FC = () => {
 const S = StyleSheet.create({
   root: { flex: 1 },
 
-  cover: { height: wp(120) },
+  cover: { height: wp(130) },
 
   profileCard: {
-    marginHorizontal: wp(15), marginTop: -wp(40),
-    borderRadius: BorderRadius.lg, borderWidth: 1, padding: wp(20),
-    ...shadow(2, 8, 0.08, '#000', 4),
+    marginHorizontal: wp(16), marginTop: -wp(40),
+    borderRadius: wp(18), padding: wp(22),
+    ...shadow(0, 8, 0.1, '#000', 5),
   },
   avatarRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  editBtn: { borderRadius: wp(12), paddingHorizontal: wp(16), paddingVertical: wp(8) },
-  editBtnT: { color: '#FFF', fontSize: fp(12), fontWeight: '700' },
-  nick: { fontSize: fp(22), fontWeight: '800', marginTop: wp(16) },
-  uname: { fontSize: fp(12), marginTop: wp(4) },
-  email: { fontSize: fp(11), marginTop: wp(8) },
+  editBtn: { borderRadius: wp(12), paddingHorizontal: wp(18), paddingVertical: wp(8) },
+  editBtnT: { color: '#FFF', fontSize: fp(13), fontWeight: '600' },
+  nick: { fontSize: fp(22), fontWeight: '800', marginTop: wp(14), letterSpacing: 0.2 },
+  uname: { fontSize: fp(13), marginTop: wp(3) },
+  email: { fontSize: fp(12), marginTop: wp(6) },
 
-  statsRow: { flexDirection: 'row', marginTop: wp(24), paddingTop: wp(20), borderTopWidth: 1 },
+  statsRow: { flexDirection: 'row', marginTop: wp(22), paddingTop: wp(18), borderTopWidth: 1 },
   statItem: { flex: 1, alignItems: 'center' },
-  statV: { fontSize: fp(22), fontWeight: '800' },
-  statL: { fontSize: fp(10), marginTop: wp(4) },
+  statV: { fontSize: fp(20), fontWeight: '800' },
+  statL: { fontSize: fp(11), marginTop: wp(4), fontWeight: '500', letterSpacing: 0.5 },
 
   menuCard: {
-    marginHorizontal: wp(15), marginTop: wp(15),
-    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
-    ...shadow(1, 4, 0.06, '#000', 2),
+    marginHorizontal: wp(16), marginTop: wp(16),
+    borderRadius: wp(16), overflow: 'hidden',
+    ...shadow(0, 6, 0.08, '#000', 3),
   },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(16), paddingHorizontal: wp(18) },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: wp(15), paddingHorizontal: wp(18) },
   menuIconW: {
     width: wp(40), height: wp(40), borderRadius: wp(12),
     justifyContent: 'center', alignItems: 'center', marginRight: wp(14),
   },
   menuTextW: { flex: 1 },
-  menuLabel: { fontSize: fp(14), fontWeight: '600' },
-  menuDesc: { fontSize: fp(10), marginTop: wp(3) },
+  menuLabel: { fontSize: fp(15), fontWeight: '600' },
+  menuDesc: { fontSize: fp(11), marginTop: wp(3), letterSpacing: 0.2 },
 
-  logoutW: { paddingHorizontal: wp(15), paddingTop: wp(20) },
+  logoutW: { paddingHorizontal: wp(16), paddingTop: wp(20) },
   footer: {
-    textAlign: 'center', fontSize: fp(10),
-    paddingTop: wp(15), paddingBottom: wp(60) + BOTTOM_SAFE_H + wp(15),
+    textAlign: 'center', fontSize: fp(11),
+    paddingTop: wp(20), paddingBottom: wp(60) + BOTTOM_SAFE_H + wp(16),
   },
 });

@@ -45,8 +45,8 @@ export const Button: React.FC<Props> = ({
       <View style={[
         S.base,
         { backgroundColor: bg, transform: [{ scale: sc }], opacity: op },
-        (isPrimary || isDanger) && shadow(3, 8, 0.2, colors.accent, 4),
-        isOutline && shadow(1, 4, 0.06, '#000', 2),
+        (isPrimary || isDanger) && shadow(3, 8, 0.2, isPrimary ? colors.accent : colors.error, 4),
+        isOutline && { borderWidth: 1, borderColor: colors.border, ...shadow(1, 4, 0.04, '#000', 1) },
         isText && S.textOnly,
         (disabled || loading) && S.disabled,
         Platform.OS === 'web' && { transitionDuration: '0.2s' } as any,
@@ -64,10 +64,10 @@ export const Button: React.FC<Props> = ({
 
 const S = StyleSheet.create({
   base: {
-    height: wp(48), borderRadius: wp(10),
+    height: wp(50), borderRadius: wp(14),
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: wp(24),
   },
-  textOnly: { height: 'auto' as any, paddingVertical: wp(8) },
+  textOnly: { height: 'auto' as any, paddingVertical: wp(10) },
   disabled: { opacity: 0.4 },
-  label: { fontSize: fp(15), fontWeight: '600' },
+  label: { fontSize: fp(15), fontWeight: '700', letterSpacing: 0.2 },
 });

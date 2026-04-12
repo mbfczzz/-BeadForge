@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 import { StateView } from '../../components/common';
 import { BeadGrid, HEART_PATTERN, CAT_PATTERN, MUSHROOM_PATTERN, FLOWER_PATTERN, STAR_PATTERN } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
@@ -36,7 +38,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
       <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>← 返回</Text></TouchableOpacity>
         <Text style={[styles.navTitle, { color: colors.text }]}>我的作品</Text>
-        <View style={{ width: 50 }} />
+        <View style={{ width: wp(50) }} />
       </View>
       <FlatList
         data={myDesigns}
@@ -56,17 +58,17 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   nav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, height: 48, borderBottomWidth: 1,
+    paddingHorizontal: wp(16), height: wp(48), borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  navBack: { fontSize: FontSize.md },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '600' },
-  list: { padding: Spacing.md },
+  navBack: { fontSize: fp(15), fontWeight: '500' },
+  navTitle: { fontSize: fp(17), fontWeight: '700' },
+  list: { padding: wp(16) },
   card: {
-    flexDirection: 'row', marginBottom: 10, borderRadius: BorderRadius.md,
-    borderWidth: 1, overflow: 'hidden',
+    flexDirection: 'row', marginBottom: wp(12), borderRadius: BorderRadius.md,
+    overflow: 'hidden', ...shadow(0, 3, 0.06, '#000', 2),
   },
-  cardCover: { width: 80, height: 80, justifyContent: 'center', alignItems: 'center' },
-  cardInfo: { flex: 1, padding: Spacing.sm, justifyContent: 'center' },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '600' },
-  cardMeta: { fontSize: FontSize.xs, marginTop: 4 },
+  cardCover: { width: wp(80), height: wp(80), justifyContent: 'center', alignItems: 'center' },
+  cardInfo: { flex: 1, paddingHorizontal: wp(14), paddingVertical: wp(12), justifyContent: 'center' },
+  cardTitle: { fontSize: fp(15), fontWeight: '600' },
+  cardMeta: { fontSize: fp(12), marginTop: wp(5) },
 });

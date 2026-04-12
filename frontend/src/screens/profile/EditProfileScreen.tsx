@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAv
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Button, Input } from '../../components/common';
 import { Spacing, FontSize, useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onBack: () => void; }
@@ -36,7 +37,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.avatarWrap}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} />
+          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(72)} />
           <Text style={[styles.avatarHint, { color: colors.accent }]}>更换头像</Text>
         </TouchableOpacity>
         <Input label="昵称" placeholder="输入昵称" value={nickname} onChangeText={setNickname} />
@@ -52,12 +53,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   nav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, height: 48, borderBottomWidth: 1,
+    paddingHorizontal: wp(16), height: wp(48), borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  navBack: { fontSize: FontSize.md },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '600' },
-  navSave: { fontSize: FontSize.md, fontWeight: '600' },
-  content: { padding: Spacing.xl },
-  avatarWrap: { alignItems: 'center', marginBottom: Spacing.xl },
-  avatarHint: { fontSize: FontSize.sm, marginTop: Spacing.sm },
+  navBack: { fontSize: fp(15), fontWeight: '500' },
+  navTitle: { fontSize: fp(17), fontWeight: '700' },
+  navSave: { fontSize: fp(15), fontWeight: '700' },
+  content: { padding: wp(24) },
+  avatarWrap: { alignItems: 'center', marginBottom: wp(28) },
+  avatarHint: { fontSize: fp(13), marginTop: wp(10) },
 });

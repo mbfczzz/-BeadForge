@@ -3,6 +3,7 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ThemeProvider, useTheme } from './src/theme';

@@ -9,7 +9,13 @@
       "Bash(npx kill-port:*)",
       "Bash(taskkill //F //IM \"node.exe\" //FI \"WINDOWTITLE eq *expo*\")",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(find:*)",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8082)",
+      "Bash(curl -s http://localhost:8082)",
+      "Bash(curl -s http://localhost:8083)",
+      "Bash(node -e \"const I = require\\('@expo/vector-icons/Ionicons'\\); console.log\\(typeof I\\)\")"
     ]
   }
 }

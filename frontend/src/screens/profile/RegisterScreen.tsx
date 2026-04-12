@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Input } from '../../components/common';
 import { Spacing, FontSize, useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 
 interface Props { onSwitchToLogin: () => void; }
@@ -68,7 +69,7 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flexGrow: 1, padding: Spacing.xl, paddingTop: Spacing.xxl },
-  title: { fontSize: FontSize.xxl, fontWeight: '700' },
-  subtitle: { fontSize: FontSize.md, marginTop: 4, marginBottom: Spacing.xl },
+  content: { flexGrow: 1, paddingHorizontal: wp(24), paddingTop: wp(44), paddingBottom: wp(30) },
+  title: { fontSize: fp(24), fontWeight: '700' },
+  subtitle: { fontSize: fp(14), marginTop: wp(6), marginBottom: wp(26) },
 });

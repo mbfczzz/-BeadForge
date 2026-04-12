@@ -30,9 +30,9 @@ export const Input: React.FC<Props> = ({
       <View style={[
         S.box,
         { backgroundColor: focused ? colors.surface : colors.inputBg },
-        focused && shadow(0, 8, 0.12, colors.accent, 2),
-        error && { borderColor: colors.error, borderWidth: 1 },
-        Platform.OS === 'web' && { transitionDuration: '0.25s' } as any,
+        focused && { ...shadow(0, 6, 0.1, colors.accent, 2), borderWidth: 1.5, borderColor: colors.accent + '40' },
+        error && { borderColor: colors.error, borderWidth: 1.5 },
+        Platform.OS === 'web' && { transitionDuration: '0.25s', transitionProperty: 'background-color, box-shadow, border-color' } as any,
       ]}>
         <TextInput
           style={[S.input, { color: colors.text }]}
@@ -58,13 +58,13 @@ export const Input: React.FC<Props> = ({
 };
 
 const S = StyleSheet.create({
-  wrap: { marginBottom: wp(16) },
-  label: { fontSize: fp(12), marginBottom: wp(8), fontWeight: '600' },
+  wrap: { marginBottom: wp(18) },
+  label: { fontSize: fp(13), marginBottom: wp(8), fontWeight: '600' },
   box: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: wp(10),
+    borderRadius: wp(12),
   },
-  input: { flex: 1, height: wp(48), paddingHorizontal: wp(14), fontSize: fp(15) },
+  input: { flex: 1, height: wp(50), paddingHorizontal: wp(16), fontSize: fp(15) },
   eye: { paddingHorizontal: wp(14) },
   eyeT: { fontSize: fp(12), fontWeight: '500' },
   err: { fontSize: fp(11), marginTop: wp(6), fontWeight: '500' },
