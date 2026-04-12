@@ -20,7 +20,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
   useEffect(() => { fetchMyDesigns(true); }, []);
 
   const renderItem = ({ item }: { item: DesignItem }) => (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surface }]} activeOpacity={0.7}>
       <View style={[styles.cardCover, { backgroundColor: colors.inputBg }]}>
         <BeadGrid pixels={PATTERNS[item.id % PATTERNS.length]} beadSize={6} gap={1} round />
       </View>

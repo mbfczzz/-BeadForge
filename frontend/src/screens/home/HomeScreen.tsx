@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
-import { StateView, PressableScale, CardSkeleton, HoverView } from '../../components/common';
+import { Avatar, StateView, PressableScale, CardSkeleton, HoverView } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
@@ -15,24 +15,23 @@ import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall,
 import { shadow } from '../../utils/shadow';
 
 const COL = getColumnCount();
-const GAP = wp(10);
+const GAP = wp(8);
 const PAD = wp(16);
 const CARD_W = getCardWidth(PAD, GAP, COL);
 const BW = getBannerWidth(PAD);
 const TAB_H = wp(60) + BOTTOM_SAFE_H;
 
-const BG_L = ['#fef2f2','#fef9ee','#eef6ff','#f0fdf4','#fdf2f8','#fffbeb','#eef2ff','#fff7ed'];
-const BG_D = ['#2d2025','#2d2818','#1e2838','#1e2d22','#2d1e30','#2d2c12','#1e1e38','#2d2520'];
+const BG_L = ['#FFF0F0','#FFF5E6','#EBF3FF','#EDFCF2','#FDF0F8','#FFFBE6','#F0EDFF','#FFF2E8'];
+const BG_D = ['#201818','#201C14','#141C24','#142018','#201420','#201E10','#181420','#201C18'];
 
 const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','像素','节日','手办','建筑','游戏','国风'];
 const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel','festival','figure','building','game','chinese'];
-const CAT_FOLD_LIMIT = 10;
 
 const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#4b78ff' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#d6b161' },
-  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#549da5' },
-  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#bf60fe' },
+  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#5B5FFF' },
+  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#FF6B6B' },
+  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#20C997' },
+  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#C084FC' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -46,7 +45,6 @@ export const HomeScreen: React.FC = () => {
   const [showTop, setShowTop] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [catExpanded, setCatExpanded] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const bannerRef = useRef<ScrollView>(null);
   const fabAnim = useRef(new Animated.Value(0)).current;
@@ -85,25 +83,25 @@ export const HomeScreen: React.FC = () => {
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* 导航栏 */}
       <View style={[$.nav, { backgroundColor: colors.navBg }]}>
-        <Text style={[$.navTitle, { color: colors.text }]}>BeadForge</Text>
+        <Text style={[$.navTitle, { color: colors.accent }]}>BeadForge</Text>
         <View style={{ flex: 1 }} />
-        <HoverView onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0} dataClass="nav-btn">
-          <Icon name={dark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={fp(20)} color={colors.textSecondary} />
+        <HoverView onPress={toggle} style={$.navBtn} hoverScale={1.1} hoverLift={0} dataClass="nav-btn">
+          <Icon name={dark ? 'white-balance-sunny' : 'moon-waning-crescent'} size={fp(22)} color={colors.textSecondary} />
         </HoverView>
       </View>
 
       <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={80}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textHint} />}>
 
-        {/* 搜索栏 */}
-        <View style={{ paddingHorizontal: PAD, paddingTop: wp(12), paddingBottom: wp(8) }}>
-          <View {...{ dataSet: { class: 'search' } } as any} style={[$.search, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.accent : colors.border }]}>
-            <Icon name="magnify" size={fp(20)} color={colors.textHint} style={{ marginRight: wp(8) }} />
+        {/* 搜索栏 - 小红书风格胶囊 */}
+        <View style={{ paddingHorizontal: PAD, paddingTop: wp(10), paddingBottom: wp(4) }}>
+          <View {...{ dataSet: { class: 'search' } } as any} style={[$.search, { backgroundColor: colors.inputBg }]}>
+            <Icon name="magnify" size={fp(20)} color={colors.textHint} />
             <TextInput style={[$.searchInput, { color: colors.text }]} placeholder="搜索拼豆图案..."
               placeholderTextColor={colors.textHint} value={searchKeyword} onChangeText={handleSearch}
               onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
             {searchKeyword.length > 0 && (
-              <TouchableOpacity onPress={() => handleSearch('')}><Icon name="close-circle-outline" size={fp(18)} color={colors.textHint} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => handleSearch('')} hitSlop={8}><Icon name="close-circle" size={fp(18)} color={colors.textHint} /></TouchableOpacity>
             )}
           </View>
         </View>
@@ -112,7 +110,7 @@ export const HomeScreen: React.FC = () => {
         <ScrollView ref={bannerRef} horizontal showsHorizontalScrollIndicator={false}
           snapToInterval={BW + wp(10)} decelerationRate="fast"
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + wp(10))))}
-          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) }}>
+          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(8), gap: wp(10) }}>
           {BANNERS.map((b) => (
             <HoverView key={b.id} hoverScale={1.015} hoverLift={4} style={[$.banner, { width: BW, backgroundColor: b.bg }]} dataClass="banner">
               <View style={$.bannerInner}>
@@ -129,26 +127,20 @@ export const HomeScreen: React.FC = () => {
           {BANNERS.map((_,i) => <View key={i} style={[$.dot, { backgroundColor: bannerIdx===i ? colors.text : colors.border }, bannerIdx===i && $.dotOn]} />)}
         </View>
 
-        {/* 分类标签 - 超过10个折叠 */}
-        <View style={$.catWrap}>
-          {(catExpanded ? CATS : CATS.slice(0, CAT_FOLD_LIMIT)).map((name, idx) => {
+        {/* 分类标签 - 横向滚动 */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={$.catWrap}>
+          {CATS.map((name, idx) => {
             const on = activeCat === idx;
             return (
               <HoverView key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)}
                 hoverScale={1.05} hoverLift={1} dataClass="cat"
-                style={[$.cat, { backgroundColor: on ? colors.text : colors.surface, borderColor: on ? colors.text : colors.border }]}>
-                <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary }]}>{name}</Text>
+                style={[$.cat, on ? { backgroundColor: colors.text } : { backgroundColor: colors.inputBg }]}>
+                <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary, fontWeight: on ? '600' : '500' }]}>{name}</Text>
               </HoverView>
             );
           })}
-          {CATS.length > CAT_FOLD_LIMIT && (
-            <HoverView onPress={() => setCatExpanded(!catExpanded)} hoverScale={1.05} hoverLift={1} dataClass="cat"
-              style={[$.cat, $.catToggle, { borderColor: colors.border }]}>
-              <Text style={[$.catT, { color: colors.textHint }]}>{catExpanded ? '收起' : `展开 +${CATS.length - CAT_FOLD_LIMIT}`}</Text>
-              <Icon name={catExpanded ? 'chevron-up' : 'chevron-down'} size={fp(16)} color={colors.textHint} style={{ marginLeft: wp(2) }} />
-            </HoverView>
-          )}
-        </View>
+        </ScrollView>
 
         {/* 标题 */}
         <View style={$.secRow}>
@@ -183,7 +175,7 @@ export const HomeScreen: React.FC = () => {
 
       {/* FAB */}
       <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabAnim.interpolate({ inputRange:[0,1], outputRange:[wp(20),0] }) }] }]}>
-        <HoverView style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        <HoverView style={[$.fabBtn, { backgroundColor: colors.surface }]}
           onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} hoverScale={1.12} hoverLift={2} dataClass="fab">
           <Icon name="arrow-up" size={fp(20)} color={colors.textSecondary} />
         </HoverView>
@@ -206,11 +198,14 @@ const Card = memo(({ item }: { item: DesignItem }) => {
         <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
       </View>
       <View style={$.cardBody}>
-        <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+        <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
         <View style={$.cardMeta}>
-          <Text style={[$.cardAuthor, { color: colors.textHint }]}>{item.authorName || '创作者'}</Text>
+          <View style={$.authorRow}>
+            <Avatar name={item.authorName || '创作者'} size={wp(18)} />
+            <Text style={[$.cardAuthor, { color: colors.textHint }]} numberOfLines={1}>{item.authorName || '创作者'}</Text>
+          </View>
           <View style={$.likeRow}>
-            <Icon name="heart-outline" size={fp(14)} color={colors.textHint} />
+            <Icon name="heart-outline" size={fp(13)} color={colors.textHint} />
             <Text style={[$.likeN, { color: colors.textHint }]}>{item.likeCount}</Text>
           </View>
         </View>
@@ -234,13 +229,12 @@ const $ = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // 搜索 - 默认无边框，focus 时才显示
+  // 搜索 - 胶囊无边框
   search: {
     flexDirection: 'row', alignItems: 'center',
-    height: wp(44), borderRadius: BorderRadius.md, paddingHorizontal: wp(14),
-    borderWidth: StyleSheet.hairlineWidth,
+    height: wp(40), borderRadius: wp(20), paddingHorizontal: wp(14), gap: wp(8),
   },
-  searchInput: { flex: 1, fontSize: fp(14), padding: 0, letterSpacing: 0.1 },
+  searchInput: { flex: 1, fontSize: fp(14), padding: 0 },
 
   // Banner
   banner: {
@@ -248,59 +242,57 @@ const $ = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(24),
   },
   bannerInner: { flex: 1, zIndex: 1 },
-  bannerT: { fontSize: fp(21), fontWeight: '700', color: '#fff', letterSpacing: 0.3 },
+  bannerT: { fontSize: fp(22), fontWeight: '800', color: '#fff', letterSpacing: 0.2 },
   bannerS: { fontSize: fp(13), color: 'rgba(255,255,255,0.85)', marginTop: wp(6), lineHeight: fp(18) },
   bannerArt: {
     backgroundColor: 'rgba(255,255,255,0.15)', padding: wp(10), borderRadius: BorderRadius.md,
   },
 
   // 指示器
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(10), gap: wp(6) },
+  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(10), marginBottom: wp(2), gap: wp(6) },
   dot: { width: wp(6), height: wp(6), borderRadius: wp(3), transition: 'all 0.3s' } as any,
   dotOn: { width: wp(18) },
 
-  // 分类药丸
+  // 分类 - 横向滚动
   catWrap: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: PAD, paddingTop: wp(14), paddingBottom: wp(14), gap: wp(8),
+    paddingHorizontal: PAD, paddingVertical: wp(12), gap: wp(8),
   },
-  cat: { paddingHorizontal: wp(14), paddingVertical: wp(7), borderRadius: BorderRadius.full, borderWidth: StyleSheet.hairlineWidth },
-  catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' },
-  catT: { fontSize: fp(13), fontWeight: '500' },
+  cat: { paddingHorizontal: wp(16), paddingVertical: wp(8), borderRadius: wp(20) },
+  catT: { fontSize: fp(13) },
 
   // 标题
   secRow: {
     flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    paddingHorizontal: PAD, marginBottom: wp(14),
+    paddingHorizontal: PAD, paddingTop: wp(4), marginBottom: wp(12),
   },
-  secT: { fontSize: fp(18), fontWeight: '700', letterSpacing: 0.2 },
-  secN: { fontSize: fp(12) },
+  secT: { fontSize: fp(17), fontWeight: '800' },
+  secN: { fontSize: fp(12), fontWeight: '500' },
 
   // 网格 - overflow visible 防止 RN Web 默认 hidden 裁剪 hover 上浮
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP, overflow: 'visible' as any },
   col: { flex: 1, gap: GAP, overflow: 'visible' as any },
 
-  // 卡片 - 无边框，纯阴影质感
+  // 卡片 - Pinterest 风格
   card: {
-    borderRadius: BorderRadius.lg, overflow: 'hidden',
-    ...shadow(0, 4, 0.08, '#000', 3),
+    borderRadius: wp(16), overflow: 'hidden',
+    ...shadow(0, 2, 0.06, '#000', 2),
   },
   cardCover: { justifyContent: 'center', alignItems: 'center' },
-  cardBody: { paddingHorizontal: wp(12), paddingTop: wp(10), paddingBottom: wp(12) },
-  cardTitle: { fontSize: fp(14), fontWeight: '600', marginBottom: wp(6), lineHeight: fp(20) },
+  cardBody: { paddingHorizontal: wp(10), paddingTop: wp(8), paddingBottom: wp(10) },
+  cardTitle: { fontSize: fp(13), fontWeight: '600', marginBottom: wp(6), lineHeight: fp(18) },
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardAuthor: { fontSize: fp(12), fontWeight: '400' },
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
-  likeN: { fontSize: fp(12) },
+  authorRow: { flexDirection: 'row', alignItems: 'center', gap: wp(5), flex: 1, marginRight: wp(8) },
+  cardAuthor: { fontSize: fp(11), fontWeight: '400', flexShrink: 1 },
+  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
+  likeN: { fontSize: fp(11) },
 
-  endT: { textAlign: 'center', fontSize: fp(12), paddingVertical: wp(24), letterSpacing: 2 },
+  endT: { textAlign: 'center', fontSize: fp(12), paddingVertical: wp(28), letterSpacing: 1 },
 
   // FAB
   fab: { position: 'absolute', right: PAD },
   fabBtn: {
-    width: wp(42), height: wp(42), borderRadius: wp(21),
+    width: wp(44), height: wp(44), borderRadius: wp(22),
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1,
-    ...shadow(2, 6, 0.1, '#000', 3),
+    ...shadow(0, 6, 0.12, '#000', 4),
   },
 });

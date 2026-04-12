@@ -58,13 +58,13 @@ export const Input: React.FC<Props> = ({
 };
 
 const S = StyleSheet.create({
-  wrap: { marginBottom: wp(18) },
-  label: { fontSize: fp(13), marginBottom: wp(8), fontWeight: '600' },
+  wrap: { marginBottom: wp(16) },
+  label: { fontSize: fp(13), marginBottom: wp(6), fontWeight: '600' },
   box: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: wp(12),
   },
-  input: { flex: 1, height: wp(50), paddingHorizontal: wp(16), fontSize: fp(15) },
+  input: { flex: 1, height: wp(48), paddingHorizontal: wp(16), fontSize: fp(15) },
   eye: { paddingHorizontal: wp(14) },
   eyeT: { fontSize: fp(12), fontWeight: '500' },
   err: { fontSize: fp(11), marginTop: wp(6), fontWeight: '500' },

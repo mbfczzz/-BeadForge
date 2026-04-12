@@ -22,22 +22,22 @@ export function injectWebHoverStyles() {
     html { scroll-behavior: smooth; }
     body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
     [role="button"], button { cursor: pointer !important; }
-    input { outline: none !important; caret-color: #4b78ff; }
+    input { outline: none !important; caret-color: #5B5FFF; }
 
     /* 滚动条 */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.16); }
-    ::selection { background: rgba(75,120,255,0.18); }
+    ::selection { background: rgba(91,95,255,0.18); }
 
     /* 搜索框 focus */
     [data-class="search"] {
       transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
     [data-class="search"]:focus-within {
-      border-color: #4b78ff !important;
-      box-shadow: 0 0 0 3px rgba(75,120,255,0.1) !important;
+      border-color: #5B5FFF !important;
+      box-shadow: 0 0 0 3px rgba(91,95,255,0.1) !important;
     }
 
     /* ========== 卡片 hover / active ========== */

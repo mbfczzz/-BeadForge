@@ -64,7 +64,7 @@ export const Button: React.FC<Props> = ({
 
 const S = StyleSheet.create({
   base: {
-    height: wp(50), borderRadius: wp(14),
+    height: wp(48), borderRadius: wp(12),
     justifyContent: 'center', alignItems: 'center', paddingHorizontal: wp(24),
   },
   textOnly: { height: 'auto' as any, paddingVertical: wp(10) },

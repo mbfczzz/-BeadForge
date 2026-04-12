@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   navBack: { fontSize: fp(15), fontWeight: '500' },
   navTitle: { fontSize: fp(17), fontWeight: '700' },
   navSave: { fontSize: fp(15), fontWeight: '700' },
-  content: { padding: wp(24) },
-  avatarWrap: { alignItems: 'center', marginBottom: wp(28) },
-  avatarHint: { fontSize: fp(13), marginTop: wp(10) },
+  content: { paddingHorizontal: wp(20), paddingTop: wp(24) },
+  avatarWrap: { alignItems: 'center', marginBottom: wp(24) },
+  avatarHint: { fontSize: fp(13), marginTop: wp(8), fontWeight: '500' },
 });

@@ -59,7 +59,7 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
         <Input label="确认密码" placeholder="再输入一次" value={confirmPwd}
           onChangeText={(t) => { setConfirmPwd(t); clear('confirmPwd'); }} secureTextEntry error={errors.confirmPwd} />
 
-        <Button title="注册" onPress={handleRegister} loading={loading} style={{ marginTop: Spacing.sm }} />
+        <Button title="注册" onPress={handleRegister} loading={loading} style={{ marginTop: wp(8) }} />
         <Button title="已有账号？登录" onPress={onSwitchToLogin} variant="text" />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -70,6 +70,6 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: wp(24), paddingTop: wp(44), paddingBottom: wp(30) },
-  title: { fontSize: fp(24), fontWeight: '700' },
-  subtitle: { fontSize: fp(14), marginTop: wp(6), marginBottom: wp(26) },
+  title: { fontSize: fp(22), fontWeight: '700' },
+  subtitle: { fontSize: fp(14), marginTop: wp(4), marginBottom: wp(24) },
 });

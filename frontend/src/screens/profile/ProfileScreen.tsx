@@ -47,9 +47,9 @@ export const ProfileScreen: React.FC = () => {
 
   const STATS = [
     { v: stats.designCount, l: '作品', c: colors.accent },
-    { v: stats.likeCount, l: '获赞', c: '#F43F5E' },
-    { v: stats.followerCount, l: '粉丝', c: '#F59E0B' },
-    { v: stats.followingCount, l: '关注', c: '#0EA5E9' },
+    { v: stats.likeCount, l: '获赞', c: '#FF6B6B' },
+    { v: stats.followerCount, l: '粉丝', c: '#F5A623' },
+    { v: stats.followingCount, l: '关注', c: '#20C997' },
   ];
 
   return (
@@ -78,7 +78,7 @@ export const ProfileScreen: React.FC = () => {
         {user?.email && <Text style={[S.email, { color: colors.textSecondary }]}>{user.email}</Text>}
 
         {/* 统计 */}
-        <View style={[S.statsRow, { borderTopColor: colors.divider + '80' }]}>
+        <View style={[S.statsRow, { borderTopColor: colors.divider }]}>
           {STATS.map((s) => (
             <TouchableOpacity key={s.l} style={S.statItem} activeOpacity={0.7}>
               <Text style={[S.statV, { color: s.c }]}>{s.v}</Text>
@@ -94,7 +94,7 @@ export const ProfileScreen: React.FC = () => {
           <PressableScale
             key={item.key}
             onPress={() => handleMenu(item.key)}
-            style={[S.menuItem, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider + '60' }]}
+            style={[S.menuItem, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }]}
             scale={0.985}
             dataClass="menu"
           >
@@ -141,7 +141,7 @@ const S = StyleSheet.create({
   uname: { fontSize: fp(13), marginTop: wp(3) },
   email: { fontSize: fp(12), marginTop: wp(6) },
 
-  statsRow: { flexDirection: 'row', marginTop: wp(22), paddingTop: wp(18), borderTopWidth: 1 },
+  statsRow: { flexDirection: 'row', marginTop: wp(20), paddingTop: wp(16), borderTopWidth: StyleSheet.hairlineWidth },
   statItem: { flex: 1, alignItems: 'center' },
   statV: { fontSize: fp(20), fontWeight: '800' },
   statL: { fontSize: fp(11), marginTop: wp(4), fontWeight: '500', letterSpacing: 0.5 },

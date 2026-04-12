@@ -64,8 +64,8 @@ const TabBtn = memo(({ icon, iconFocused, label, focused, onPress, accentColor, 
         { transform: [{ translateY: ty }] },
         Platform.OS === 'web' && { transitionDuration: '0.2s' } as any,
       ]}>
-        <MaterialCommunityIcons name={focused ? iconFocused : icon} size={wp(24)} color={color} />
-        <Text style={[S.tabLabel, { color, fontWeight: focused ? '700' : '400' }]}>{label}</Text>
+        <MaterialCommunityIcons name={focused ? iconFocused : icon} size={wp(26)} color={color} />
+        <Text style={[S.tabLabel, { color, fontWeight: focused ? '600' : '400', opacity: focused ? 1 : 0.7 }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -88,5 +88,5 @@ const S = StyleSheet.create({
   },
   tab: { flex: 1, alignItems: 'center' },
   tabInner: { alignItems: 'center', paddingVertical: wp(3) },
-  tabLabel: { fontSize: fp(10), marginTop: wp(2), letterSpacing: 0.2 },
+  tabLabel: { fontSize: fp(11), marginTop: wp(2), letterSpacing: 0.1 },
 });

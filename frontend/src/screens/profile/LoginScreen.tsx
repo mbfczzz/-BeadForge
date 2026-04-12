@@ -98,8 +98,8 @@ const s = StyleSheet.create({
     borderRadius: wp(18), padding: wp(24), paddingTop: wp(28),
     ...shadow(0, 10, 0.1, '#000', 5),
   },
-  formTitle: { fontSize: fp(24), fontWeight: '700', marginBottom: wp(6) },
-  formSub: { fontSize: fp(14), marginBottom: wp(22), lineHeight: fp(20) },
+  formTitle: { fontSize: fp(22), fontWeight: '700', marginBottom: wp(4) },
+  formSub: { fontSize: fp(14), marginBottom: wp(20), lineHeight: fp(20) },
 
   dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: wp(18) },
   dividerLine: { flex: 1, height: 1 },
