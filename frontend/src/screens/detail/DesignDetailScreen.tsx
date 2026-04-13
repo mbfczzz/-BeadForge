@@ -193,6 +193,25 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
             <TipRow icon="alert-circle" text="熨烫时注意均匀用力，避免局部过热变形" colors={colors} />
           </View>
         </View>
+
+        {/* 跨模块入口 */}
+        <View style={$.section}>
+          <View style={[$.crossCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Pressable style={$.crossRow} onPress={() => navigation.navigate('Main' as any, { screen: 'Publish' } as any)}>
+              <Feather name="message-circle" size={fp(16)} color={colors.accent} />
+              <Text style={[$.crossText, { color: colors.text }]}>查看社区讨论</Text>
+              <Text style={[$.crossHint, { color: colors.textHint }]}>看看大家怎么做的</Text>
+              <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+            </Pressable>
+            <View style={[$.crossDivider, { backgroundColor: colors.divider }]} />
+            <Pressable style={$.crossRow} onPress={() => navigation.navigate('Main' as any, { screen: 'Market' } as any)}>
+              <Feather name="shopping-bag" size={fp(16)} color="#F5A623" />
+              <Text style={[$.crossText, { color: colors.text }]}>购买材料</Text>
+              <Text style={[$.crossHint, { color: colors.textHint }]}>珠子、拼豆板、工具</Text>
+              <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
 
       {/* 底部操作栏 */}
@@ -422,6 +441,18 @@ const $ = StyleSheet.create({
   },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start' },
   tipText: { flex: 1, fontSize: FontSize.md, lineHeight: fp(20) },
+
+  // 跨模块入口
+  crossCard: {
+    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
+  },
+  crossRow: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(10),
+    paddingHorizontal: wp(14), paddingVertical: wp(13),
+  },
+  crossText: { fontSize: FontSize.md, fontWeight: '500' },
+  crossHint: { flex: 1, fontSize: FontSize.xs, textAlign: 'right' },
+  crossDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: wp(14) },
 
   // 底部栏
   bottomBar: {

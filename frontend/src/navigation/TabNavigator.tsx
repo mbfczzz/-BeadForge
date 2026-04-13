@@ -19,7 +19,7 @@ const TABS: { name: string; label: string; icon: IconName; iconFocused: IconName
   { name: 'Home', label: '发现', icon: 'compass-outline', iconFocused: 'compass', component: HomeScreen },
   { name: 'Market', label: '市场', icon: 'store-outline', iconFocused: 'store', component: MarketScreen },
   { name: 'Create', label: '创作', icon: 'plus-circle-outline', iconFocused: 'plus-circle', component: CreateScreen },
-  { name: 'Publish', label: '动态', icon: 'chat-outline', iconFocused: 'chat', component: PublishScreen },
+  { name: 'Publish', label: '动态', icon: 'message-text-outline', iconFocused: 'message-text', component: PublishScreen },
   { name: 'Profile', label: '我的', icon: 'account-outline', iconFocused: 'account', component: ProfileScreen },
 ];
 
@@ -31,6 +31,7 @@ function CustomTabBar({ state, navigation }: any) {
     <View style={[S.bar, {
       paddingBottom: Math.max(insets.bottom, wp(6)),
       backgroundColor: colors.navBg,
+      borderTopColor: colors.navBorder,
     }]}>
       {state.routes.map((route: any, idx: number) => {
         const tab = TABS[idx];
@@ -49,7 +50,6 @@ function CustomTabBar({ state, navigation }: any) {
 const TabBtn = memo(({ icon, iconFocused, label, focused, onPress, accentColor, inactiveColor }: any) => {
   const [hovered, setHovered] = useState(false);
   const color = focused ? accentColor : inactiveColor;
-  const ty = hovered ? -wp(2) : 0;
 
   return (
     <Pressable
@@ -61,11 +61,11 @@ const TabBtn = memo(({ icon, iconFocused, label, focused, onPress, accentColor, 
     >
       <View style={[
         S.tabInner,
-        { transform: [{ translateY: ty }] },
-        Platform.OS === 'web' && { transitionDuration: '0.2s' } as any,
+        hovered && { transform: [{ translateY: -wp(1) }] },
+        Platform.OS === 'web' && { transitionDuration: '0.15s' } as any,
       ]}>
-        <MaterialCommunityIcons name={focused ? iconFocused : icon} size={wp(26)} color={color} />
-        <Text style={[S.tabLabel, { color, fontWeight: focused ? '600' : '400', opacity: focused ? 1 : 0.7 }]}>{label}</Text>
+        <MaterialCommunityIcons name={focused ? iconFocused : icon} size={wp(24)} color={color} />
+        <Text style={[S.tabLabel, { color, fontWeight: focused ? '600' : '400', opacity: focused ? 1 : 0.65 }]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -79,14 +79,9 @@ export const TabNavigator: React.FC = () => (
 
 const S = StyleSheet.create({
   bar: {
-    flexDirection: 'row', paddingTop: wp(8),
-    ...Platform.select({
-      web: { boxShadow: '0 -2px 12px rgba(0,0,0,0.06)' } as any,
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-      android: { elevation: 6 },
-    }),
+    flexDirection: 'row', paddingTop: wp(6), borderTopWidth: StyleSheet.hairlineWidth,
   },
   tab: { flex: 1, alignItems: 'center' },
   tabInner: { alignItems: 'center', paddingVertical: wp(3) },
-  tabLabel: { fontSize: fp(11), marginTop: wp(2), letterSpacing: 0.1 },
+  tabLabel: { fontSize: fp(10), marginTop: wp(2), letterSpacing: 0.1 },
 });

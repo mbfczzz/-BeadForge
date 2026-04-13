@@ -8,6 +8,9 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { Avatar, BeadGrid, ALL_PATTERNS } from '../../components/common';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation/types';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 
 const PAD = wp(15);
@@ -211,6 +214,7 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
 /* ═══════════════════ 图纸 Tab ═══════════════════ */
 
 const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, dark }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [catIdx, setCatIdx] = useState(0);
   const [sortIdx, setSortIdx] = useState(0);
   const [search, setSearch] = useState('');
@@ -263,7 +267,8 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
       <Modal visible={!!detail} animationType="slide" transparent onRequestClose={() => setDetail(null)}>
         <Pressable style={$.overlay} onPress={() => setDetail(null)}>
           <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.78 }]} onPress={() => {}}>
-            {detail && <PatDetail p={detail} colors={colors} dark={dark} onClose={() => setDetail(null)} />}
+            {detail && <PatDetail p={detail} colors={colors} dark={dark} onClose={() => setDetail(null)}
+              onMake={(cols, rows) => navigation.navigate('Editor', { mode: 'manual', cols, rows })} />}
           </Pressable>
         </Pressable>
       </Modal>
@@ -380,7 +385,7 @@ const MatDetail: React.FC<{ p: Product; colors: ThemeColors; onAdd: () => void; 
 
 /* ═══════════════════ 图纸详情 ═══════════════════ */
 
-const PatDetail: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onClose: () => void }> = ({ p, colors, dark, onClose }) => {
+const PatDetail: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onClose: () => void; onMake: (cols: number, rows: number) => void }> = ({ p, colors, dark, onClose, onMake }) => {
   const pat = ALL_PATTERNS[p.patIdx % ALL_PATTERNS.length];
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
@@ -410,6 +415,10 @@ const PatDetail: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onCl
         <TouchableOpacity activeOpacity={0.8} onPress={() => { onClose(); Alert.alert(p.free ? '下载成功' : '购买成功', `图纸「${p.title}」已保存到我的收藏`); }} style={[$.dtAddBtn, { backgroundColor: colors.accent }]}>
           <Feather name={p.free ? 'download' : 'shopping-cart'} size={fp(13)} color="#fff" />
           <Text style={$.dtAddBtnT}>{p.free ? '免费下载' : '购买图纸'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.8} onPress={() => { onClose(); onMake(p.cols, p.rows); }} style={[$.dtAddBtn, { backgroundColor: '#20C997', marginLeft: wp(8) }]}>
+          <Feather name="play" size={fp(13)} color="#fff" />
+          <Text style={$.dtAddBtnT}>开始制作</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
