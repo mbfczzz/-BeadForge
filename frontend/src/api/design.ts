@@ -8,7 +8,7 @@ export interface DesignItem {
   description: string;
   category: string;
   coverImage: string | null;
-  designData: string | null;
+  designData: string | string[][] | null;
   status: string;
   likeCount: number;
   viewCount: number;

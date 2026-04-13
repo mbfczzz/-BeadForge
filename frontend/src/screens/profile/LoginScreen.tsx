@@ -1,34 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, ViewStyle } from 'react-native';
+import {
+  View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform,
+  TouchableOpacity, TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Input } from '../../components/common';
-import { BeadGrid, HEART_PATTERN } from '../../components/common/BeadGrid';
-import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
+import { Feather } from '@expo/vector-icons';
+import { useTheme, FontSize, BorderRadius } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
 import { useAuthStore } from '../../store/useAuthStore';
 
-interface Props { onSwitchToRegister: () => void; }
+interface Props { onSwitchToRegister: () => void }
 
 export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const login = useAuthStore((s) => s.login);
 
-  const validate = () => {
-    const e: typeof errors = {};
-    if (!username.trim()) e.username = '请输入用户名';
-    if (!password) e.password = '请输入密码';
-    else if (password.length < 6) e.password = '密码至少6位';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const handleLogin = async () => {
-    if (!validate()) return;
+    if (!username.trim()) { Alert.alert('提示', '请输入用户名'); return; }
+    if (password.length < 6) { Alert.alert('提示', '密码至少6位'); return; }
     setLoading(true);
     try { await login({ username: username.trim(), password }); }
     catch (e: any) { Alert.alert('登录失败', e.message); }
@@ -36,72 +29,104 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
   };
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.bg }]}>
-      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-          {/* 品牌区 */}
-          <View style={[s.brandArea, { backgroundColor: colors.accent },
-            Platform.OS === 'web' && { backgroundImage: `linear-gradient(135deg, ${colors.accentGradStart} 0%, ${colors.accentGradEnd} 100%)` } as any,
-          ]}>
-            <View style={s.brandDeco}>
-              <View style={{ opacity: 0.15 }}>
-                <BeadGrid pixels={HEART_PATTERN} beadSize={wp(8)} gap={wp(2)} round />
-              </View>
+    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: wp(24) }}>
+
+          {/* Logo */}
+          <View style={$.logoRow}>
+            <View style={[$.logoBox, { backgroundColor: colors.accent }]}>
+              <Text style={$.logoEmoji}>🧩</Text>
             </View>
-            <Text style={s.brandEmoji}>🧩</Text>
-            <Text style={s.brandName}>BeadForge</Text>
-            <Text style={s.brandSub}>拼豆创作平台</Text>
+            <View style={{ marginLeft: wp(12) }}>
+              <Text style={[$.brand, { color: colors.text }]}>BeadForge</Text>
+              <Text style={[$.sub, { color: colors.textHint }]}>拼豆创作平台</Text>
+            </View>
           </View>
 
-          {/* 表单区 */}
-          <View style={[s.formCard, { backgroundColor: colors.surface }]}>
-            <Text style={[s.formTitle, { color: colors.text }]}>欢迎回来</Text>
-            <Text style={[s.formSub, { color: colors.textHint }]}>登录后即可创作和分享拼豆作品</Text>
-
-            <Input label="用户名" placeholder="请输入用户名" value={username}
-              onChangeText={(t) => { setUsername(t); setErrors((e) => ({ ...e, username: undefined })); }} error={errors.username} />
-            <Input label="密码" placeholder="请输入密码" value={password}
-              onChangeText={(t) => { setPassword(t); setErrors((e) => ({ ...e, password: undefined })); }} secureTextEntry error={errors.password} />
-
-            <Button title="登录" onPress={handleLogin} loading={loading} style={{ marginTop: wp(8) }} />
-
-            <View style={s.dividerRow}>
-              <View style={[s.dividerLine, { backgroundColor: colors.divider }]} />
-              <Text style={[s.dividerText, { color: colors.textHint }]}>OR</Text>
-              <View style={[s.dividerLine, { backgroundColor: colors.divider }]} />
-            </View>
-
-            <Button title="创建新账号" onPress={onSwitchToRegister} variant="outline" />
+          {/* 用户名 */}
+          <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+            <Feather name="user" size={fp(16)} color={colors.textHint} />
+            <TextInput
+              style={[$.input, { color: colors.text }]}
+              placeholder="用户名"
+              placeholderTextColor={colors.textHint}
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+            />
           </View>
-        </ScrollView>
+
+          {/* 密码 */}
+          <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+            <Feather name="lock" size={fp(16)} color={colors.textHint} />
+            <TextInput
+              style={[$.input, { color: colors.text }]}
+              placeholder="密码"
+              placeholderTextColor={colors.textHint}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPwd}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity onPress={() => setShowPwd(!showPwd)} activeOpacity={0.6}>
+              <Feather name={showPwd ? 'eye-off' : 'eye'} size={fp(16)} color={colors.textHint} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 登录按钮 */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleLogin}
+            disabled={loading}
+            style={[$.loginBtn, { backgroundColor: colors.accent, opacity: loading ? 0.6 : 1 }]}
+          >
+            <Text style={$.loginBtnT}>{loading ? '登录中...' : '登录'}</Text>
+          </TouchableOpacity>
+
+          {/* 注册入口 */}
+          <View style={$.bottomRow}>
+            <Text style={[$.bottomText, { color: colors.textHint }]}>还没有账号？</Text>
+            <TouchableOpacity onPress={onSwitchToRegister} activeOpacity={0.6}>
+              <Text style={[$.bottomLink, { color: colors.accent }]}>立即注册</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const s = StyleSheet.create({
-  safe: { flex: 1 },
-  flex: { flex: 1 },
-  scroll: { flexGrow: 1 },
+const $ = StyleSheet.create({
+  root: { flex: 1 },
 
-  brandArea: {
-    height: wp(220), justifyContent: 'center', alignItems: 'center',
-    overflow: 'hidden',
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: wp(30) },
+  logoBox: {
+    width: wp(48), height: wp(48), borderRadius: wp(14),
+    justifyContent: 'center', alignItems: 'center',
   },
-  brandDeco: { position: 'absolute', right: wp(10), bottom: wp(10) },
-  brandEmoji: { fontSize: fp(48), marginBottom: wp(10) },
-  brandName: { fontSize: fp(28), fontWeight: '800', color: '#FFF', letterSpacing: 1.5 },
-  brandSub: { fontSize: fp(13), color: 'rgba(255,255,255,0.8)', marginTop: wp(6) },
+  logoEmoji: { fontSize: fp(24) },
+  brand: { fontSize: fp(22), fontWeight: '800' },
+  sub: { fontSize: fp(12), marginTop: wp(2) },
 
-  formCard: {
-    marginHorizontal: wp(16), marginTop: -wp(28),
-    borderRadius: wp(18), padding: wp(24), paddingTop: wp(28),
-    ...shadow(0, 10, 0.1, '#000', 5),
+  inputBox: {
+    flexDirection: 'row', alignItems: 'center',
+    height: wp(48), borderRadius: wp(12), borderWidth: 1,
+    paddingHorizontal: wp(14), marginBottom: wp(12),
   },
-  formTitle: { fontSize: fp(22), fontWeight: '700', marginBottom: wp(4) },
-  formSub: { fontSize: fp(14), marginBottom: wp(20), lineHeight: fp(20) },
+  input: { flex: 1, fontSize: fp(15), marginLeft: wp(10), padding: 0 },
 
-  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: wp(18) },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { marginHorizontal: wp(14), fontSize: fp(12), fontWeight: '600' },
+  loginBtn: {
+    height: wp(48), borderRadius: wp(12),
+    justifyContent: 'center', alignItems: 'center',
+    marginTop: wp(6),
+  },
+  loginBtnT: { color: '#fff', fontSize: fp(16), fontWeight: '700' },
+
+  bottomRow: {
+    flexDirection: 'row', justifyContent: 'center',
+    marginTop: wp(20),
+  },
+  bottomText: { fontSize: fp(13) },
+  bottomLink: { fontSize: fp(13), fontWeight: '700', marginLeft: wp(4) },
 });

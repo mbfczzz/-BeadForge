@@ -1,54 +1,52 @@
-import React, { useState } from 'react';
-import { View, Pressable, ViewStyle, Platform } from 'react-native';
+import React, { useCallback } from 'react';
+import { Pressable, StyleProp, ViewStyle, Platform } from 'react-native';
 
 interface Props {
   children: React.ReactNode;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   hoverScale?: number;
   hoverLift?: number;
-  dataClass?: string;
 }
 
 /**
- * Hover 交互组件
- * Web: 纯 CSS hover/active (通过 data-class 匹配全局样式)
- * Native: JS state 驱动
+ * 交互组件 — 移动端用 Pressable 原生 style 回调（零 useState），Web 端用 CSS transition
  */
 export const HoverView: React.FC<Props> = ({
   children, onPress, style,
-  hoverScale = 1.02, hoverLift = 3, dataClass,
+  hoverScale = 1.02, hoverLift = 3,
 }) => {
-  const [hovered, setHovered] = useState(false);
-  const [pressed, setPressed] = useState(false);
+  // 移动端：用 Pressable 的 style 函数，pressed 时缩放，不需要 state
+  if (Platform.OS !== 'web') {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          style as ViewStyle,
+          pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] },
+        ]}
+      >
+        {children}
+      </Pressable>
+    );
+  }
 
-  const isWeb = Platform.OS === 'web';
-
-  // Native: JS 驱动 transform
-  const nativeTransform = !isWeb ? {
-    transform: [
-      { translateY: pressed ? 0 : hovered ? -hoverLift : 0 },
-      { scale: pressed ? 0.97 : hovered ? hoverScale : 1 },
-    ],
-  } : {};
-
+  // Web 端：保留 hover 效果
   return (
     <Pressable
       onPress={onPress}
-      {...(!isWeb ? {
-        onPressIn: () => setPressed(true),
-        onPressOut: () => setPressed(false),
-        // @ts-ignore
-        onHoverIn: () => setHovered(true),
-        onHoverOut: () => setHovered(false),
-      } : {})}
+      style={({ pressed, hovered }: any) => [
+        style as ViewStyle,
+        {
+          transform: [
+            { translateY: pressed ? 0 : hovered ? -hoverLift : 0 },
+            { scale: pressed ? 0.97 : hovered ? hoverScale : 1 },
+          ],
+          transitionDuration: '0.2s',
+        } as any,
+      ]}
     >
-      <View
-        {...(isWeb && dataClass ? { dataSet: { class: dataClass } } as any : {})}
-        style={[style, nativeTransform]}
-      >
-        {children}
-      </View>
+      {children}
     </Pressable>
   );
 };

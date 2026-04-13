@@ -6,3 +6,6 @@ export { BeadGrid, ALL_PATTERNS } from './BeadGrid';
 export { PressableScale } from './PressableScale';
 export { HoverView } from './HoverView';
 export { Skeleton, CardSkeleton } from './Skeleton';
+export { DanmakuOverlay } from './Danmaku';
+export { DanmakuInput } from './DanmakuInput';
+export type { DanmakuItem, DanmakuConfig } from './Danmaku';

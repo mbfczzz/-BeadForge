@@ -1,74 +1,111 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
-import { wp, fp } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
-import { StateView } from '../../components/common';
-import { BeadGrid, HEART_PATTERN, CAT_PATTERN, MUSHROOM_PATTERN, FLOWER_PATTERN, STAR_PATTERN } from '../../components/common/BeadGrid';
+import { useNavigation } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { FontSize, BorderRadius, useTheme } from '../../theme';
+import { HoverView, StateView, BeadGrid, ALL_PATTERNS } from '../../components/common';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
+import { wp, fp } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 
-interface Props { onBack: () => void; }
+const PAD = wp(15);
+const STATUS_MAP: Record<string, { label: string; color: string }> = {
+  DRAFT: { label: '草稿', color: '#F59E0B' },
+  PUBLISHED: { label: '已发布', color: '#22C55E' },
+  ARCHIVED: { label: '已归档', color: '#6B7280' },
+};
 
-const PATTERNS = [HEART_PATTERN, CAT_PATTERN, MUSHROOM_PATTERN, FLOWER_PATTERN, STAR_PATTERN];
-const STATUS: Record<string, string> = { DRAFT: '草稿', PUBLISHED: '已发布', ARCHIVED: '已归档' };
+interface Props { onBack: () => void }
 
 export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
+  const navigation = useNavigation<any>();
   const { myDesigns, myLoading, myHasMore, fetchMyDesigns } = useDesignStore();
   useEffect(() => { fetchMyDesigns(true); }, []);
 
-  const renderItem = ({ item }: { item: DesignItem }) => (
-    <TouchableOpacity style={[styles.card, { backgroundColor: colors.surface }]} activeOpacity={0.7}>
-      <View style={[styles.cardCover, { backgroundColor: colors.inputBg }]}>
-        <BeadGrid pixels={PATTERNS[item.id % PATTERNS.length]} beadSize={6} gap={1} round />
-      </View>
-      <View style={styles.cardInfo}>
-        <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-        <Text style={[styles.cardMeta, { color: colors.textHint }]}>
-          {STATUS[item.status] || item.status} · {item.createdAt?.slice(0, 10)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const handlePress = (item: DesignItem) => {
+    navigation.navigate('DesignDetail', { item });
+  };
+
+  const renderItem = ({ item }: { item: DesignItem }) => {
+    const pat = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
+    const st = STATUS_MAP[item.status] || { label: item.status, color: '#6B7280' };
+    return (
+      <HoverView onPress={() => handlePress(item)} style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]} hoverScale={1.01} hoverLift={2}>
+        <View style={[$.cardCover, { backgroundColor: dark ? '#2a2a2a' : '#fafafa' }]}>
+          <BeadGrid pixels={pat} beadSize={wp(6)} gap={0.5} round />
+        </View>
+        <View style={$.cardInfo}>
+          <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+          <Text style={[$.cardDesc, { color: colors.textHint }]} numberOfLines={1}>{item.description}</Text>
+          <View style={$.cardFooter}>
+            <View style={[$.statusBadge, { backgroundColor: st.color + '18' }]}>
+              <View style={[$.statusDot, { backgroundColor: st.color }]} />
+              <Text style={[$.statusText, { color: st.color }]}>{st.label}</Text>
+            </View>
+            <Text style={[$.cardDate, { color: colors.textHint }]}>{item.createdAt?.slice(0, 10)}</Text>
+          </View>
+        </View>
+        <Feather name="chevron-right" size={fp(16)} color={colors.textHint} style={{ marginRight: wp(4) }} />
+      </HoverView>
+    );
+  };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>← 返回</Text></TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.text }]}>我的作品</Text>
-        <View style={{ width: wp(50) }} />
+    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
+      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+        <HoverView onPress={onBack} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
+          <Feather name="arrow-left" size={fp(18)} color={colors.text} />
+        </HoverView>
+        <Text style={[$.navTitle, { color: colors.text }]}>我的作品</Text>
+        <View style={{ width: wp(34) }} />
       </View>
       <FlatList
         data={myDesigns}
         keyExtractor={(i) => i.id.toString()}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={{ padding: PAD, gap: wp(10) }}
         refreshControl={<RefreshControl refreshing={myLoading && myDesigns.length > 0} onRefresh={() => fetchMyDesigns(true)} tintColor={colors.accent} />}
         onEndReached={() => { if (myHasMore) fetchMyDesigns(false); }}
         onEndReachedThreshold={0.3}
-        ListEmptyComponent={myLoading ? <StateView loading /> : <StateView empty emptyText="还没有作品" />}
+        ListEmptyComponent={myLoading ? <StateView loading /> : <StateView empty emptyText="还没有作品，去创作吧" />}
       />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const $ = StyleSheet.create({
+  root: { flex: 1 },
   nav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: wp(16), height: wp(48), borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row', alignItems: 'center',
+    height: wp(50), paddingHorizontal: PAD,
+    borderBottomWidth: 1, gap: wp(10),
   },
-  navBack: { fontSize: fp(15), fontWeight: '500' },
-  navTitle: { fontSize: fp(17), fontWeight: '700' },
-  list: { padding: wp(16) },
+  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '600', textAlign: 'center' },
+  navBtn: {
+    width: wp(34), height: wp(34), borderRadius: wp(17),
+    justifyContent: 'center', alignItems: 'center',
+  },
   card: {
-    flexDirection: 'row', marginBottom: wp(12), borderRadius: BorderRadius.md,
-    overflow: 'hidden', ...shadow(0, 3, 0.06, '#000', 2),
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
+    ...shadow(1, 4, 0.05, '#000', 1),
   },
-  cardCover: { width: wp(80), height: wp(80), justifyContent: 'center', alignItems: 'center' },
-  cardInfo: { flex: 1, paddingHorizontal: wp(14), paddingVertical: wp(12), justifyContent: 'center' },
-  cardTitle: { fontSize: fp(15), fontWeight: '600' },
-  cardMeta: { fontSize: fp(12), marginTop: wp(5) },
+  cardCover: {
+    width: wp(72), height: wp(72),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  cardInfo: { flex: 1, padding: wp(10), gap: wp(4) },
+  cardTitle: { fontSize: FontSize.md, fontWeight: '600' },
+  cardDesc: { fontSize: FontSize.xs },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: wp(8), marginTop: wp(2) },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(4),
+    paddingHorizontal: wp(8), paddingVertical: wp(2), borderRadius: wp(4),
+  },
+  statusDot: { width: wp(5), height: wp(5), borderRadius: wp(2.5) },
+  statusText: { fontSize: fp(10), fontWeight: '600' },
+  cardDate: { fontSize: FontSize.xs },
 });

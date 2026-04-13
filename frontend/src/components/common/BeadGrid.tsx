@@ -6,17 +6,17 @@ interface Props {
   beadSize?: number;
   gap?: number;
   round?: boolean;
-  /** 是否渲染高光模拟真实珠子质感 */
+  /** 高光质感（大图预览开启，列表缩略图关闭以提升性能） */
   glossy?: boolean;
 }
 
 /**
- * 拼豆像素网格 - 带高光质感
+ * 拼豆像素网格
+ * - glossy=true: 带高光+阴影（用于详情页大预览）
+ * - glossy=false: 纯色块（用于卡片缩略图，性能优先）
  */
-export const BeadGrid = memo<Props>(({ pixels, beadSize = 8, gap = 1, round = true, glossy = true }) => {
+export const BeadGrid = memo<Props>(({ pixels, beadSize = 8, gap = 1, round = true, glossy = false }) => {
   const r = round ? beadSize / 2 : 1;
-  const hlSize = Math.max(beadSize * 0.3, 2);
-  const hlOffset = Math.max(beadSize * 0.15, 1);
 
   const rows = useMemo(() =>
     pixels.map((row, y) => (
@@ -29,28 +29,23 @@ export const BeadGrid = memo<Props>(({ pixels, beadSize = 8, gap = 1, round = tr
             <View key={x} style={{
               width: beadSize, height: beadSize, borderRadius: r,
               backgroundColor: color,
-              ...(Platform.OS === 'web'
-                ? { boxShadow: '0 0.5px 1px rgba(0,0,0,0.15)' }
-                : { shadowColor: '#000', shadowOffset: { width: 0, height: 0.5 }, shadowOpacity: 0.15, shadowRadius: 0.5 }
-              ) as any,
             }}>
-              {/* 高光点 */}
-              {glossy && beadSize >= 6 && (
+              {glossy && beadSize >= 8 && (
                 <View style={{
                   position: 'absolute',
-                  top: hlOffset,
-                  left: hlOffset,
-                  width: hlSize,
-                  height: hlSize,
-                  borderRadius: hlSize / 2,
-                  backgroundColor: 'rgba(255,255,255,0.45)',
+                  top: Math.max(beadSize * 0.15, 1),
+                  left: Math.max(beadSize * 0.15, 1),
+                  width: Math.max(beadSize * 0.28, 2),
+                  height: Math.max(beadSize * 0.28, 2),
+                  borderRadius: beadSize * 0.14,
+                  backgroundColor: 'rgba(255,255,255,0.4)',
                 }} />
               )}
             </View>
           );
         })}
       </View>
-    )), [pixels, beadSize, gap, r, glossy, hlSize, hlOffset]);
+    )), [pixels, beadSize, gap, r, glossy]);
 
   return <View style={styles.grid}>{rows}</View>;
 });

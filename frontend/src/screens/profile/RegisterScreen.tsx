@@ -1,75 +1,123 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+  View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform,
+  TouchableOpacity, TextInput, ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button, Input } from '../../components/common';
-import { Spacing, FontSize, useTheme } from '../../theme';
+import { Feather } from '@expo/vector-icons';
+import { useTheme, FontSize, BorderRadius } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 
-interface Props { onSwitchToLogin: () => void; }
-interface FormErrors { username?: string; password?: string; confirmPwd?: string; email?: string; }
+interface Props { onSwitchToLogin: () => void }
 
 export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const [username, setUsername] = useState('');
   const [nickname, setNickname] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
   const register = useAuthStore((s) => s.register);
-  const clear = (f: keyof FormErrors) => setErrors((e) => ({ ...e, [f]: undefined }));
-
-  const validate = () => {
-    const e: FormErrors = {};
-    if (!username.trim()) e.username = '请输入用户名';
-    else if (username.trim().length < 3) e.username = '至少3个字符';
-    else if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) e.username = '只能包含字母、数字和下划线';
-    if (!password) e.password = '请输入密码';
-    else if (password.length < 6) e.password = '至少6位';
-    if (password && password !== confirmPwd) e.confirmPwd = '两次密码不一致';
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = '邮箱格式不对';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
 
   const handleRegister = async () => {
-    if (!validate()) return;
+    if (!username.trim() || username.trim().length < 3) { Alert.alert('提示', '用户名至少3个字符'); return; }
+    if (password.length < 6) { Alert.alert('提示', '密码至少6位'); return; }
+    if (password !== confirmPwd) { Alert.alert('提示', '两次密码不一致'); return; }
     setLoading(true);
-    try { await register({ username: username.trim(), password, nickname: nickname.trim() || undefined, email: email.trim() || undefined }); }
-    catch (e: any) { Alert.alert('注册失败', e.message); }
+    try {
+      await register({ username: username.trim(), password, nickname: nickname.trim() || undefined });
+    } catch (e: any) { Alert.alert('注册失败', e.message); }
     finally { setLoading(false); }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: colors.text }]}>创建账号</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>加入 BeadForge 社区</Text>
+    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: wp(24) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        <Input label="用户名" placeholder="字母、数字、下划线" value={username}
-          onChangeText={(t) => { setUsername(t); clear('username'); }} error={errors.username} />
-        <Input label="昵称（选填）" placeholder="显示名称" value={nickname} onChangeText={setNickname} />
-        <Input label="邮箱（选填）" placeholder="example@mail.com" value={email}
-          onChangeText={(t) => { setEmail(t); clear('email'); }} keyboardType="email-address" error={errors.email} />
-        <Input label="密码" placeholder="至少6位" value={password}
-          onChangeText={(t) => { setPassword(t); clear('password'); }} secureTextEntry error={errors.password} />
-        <Input label="确认密码" placeholder="再输入一次" value={confirmPwd}
-          onChangeText={(t) => { setConfirmPwd(t); clear('confirmPwd'); }} secureTextEntry error={errors.confirmPwd} />
+          {/* 标题 */}
+          <Text style={[$.title, { color: colors.text }]}>创建账号</Text>
+          <Text style={[$.sub, { color: colors.textHint }]}>加入 BeadForge 社区</Text>
 
-        <Button title="注册" onPress={handleRegister} loading={loading} style={{ marginTop: wp(8) }} />
-        <Button title="已有账号？登录" onPress={onSwitchToLogin} variant="text" />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* 用户名 */}
+          <InputRow icon="user" placeholder="用户名" value={username} onChangeText={setUsername} colors={colors} />
+
+          {/* 昵称 */}
+          <InputRow icon="smile" placeholder="昵称（选填）" value={nickname} onChangeText={setNickname} colors={colors} />
+
+          {/* 密码 */}
+          <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+            <Feather name="lock" size={fp(16)} color={colors.textHint} />
+            <TextInput style={[$.input, { color: colors.text }]} placeholder="密码（至少6位）" placeholderTextColor={colors.textHint} value={password} onChangeText={setPassword} secureTextEntry={!showPwd} autoCapitalize="none" />
+            <TouchableOpacity onPress={() => setShowPwd(!showPwd)} activeOpacity={0.6}>
+              <Feather name={showPwd ? 'eye-off' : 'eye'} size={fp(16)} color={colors.textHint} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 确认密码 */}
+          <InputRow icon="shield" placeholder="确认密码" value={confirmPwd} onChangeText={setConfirmPwd} colors={colors} secure={!showPwd} />
+
+          {/* 注册按钮 */}
+          <TouchableOpacity
+            activeOpacity={0.8} onPress={handleRegister} disabled={loading}
+            style={[$.btn, { backgroundColor: colors.accent, opacity: loading ? 0.6 : 1 }]}
+          >
+            <Text style={$.btnT}>{loading ? '注册中...' : '注册'}</Text>
+          </TouchableOpacity>
+
+          {/* 底部 */}
+          <View style={$.bottomRow}>
+            <Text style={[$.bottomText, { color: colors.textHint }]}>已有账号？</Text>
+            <TouchableOpacity onPress={onSwitchToLogin} activeOpacity={0.6}>
+              <Text style={[$.bottomLink, { color: colors.accent }]}>立即登录</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flexGrow: 1, paddingHorizontal: wp(24), paddingTop: wp(44), paddingBottom: wp(30) },
-  title: { fontSize: fp(22), fontWeight: '700' },
-  subtitle: { fontSize: fp(14), marginTop: wp(4), marginBottom: wp(24) },
+/* ──── 输入行 ──── */
+
+const InputRow: React.FC<{
+  icon: string; placeholder: string; value: string; onChangeText: (t: string) => void;
+  colors: any; secure?: boolean;
+}> = ({ icon, placeholder, value, onChangeText, colors, secure }) => (
+  <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+    <Feather name={icon as any} size={fp(16)} color={colors.textHint} />
+    <TextInput
+      style={[$.input, { color: colors.text }]}
+      placeholder={placeholder} placeholderTextColor={colors.textHint}
+      value={value} onChangeText={onChangeText}
+      secureTextEntry={secure} autoCapitalize="none"
+    />
+  </View>
+);
+
+const $ = StyleSheet.create({
+  root: { flex: 1 },
+
+  title: { fontSize: fp(24), fontWeight: '800', marginBottom: wp(4) },
+  sub: { fontSize: fp(13), marginBottom: wp(24) },
+
+  inputBox: {
+    flexDirection: 'row', alignItems: 'center',
+    height: wp(48), borderRadius: wp(12), borderWidth: 1,
+    paddingHorizontal: wp(14), marginBottom: wp(12),
+  },
+  input: { flex: 1, fontSize: fp(15), marginLeft: wp(10), padding: 0 },
+
+  btn: {
+    height: wp(48), borderRadius: wp(12),
+    justifyContent: 'center', alignItems: 'center',
+    marginTop: wp(6),
+  },
+  btnT: { color: '#fff', fontSize: fp(16), fontWeight: '700' },
+
+  bottomRow: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(20) },
+  bottomText: { fontSize: fp(13) },
+  bottomLink: { fontSize: fp(13), fontWeight: '700', marginLeft: wp(4) },
 });
