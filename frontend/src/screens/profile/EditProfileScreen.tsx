@@ -35,7 +35,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
         <TouchableOpacity onPress={handleSave}><Text style={[styles.navSave, { color: colors.accent }]}>保存</Text></TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.avatarWrap}>
+        <TouchableOpacity style={styles.avatarWrap} onPress={() => Alert.alert('更换头像', '暂不支持上传，后续版本开放')}>
           <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} />
           <Text style={[styles.avatarHint, { color: colors.accent }]}>更换头像</Text>
         </TouchableOpacity>

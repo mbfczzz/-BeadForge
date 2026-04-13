@@ -5,8 +5,9 @@ import {
   NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { Spacing, FontSize, BorderRadius, useTheme } from '../../theme';
+import { FontSize, BorderRadius, useTheme } from '../../theme';
 import { StateView, PressableScale, CardSkeleton, HoverView } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
@@ -195,13 +196,18 @@ export const HomeScreen: React.FC = () => {
 /** 画廊卡片 - moely 风格：小圆角+细边框+淡阴影 */
 const Card = memo(({ item }: { item: DesignItem }) => {
   const { colors, dark } = useTheme();
+  const navigation = useNavigation<any>();
   const pat = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
   const h = wp(100) + (item.id * 31) % wp(60);
   const bg = (dark ? BG_D : BG_L)[item.id % BG_L.length];
   const bs = Math.max(Math.floor(CARD_W / (pat[0]?.length||9)) - 1, wp(3));
 
   return (
-    <PressableScale style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} scale={0.98} dataClass="card">
+    <PressableScale
+      style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
+      scale={0.98} dataClass="card"
+      onPress={() => navigation.navigate('DesignDetail', { item })}
+    >
       <View style={[$.cardCover, { height: h, backgroundColor: bg }]}>
         <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
       </View>
@@ -265,7 +271,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8),
   },
   cat: { paddingHorizontal: wp(15), paddingVertical: wp(6), borderRadius: BorderRadius.full, borderWidth: 1 },
-  catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent', borderStyle: 'dashed' as any },
+  catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' },
   catT: { fontSize: FontSize.sm, fontWeight: '500' },
 
   // 标题
