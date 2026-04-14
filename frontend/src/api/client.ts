@@ -12,8 +12,13 @@ export function setOnUnauthorized(cb: () => void) {
   onUnauthorized = cb;
 }
 
+import { Platform } from 'react-native';
+
+// Web 端（Docker 内前后端同端口）用相对路径，原生端用绝对 IP
+const BASE_URL = Platform.OS === 'web' ? '/api' : 'http://172.16.2.89:8080/api';
+
 const client = axios.create({
-  baseURL: 'http://172.16.2.89:8080/api',
+  baseURL: BASE_URL,
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

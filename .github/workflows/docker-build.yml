@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/beadforge-backend
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -40,12 +40,11 @@ jobs:
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
 
       - name: Build and Push
         uses: docker/build-push-action@v5
         with:
-          context: ./backend
+          context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
