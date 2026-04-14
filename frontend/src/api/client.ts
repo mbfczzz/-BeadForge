@@ -1,24 +1,16 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getApiUrl } from '../config/env';
 
 const TOKEN_KEY = 'beadforge_token';
 
-/**
- * 登出回调 - 由 AuthStore 注入，避免循环依赖
- */
 let onUnauthorized: (() => void) | null = null;
-
 export function setOnUnauthorized(cb: () => void) {
   onUnauthorized = cb;
 }
 
-import { Platform } from 'react-native';
-
-// Web 端（Docker 内前后端同端口）用相对路径，原生端用绝对 IP
-const BASE_URL = Platform.OS === 'web' ? '/api' : 'http://172.16.2.89:8080/api';
-
 const client = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getApiUrl(),
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
