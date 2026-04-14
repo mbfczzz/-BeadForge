@@ -139,7 +139,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       const t = setTimeout(() => { pushHistory(generateMockPattern(cols, rows)); setGenerating(false); }, 1500);
       return () => clearTimeout(t);
     }
-    if (mode === 'manual') setGenerating(false);
+    // manual 和 ai 模式都不显示 loading（ai 模式显示输入面板）
+    setGenerating(false);
   }, []);
 
   const undo = useCallback(() => {
