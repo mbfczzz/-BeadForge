@@ -10,7 +10,6 @@ import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
-import { isDoubaoConfigured } from '../../config/doubao';
 import { usePatternStore } from '../../store/usePatternStore';
 import { hapticSelection, hapticLight } from '../../hooks/useFeedback';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
@@ -94,7 +93,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [genError, setGenError] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [showAiInput, setShowAiInput] = useState(mode === 'ai');
-  const useRealApi = isDoubaoConfigured();
+  const useRealApi = true; // API Key 存后端数据库，始终尝试调用
 
   /* ---- 画布状态 ---- */
   const [grid, setGrid] = useState<string[][]>(() => createEmptyGrid(cols, rows));

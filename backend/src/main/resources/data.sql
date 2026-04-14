@@ -71,6 +71,12 @@ INSERT IGNORE INTO t_feed (id, user_id, content, design_id, tags, like_count, co
 (6, 8, '宝石拼豆第一弹！蓝色钻石搞定✨ 接下来挑战红宝石', 7, '宝石,新手', 95, 12, 3, '2026-04-11 08:00:00'),
 (7, 9, '彩虹挂画完成了！这个用了快 600 颗珠子，7 种颜色。推荐新手从这个练起，配色简单效果好。', 8, '彩虹,教程', 521, 78, 45, '2026-04-10 12:00:00');
 
+-- API配置
+INSERT IGNORE INTO t_api_config (config_key, config_value, description) VALUES
+('doubao_api_key', 'aa74c59c-9d1d-46b2-a8c1-b1bacb1997cc', '豆包文生图 API Key'),
+('doubao_model', 'doubao-seedream-5-0-260128', '豆包文生图模型ID'),
+('doubao_base_url', 'https://ark.cn-beijing.volces.com/api/v3', '豆包API地址');
+
 -- 一些关注关系
 INSERT IGNORE INTO t_follow (follower_id, following_id) VALUES
 (1, 2), (1, 3), (1, 9),
