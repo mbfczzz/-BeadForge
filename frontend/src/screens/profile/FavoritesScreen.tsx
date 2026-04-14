@@ -4,12 +4,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useTheme, FontSize, BorderRadius } from '../../theme';
+import { useTheme } from '../../theme';
 import { HoverView, BeadGrid, ALL_PATTERNS } from '../../components/common';
 import { wp, fp, screenW } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
-const PAD = wp(15);
+const PAD = wp(16);
 const GAP = wp(10);
 const CARD_W = (screenW - PAD * 2 - GAP) / 2;
 
@@ -45,12 +45,19 @@ export const FavoritesScreen: React.FC<Props> = ({ onBack }) => {
         <View style={{ width: wp(34) }} />
       </View>
 
+      {/* 统计条 */}
+      <View style={[$.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.divider }]}>
+        <Text style={[$.statsText, { color: colors.textSecondary }]}>共 {MOCK_FAVS.length} 个收藏</Text>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
-        <Text style={[$.count, { color: colors.textHint }]}>共 {MOCK_FAVS.length} 个收藏</Text>
         {MOCK_FAVS.length === 0 && (
-          <View style={$.empty}>
-            <Feather name="bookmark" size={fp(32)} color={colors.textHint} />
-            <Text style={[$.emptyText, { color: colors.textHint }]}>还没有收藏，去发现页逛逛吧</Text>
+          <View style={$.emptyWrap}>
+            <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a2a' : '#FFF9E6' }]}>
+              <Feather name="bookmark" size={fp(28)} color="#FBBF24" />
+            </View>
+            <Text style={[$.emptyTitle, { color: colors.text }]}>还没有收藏</Text>
+            <Text style={[$.emptySub, { color: colors.textHint }]}>去发现页逛逛吧</Text>
           </View>
         )}
         <View style={$.grid}>
@@ -58,8 +65,17 @@ export const FavoritesScreen: React.FC<Props> = ({ onBack }) => {
             const pat = ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length];
             const bs = Math.floor((CARD_W - wp(24)) / (pat[0]?.length || 9)) - 1;
             return (
-              <HoverView key={item.id} onPress={() => Alert.alert(item.title, `作者：${item.author}\n点赞：${item.likeCount}`)} style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]} hoverScale={1.02} hoverLift={3}>
-                <View style={[$.cardCover, { backgroundColor: dark ? '#2a2a2a' : '#fafafa' }]}>
+              <HoverView
+                key={item.id}
+                onPress={() => Alert.alert(item.title, `作者：${item.author}\n点赞：${item.likeCount}`)}
+                style={[$.card, {
+                  backgroundColor: colors.cardBg,
+                  borderColor: dark ? colors.border : '#F0F0F0',
+                  ...shadow(2, 6, dark ? 0 : 0.06),
+                }]}
+                hoverScale={1.02} hoverLift={3}
+              >
+                <View style={[$.cardCover, { backgroundColor: dark ? '#1e1e1e' : '#FAFAFA' }]}>
                   <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(12))} gap={1} round />
                 </View>
                 <View style={$.cardBody}>
@@ -88,30 +104,40 @@ const $ = StyleSheet.create({
     height: wp(50), paddingHorizontal: PAD,
     borderBottomWidth: 1, gap: wp(10),
   },
-  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '600', textAlign: 'center' },
+  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '700', textAlign: 'center' },
   navBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
   },
-  count: { fontSize: FontSize.xs, paddingHorizontal: PAD, marginTop: wp(12) },
-  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: wp(60), gap: wp(10) },
-  emptyText: { fontSize: FontSize.sm },
+
+  statsBar: {
+    paddingHorizontal: PAD, paddingVertical: wp(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  statsText: { fontSize: fp(12), fontWeight: '500' },
+
+  emptyWrap: { alignItems: 'center', paddingTop: wp(60) },
+  emptyIcon: {
+    width: wp(72), height: wp(72), borderRadius: wp(36),
+    justifyContent: 'center', alignItems: 'center', marginBottom: wp(16),
+  },
+  emptyTitle: { fontSize: fp(16), fontWeight: '700', marginBottom: wp(6) },
+  emptySub: { fontSize: fp(13) },
+
   grid: {
     flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: PAD, paddingTop: wp(10), gap: GAP,
+    paddingHorizontal: PAD, paddingTop: wp(12), gap: GAP,
   },
   card: {
-    width: CARD_W, borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
-    ...shadow(1, 4, 0.06, '#000', 2),
+    width: CARD_W, borderRadius: wp(14), borderWidth: 1, overflow: 'hidden',
   },
   cardCover: {
     height: wp(100), justifyContent: 'center', alignItems: 'center',
-    borderTopLeftRadius: BorderRadius.lg, borderTopRightRadius: BorderRadius.lg,
   },
   cardBody: { padding: wp(10), gap: wp(4) },
-  cardTitle: { fontSize: FontSize.sm, fontWeight: '600' },
+  cardTitle: { fontSize: fp(13), fontWeight: '700' },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardAuthor: { fontSize: FontSize.xs },
+  cardAuthor: { fontSize: fp(10) },
   cardLike: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
-  cardLikeNum: { fontSize: FontSize.xs },
+  cardLikeNum: { fontSize: fp(10) },
 });

@@ -14,7 +14,7 @@ import { Platform } from 'react-native';
  */
 
 const API_URLS = {
-  local: 'http://172.16.2.89:8080/api',
+  local: 'http://192.168.1.4:8080/api',
   test:  'http://114.66.6.79:6006/api',
   prod:  '/api',
 };

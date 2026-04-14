@@ -9,7 +9,7 @@ import { HoverView, PressableScale } from '../../components/common';
 import { wp, fp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
-const PAD = wp(15);
+const PAD = wp(16);
 
 interface SettingGroup { title: string; items: SettingItem[] }
 interface SettingItem {
@@ -139,7 +139,7 @@ const $ = StyleSheet.create({
     height: wp(50), paddingHorizontal: PAD,
     borderBottomWidth: 1, gap: wp(10),
   },
-  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '600', textAlign: 'center' },
+  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '700', textAlign: 'center' },
   navBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',

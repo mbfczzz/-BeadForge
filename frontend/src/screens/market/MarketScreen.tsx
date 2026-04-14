@@ -1,7 +1,7 @@
 import React, { useState, useMemo, memo, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Alert, Dimensions,
-  TextInput, TouchableOpacity, Modal, FlatList, Pressable,
+  TextInput, TouchableOpacity, Modal, FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -171,24 +171,24 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
 
       {/* 详情 */}
       <Modal visible={!!detail} animationType="fade" transparent onRequestClose={() => setDetail(null)}>
-        <Pressable style={$.overlay} onPress={() => setDetail(null)}>
-          <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.72 }]} onPress={() => {}}>
+        <TouchableOpacity style={$.overlay} activeOpacity={1} onPress={() => setDetail(null)}>
+          <View style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.72 }]} onStartShouldSetResponder={() => true}>
             {detail && <MatDetail p={detail} colors={colors} onAdd={() => { addToCart(detail); setDetail(null); }} onClose={() => setDetail(null)} />}
-          </Pressable>
-        </Pressable>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* 购物车 */}
       <Modal visible={showCart} animationType="fade" transparent onRequestClose={() => setShowCart(false)}>
-        <Pressable style={$.overlay} onPress={() => setShowCart(false)}>
-          <Pressable style={[$.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
+        <TouchableOpacity style={$.overlay} activeOpacity={1} onPress={() => setShowCart(false)}>
+          <View style={[$.sheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
             <CartSheet cart={cart} colors={colors} cartTotal={cartTotal} cartCount={cartCount}
               onClose={() => setShowCart(false)} onRemove={removeFromCart} onChangeQty={changeQty}
               onClear={() => { setCart([]); showToast('已清空'); }}
               onCheckout={() => { setShowCart(false); Alert.alert('下单成功', `共 ${cartCount} 件，¥${cartTotal.toFixed(1)}`); setCart([]); }}
             />
-          </Pressable>
-        </Pressable>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -278,13 +278,13 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
 
       {/* 图纸详情 */}
       <Modal visible={!!detail} animationType="fade" transparent onRequestClose={() => setDetail(null)}>
-        <Pressable style={$.overlay} onPress={() => setDetail(null)}>
-          <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.78 }]} onPress={() => {}}>
+        <TouchableOpacity style={$.overlay} activeOpacity={1} onPress={() => setDetail(null)}>
+          <View style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.78 }]} onStartShouldSetResponder={() => true}>
             {detail && <PatDetail p={detail} colors={colors} dark={dark} owned={hasBought(detail.id)}
               onClose={() => setDetail(null)} onBuy={() => handleBuy(detail)}
               onMake={() => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: detail.cols, rows: detail.rows }); }} />}
-          </Pressable>
-        </Pressable>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Platform, TextInput,
+  View, Text, StyleSheet, ScrollView, Platform, TextInput,
   ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -487,8 +487,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
 
       {/* ── 发布到市场弹窗 ── */}
       <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
-        <Pressable style={$.pubOverlay} onPress={() => setShowPublish(false)}>
-          <Pressable style={[$.pubSheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
+        <TouchableOpacity style={$.pubOverlay} activeOpacity={1} onPress={() => setShowPublish(false)}>
+          <View style={[$.pubSheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
             <Text style={[$.pubTitle, { color: colors.text }]}>发布到图纸市场</Text>
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>标题</Text>
@@ -537,8 +537,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
                 <Text style={$.pubSubmitT}>发布</Text>
               </TouchableOpacity>
             </View>
-          </Pressable>
-        </Pressable>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );

@@ -35,7 +35,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ token, user });
       get().fetchStats();
     } catch (e: any) {
-      throw new Error(e?.response?.data?.message || e?.message || '登录失败');
+      throw new Error(e?.message || '登录失败');
     }
   },
 
@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await AsyncStorage.setItem(TOKEN_KEY, token);
       set({ token, user });
     } catch (e: any) {
-      throw new Error(e?.response?.data?.message || e?.message || '注册失败');
+      throw new Error(e?.message || '注册失败');
     }
   },
 
@@ -94,7 +94,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const res: any = await client.put('/user/profile', data);
       set({ user: res.data });
     } catch (e: any) {
-      throw new Error(e?.response?.data?.message || '更新失败');
+      throw new Error(e?.message || '更新失败');
     }
   },
 }));

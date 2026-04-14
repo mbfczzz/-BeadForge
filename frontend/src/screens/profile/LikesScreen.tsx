@@ -4,12 +4,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useTheme, FontSize, BorderRadius } from '../../theme';
-import { Avatar, HoverView, BeadGrid, ALL_PATTERNS } from '../../components/common';
-import { wp, fp, screenW } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
+import { useTheme } from '../../theme';
+import { HoverView, BeadGrid, ALL_PATTERNS } from '../../components/common';
+import { wp, fp } from '../../utils/responsive';
 
-const PAD = wp(15);
+const PAD = wp(16);
 
 interface LikeItem {
   id: number;
@@ -46,28 +45,47 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
         <View style={{ width: wp(34) }} />
       </View>
 
+      {/* 统计条 */}
+      <View style={[$.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.divider }]}>
+        <Text style={[$.statsText, { color: colors.textSecondary }]}>共 {MOCK_LIKES.length} 个点赞</Text>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
-        <Text style={[$.count, { color: colors.textHint }]}>共 {MOCK_LIKES.length} 个点赞</Text>
         {MOCK_LIKES.length === 0 && (
-          <View style={$.empty}>
-            <Feather name="heart" size={fp(32)} color={colors.textHint} />
-            <Text style={[$.emptyText, { color: colors.textHint }]}>还没有点赞，去发现喜欢的作品吧</Text>
+          <View style={$.emptyWrap}>
+            <View style={[$.emptyIcon, { backgroundColor: dark ? '#2a1a1a' : '#FFECEC' }]}>
+              <Feather name="heart" size={fp(28)} color="#EF4444" />
+            </View>
+            <Text style={[$.emptyTitle, { color: colors.text }]}>还没有点赞</Text>
+            <Text style={[$.emptySub, { color: colors.textHint }]}>去发现喜欢的作品吧</Text>
           </View>
         )}
-        {MOCK_LIKES.map((item) => {
+        {MOCK_LIKES.map((item, idx) => {
           const pat = ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length];
           return (
-            <HoverView key={item.id} onPress={() => Alert.alert(item.title, `作者：${item.author}\n点赞：${item.likeCount}`)} style={[$.likeCard, { backgroundColor: colors.surface, borderBottomColor: colors.border }]} hoverScale={1.01} hoverLift={1}>
-              <View style={[$.thumb, { backgroundColor: dark ? '#2a2a2a' : '#fafafa' }]}>
+            <HoverView
+              key={item.id}
+              onPress={() => Alert.alert(item.title, `作者：${item.author}\n点赞：${item.likeCount}`)}
+              style={[$.likeCard, {
+                backgroundColor: colors.surface,
+                borderBottomColor: idx < MOCK_LIKES.length - 1 ? colors.divider : 'transparent',
+                borderBottomWidth: idx < MOCK_LIKES.length - 1 ? StyleSheet.hairlineWidth : 0,
+              }]}
+              hoverScale={1.01} hoverLift={1}
+            >
+              <View style={[$.thumb, { backgroundColor: dark ? '#1e1e1e' : '#FAFAFA' }]}>
                 <BeadGrid pixels={pat} beadSize={wp(5)} gap={0.5} round />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={$.likeInfo}>
                 <Text style={[$.likeTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[$.likeAuthor, { color: colors.textHint }]}>{item.author} · {item.timeAgo}</Text>
+                <Text style={[$.likeAuthor, { color: colors.textHint }]}>{item.author}</Text>
               </View>
               <View style={$.likeRight}>
-                <Feather name="heart" size={fp(14)} color="#EF4444" />
-                <Text style={[$.likeNum, { color: colors.textHint }]}>{item.likeCount}</Text>
+                <View style={$.likeCountRow}>
+                  <Feather name="heart" size={fp(12)} color="#EF4444" />
+                  <Text style={[$.likeNum, { color: colors.textSecondary }]}>{item.likeCount}</Text>
+                </View>
+                <Text style={[$.likeTime, { color: colors.textHint }]}>{item.timeAgo}</Text>
               </View>
             </HoverView>
           );
@@ -84,26 +102,41 @@ const $ = StyleSheet.create({
     height: wp(50), paddingHorizontal: PAD,
     borderBottomWidth: 1, gap: wp(10),
   },
-  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '600', textAlign: 'center' },
+  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '700', textAlign: 'center' },
   navBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
   },
-  count: { fontSize: FontSize.xs, paddingHorizontal: PAD, marginTop: wp(12), marginBottom: wp(4) },
-  empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: wp(60), gap: wp(10) },
-  emptyText: { fontSize: FontSize.sm },
+
+  statsBar: {
+    paddingHorizontal: PAD, paddingVertical: wp(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  statsText: { fontSize: fp(12), fontWeight: '500' },
+
+  emptyWrap: { alignItems: 'center', paddingTop: wp(60) },
+  emptyIcon: {
+    width: wp(72), height: wp(72), borderRadius: wp(36),
+    justifyContent: 'center', alignItems: 'center', marginBottom: wp(16),
+  },
+  emptyTitle: { fontSize: fp(16), fontWeight: '700', marginBottom: wp(6) },
+  emptySub: { fontSize: fp(13) },
+
   likeCard: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: PAD, paddingVertical: wp(12),
-    borderBottomWidth: StyleSheet.hairlineWidth, gap: wp(12),
+    paddingHorizontal: PAD, paddingVertical: wp(14),
+    gap: wp(12),
   },
   thumb: {
-    width: wp(52), height: wp(52), borderRadius: BorderRadius.md,
+    width: wp(54), height: wp(54), borderRadius: wp(12),
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },
-  likeTitle: { fontSize: FontSize.md, fontWeight: '600' },
-  likeAuthor: { fontSize: FontSize.xs, marginTop: wp(3) },
-  likeRight: { alignItems: 'center', gap: wp(3) },
-  likeNum: { fontSize: FontSize.xs },
+  likeInfo: { flex: 1 },
+  likeTitle: { fontSize: fp(14), fontWeight: '700' },
+  likeAuthor: { fontSize: fp(11), marginTop: wp(3) },
+  likeRight: { alignItems: 'flex-end', gap: wp(4) },
+  likeCountRow: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
+  likeNum: { fontSize: fp(12), fontWeight: '600' },
+  likeTime: { fontSize: fp(10) },
 });

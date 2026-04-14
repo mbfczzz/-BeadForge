@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity,
+  KeyboardAvoidingView, Platform, TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Avatar, Button, Input } from '../../components/common';
-import { Spacing, FontSize, useTheme } from '../../theme';
+import { Feather } from '@expo/vector-icons';
+import { Avatar } from '../../components/common';
+import { useTheme } from '../../theme';
+import { wp, fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 
-interface Props { onBack: () => void; }
+const PAD = wp(16);
+
+interface Props { onBack: () => void }
 
 export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
-  const { colors } = useTheme();
+  const { colors, dark } = useTheme();
   const { user, updateProfile } = useAuthStore();
   const [nickname, setNickname] = useState(user?.nickname || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -26,38 +33,134 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
     finally { setLoading(false); }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={[styles.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <TouchableOpacity onPress={onBack}><Text style={[styles.navBack, { color: colors.textSecondary }]}>取消</Text></TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.text }]}>编辑资料</Text>
-        <TouchableOpacity onPress={handleSave}><Text style={[styles.navSave, { color: colors.accent }]}>保存</Text></TouchableOpacity>
+  const changed = nickname !== (user?.nickname || '') || email !== (user?.email || '') || phone !== (user?.phone || '');
+
+  const renderField = (
+    label: string, icon: string, value: string, onChange: (v: string) => void,
+    opts?: { placeholder?: string; kbd?: 'email-address' | 'phone-pad' },
+  ) => (
+    <View style={$.fieldWrap}>
+      <Text style={[$.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={[$.fieldBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+        <Feather name={icon as any} size={fp(14)} color={colors.textHint} />
+        <TextInput
+          style={[$.fieldInput, { color: colors.text }]}
+          placeholder={opts?.placeholder || `输入${label}`}
+          placeholderTextColor={colors.textHint}
+          value={value}
+          onChangeText={onChange}
+          keyboardType={opts?.kbd}
+          autoCapitalize="none"
+        />
       </View>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.avatarWrap} onPress={() => Alert.alert('更换头像', '暂不支持上传，后续版本开放')}>
-          <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={72} />
-          <Text style={[styles.avatarHint, { color: colors.accent }]}>更换头像</Text>
-        </TouchableOpacity>
-        <Input label="昵称" placeholder="输入昵称" value={nickname} onChangeText={setNickname} />
-        <Input label="邮箱" placeholder="选填" value={email} onChangeText={setEmail} keyboardType="email-address" />
-        <Input label="手机号" placeholder="选填" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* 导航栏 */}
+        <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+          <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={$.navBackBtn}>
+            <Feather name="x" size={fp(18)} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[$.navTitle, { color: colors.text }]}>编辑资料</Text>
+          <TouchableOpacity onPress={handleSave} disabled={!changed || loading} activeOpacity={0.7}
+            style={[$.saveBtn, { backgroundColor: changed ? colors.accent : colors.border }]}
+          >
+            <Text style={[$.saveBtnText, { opacity: changed ? 1 : 0.5 }]}>
+              {loading ? '保存中' : '保存'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={$.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          {/* 头像区域 */}
+          <TouchableOpacity
+            style={$.avatarSection}
+            onPress={() => Alert.alert('更换头像', '暂不支持上传，后续版本开放')}
+            activeOpacity={0.7}
+          >
+            <View style={$.avatarOuter}>
+              <Avatar uri={user?.avatar} name={user?.nickname || user?.username} size={wp(80)} />
+              <View style={[$.avatarEditBadge, { backgroundColor: colors.accent, borderColor: colors.bg }]}>
+                <Feather name="camera" size={fp(12)} color="#fff" />
+              </View>
+            </View>
+            <Text style={[$.avatarHint, { color: colors.accent }]}>点击更换头像</Text>
+          </TouchableOpacity>
+
+          {/* 表单 */}
+          <View style={[$.formCard, { backgroundColor: colors.surface }]}>
+            {renderField('昵称', 'user', nickname, setNickname)}
+            {renderField('邮箱', 'mail', email, setEmail, { placeholder: '选填', kbd: 'email-address' })}
+            {renderField('手机号', 'phone', phone, setPhone, { placeholder: '选填', kbd: 'phone-pad' })}
+          </View>
+
+          {/* 用户名不可改 */}
+          <View style={[$.infoCard, { backgroundColor: dark ? '#1a1a1a' : '#FAFAFA' }]}>
+            <Feather name="info" size={fp(12)} color={colors.textHint} />
+            <Text style={[$.infoText, { color: colors.textHint }]}>
+              用户名 @{user?.username} 创建后不可修改
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
+const $ = StyleSheet.create({
+  root: { flex: 1 },
+
   nav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: Spacing.md, height: 48, borderBottomWidth: 1,
+    paddingHorizontal: PAD, height: wp(50),
+    borderBottomWidth: 1,
   },
-  navBack: { fontSize: FontSize.md },
-  navTitle: { fontSize: FontSize.lg, fontWeight: '600' },
-  navSave: { fontSize: FontSize.md, fontWeight: '600' },
-  content: { padding: Spacing.xl },
-  avatarWrap: { alignItems: 'center', marginBottom: Spacing.xl },
-  avatarHint: { fontSize: FontSize.sm, marginTop: Spacing.sm },
+  navBackBtn: {
+    width: wp(34), height: wp(34), borderRadius: wp(17),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  navTitle: { fontSize: fp(16), fontWeight: '700' },
+  saveBtn: {
+    paddingHorizontal: wp(16), paddingVertical: wp(7),
+    borderRadius: wp(14),
+  },
+  saveBtnText: { color: '#fff', fontSize: fp(13), fontWeight: '700' },
+
+  content: { paddingBottom: wp(40) },
+
+  /* 头像 */
+  avatarSection: { alignItems: 'center', paddingVertical: wp(28) },
+  avatarOuter: { position: 'relative' },
+  avatarEditBadge: {
+    position: 'absolute', bottom: wp(2), right: wp(2),
+    width: wp(26), height: wp(26), borderRadius: wp(13),
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2,
+  },
+  avatarHint: { fontSize: fp(12), fontWeight: '500', marginTop: wp(10) },
+
+  /* 表单 */
+  formCard: {
+    marginHorizontal: PAD, borderRadius: wp(14),
+    paddingHorizontal: PAD, paddingVertical: wp(4),
+  },
+  fieldWrap: { paddingVertical: wp(12) },
+  fieldLabel: { fontSize: fp(12), fontWeight: '600', marginBottom: wp(8) },
+  fieldBox: {
+    flexDirection: 'row', alignItems: 'center',
+    height: wp(46), borderRadius: wp(12), borderWidth: 1,
+    paddingHorizontal: wp(14),
+  },
+  fieldInput: { flex: 1, fontSize: fp(14), marginLeft: wp(10), padding: 0 },
+
+  /* 提示 */
+  infoCard: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(8),
+    marginHorizontal: PAD, marginTop: wp(16),
+    padding: wp(12), borderRadius: wp(10),
+  },
+  infoText: { fontSize: fp(11), flex: 1, lineHeight: fp(16) },
 });
