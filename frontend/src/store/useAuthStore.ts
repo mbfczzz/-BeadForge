@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY } from '../api/client';
+import client, { TOKEN_KEY } from '../api/client';
 import { LoginParams, RegisterParams, UserInfo } from '../api/auth';
 import { UserStats } from '../api/user';
 
@@ -21,11 +21,6 @@ interface AuthState {
 
 const EMPTY_STATS: UserStats = { designCount: 0, likeCount: 0, followerCount: 0, followingCount: 0 };
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * Mock 模式 - 不连后端，本地模拟登录/注册
- */
 export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   user: null,
@@ -33,35 +28,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
 
   login: async (params) => {
-    await delay(500);
-    // Mock: 任意用户名密码都可登录
-    const user: UserInfo = {
-      id: 1,
-      username: params.username,
-      nickname: params.username,
-      avatar: null,
-      email: null,
-      phone: null,
-    };
-    const token = 'mock-token-' + Date.now();
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    set({ token, user });
-    get().fetchStats();
+    try {
+      const res: any = await client.post('/auth/login', params);
+      const { token, user } = res.data;
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+      set({ token, user });
+      get().fetchStats();
+    } catch (e: any) {
+      throw new Error(e?.response?.data?.message || e?.message || '登录失败');
+    }
   },
 
   register: async (params) => {
-    await delay(500);
-    const user: UserInfo = {
-      id: 1,
-      username: params.username,
-      nickname: params.nickname || params.username,
-      avatar: null,
-      email: params.email || null,
-      phone: null,
-    };
-    const token = 'mock-token-' + Date.now();
-    await AsyncStorage.setItem(TOKEN_KEY, token);
-    set({ token, user });
+    try {
+      const res: any = await client.post('/auth/register', params);
+      const { token, user } = res.data;
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+      set({ token, user });
+    } catch (e: any) {
+      throw new Error(e?.response?.data?.message || e?.message || '注册失败');
+    }
   },
 
   logout: async () => {
@@ -73,27 +59,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       if (token) {
-        set({
-          token,
-          user: { id: 1, username: 'beadlover', nickname: '拼豆爱好者', avatar: null, email: 'hi@beadforge.com', phone: null },
-        });
-        get().fetchStats();
+        set({ token });
+        // 用 token 获取用户信息
+        try {
+          const res: any = await client.get('/user/profile');
+          set({ user: res.data });
+          get().fetchStats();
+        } catch {
+          // token 过期
+          await AsyncStorage.removeItem(TOKEN_KEY);
+          set({ token: null });
+        }
       }
     } catch {}
     set({ isLoading: false });
   },
 
-  fetchProfile: async () => {},
+  fetchProfile: async () => {
+    try {
+      const res: any = await client.get('/user/profile');
+      set({ user: res.data });
+    } catch {}
+  },
 
   fetchStats: async () => {
-    await delay(300);
-    set({ stats: { designCount: 12, likeCount: 328, followerCount: 56, followingCount: 23 } });
+    try {
+      const res: any = await client.get('/user/stats');
+      set({ stats: res.data });
+    } catch {}
   },
 
   updateProfile: async (data) => {
-    await delay(400);
-    set((state) => ({
-      user: state.user ? { ...state.user, ...data } as UserInfo : null,
-    }));
+    try {
+      const res: any = await client.put('/user/profile', data);
+      set({ user: res.data });
+    } catch (e: any) {
+      throw new Error(e?.response?.data?.message || '更新失败');
+    }
   },
 }));

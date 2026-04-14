@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef, useState, memo } from 'react';
+import React, { useEffect, useCallback, useRef, useState, memo, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   RefreshControl, TextInput, Animated,
@@ -14,6 +14,7 @@ import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
 import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
+import { hapticLight } from '../../hooks/useFeedback';
 
 const COL = getColumnCount();
 const GAP = wp(10);
@@ -75,11 +76,14 @@ export const HomeScreen: React.FC = () => {
     searchTimer.current = setTimeout(() => fetchDesigns(true), 500);
   }, []);
 
-  const filtered = searchKeyword.trim()
-    ? designs.filter((d) => d.title.includes(searchKeyword.trim()))
-    : designs;
-  const cols: DesignItem[][] = Array.from({ length: COL }, () => []);
-  filtered.forEach((item, i) => cols[i % COL].push(item));
+  const { filtered, cols } = useMemo(() => {
+    const f = searchKeyword.trim()
+      ? designs.filter((d) => d.title.includes(searchKeyword.trim()))
+      : designs;
+    const c: DesignItem[][] = Array.from({ length: COL }, () => []);
+    f.forEach((item, i) => c[i % COL].push(item));
+    return { filtered: f, cols: c };
+  }, [designs, searchKeyword]);
   const isFirstLoad = loading && designs.length === 0;
 
   return (
@@ -200,7 +204,7 @@ const Card = memo(({ item }: { item: DesignItem }) => {
   const pat = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
   const h = wp(100) + (item.id * 31) % wp(60);
   const bg = (dark ? BG_D : BG_L)[item.id % BG_L.length];
-  const bs = Math.max(Math.floor(CARD_W / (pat[0]?.length||9)) - 1, wp(3));
+  const bs = Math.min(Math.max(Math.floor(CARD_W / (pat[0]?.length||9)) - 2, wp(3)), wp(8));
 
   return (
     <PressableScale
@@ -290,9 +294,8 @@ const $ = StyleSheet.create({
   card: {
     borderRadius: BorderRadius.lg, overflow: 'hidden',
     borderWidth: 1,
-    ...shadow(1, 4, 0.08, '#000', 2),
   },
-  cardCover: { justifyContent: 'center', alignItems: 'center' },
+  cardCover: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   cardBody: { padding: wp(10) },
   cardTitle: { fontSize: FontSize.md, fontWeight: '500', marginBottom: wp(5) },
   cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

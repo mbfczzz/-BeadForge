@@ -9,6 +9,9 @@ import type { ThemeColors } from '../../theme';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { Avatar, HoverView, DanmakuOverlay, DanmakuInput } from '../../components/common';
 import { useDanmaku } from '../../hooks/useDanmaku';
+import { useToast } from '../../hooks/useFeedback';
+import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
+import { Toast } from '../../components/common/Toast';
 import { MOCK_DANMAKU } from '../../mock/danmaku';
 import type { RootScreenProps } from '../../navigation/types';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
@@ -64,11 +67,17 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
   const [followed, setFollowed] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const likeCount = liked ? item.likeCount + 1 : item.likeCount;
+  const toast = useToast();
 
   const danmaku = useDanmaku(MOCK_DANMAKU);
 
   const previewW = screenW - PAD * 2 - wp(40);
   const beadSize = Math.floor(previewW / (info.cols || 9)) - 1;
+
+  const toggleLike = () => { setLiked(!liked); hapticLight(); if (!liked) toast.show('已点赞'); };
+  const toggleSave = () => { setSaved(!saved); hapticLight(); toast.show(saved ? '已取消收藏' : '已收藏'); };
+  const toggleFollow = () => { setFollowed(!followed); hapticSuccess(); toast.show(followed ? '已取消关注' : '已关注'); };
+  const doShare = () => { hapticLight(); toast.show('链接已复制'); };
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -139,7 +148,7 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
             <Text style={[$.authorName, { color: colors.text }]}>{item.authorName || '创作者'}</Text>
             <Text style={[$.authorSub, { color: colors.textHint }]}>拼豆创作者</Text>
           </View>
-          <HoverView onPress={() => setFollowed(!followed)} style={[$.followBtn, { backgroundColor: followed ? colors.inputBg : colors.accent }]} hoverScale={1.05} hoverLift={1}>
+          <HoverView onPress={toggleFollow} style={[$.followBtn, { backgroundColor: followed ? colors.inputBg : colors.accent }]} hoverScale={1.05} hoverLift={1}>
             <Text style={[$.followText, followed && { color: colors.textSecondary }]}>{followed ? '已关注' : '关注'}</Text>
           </HoverView>
         </View>
@@ -219,14 +228,14 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
         <ActionBtn
           icon="heart" label={fmtNum(likeCount)}
           active={liked} activeColor="#EF4444" colors={colors}
-          onPress={() => setLiked(!liked)}
+          onPress={toggleLike}
         />
         <ActionBtn
           icon="bookmark" label={saved ? '已收藏' : '收藏'}
           active={saved} activeColor={colors.accent} colors={colors}
-          onPress={() => setSaved(!saved)}
+          onPress={toggleSave}
         />
-        <ActionBtn icon="share-2" label="分享" colors={colors} onPress={() => Alert.alert('分享', '链接已复制到剪贴板')} />
+        <ActionBtn icon="share-2" label="分享" colors={colors} onPress={doShare} />
         <View style={{ flex: 1 }} />
         <HoverView
           onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: info.cols, rows: info.rows })}
@@ -237,6 +246,7 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
           <Text style={$.makeBtnText}>开始制作</Text>
         </HoverView>
       </View>
+      <Toast message={toast.msg} />
     </SafeAreaView>
   );
 };

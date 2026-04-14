@@ -19,3 +19,4 @@ frontend/dist/
 .env
 .env.local
 *.log
+*.stackdump

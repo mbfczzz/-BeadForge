@@ -98,6 +98,26 @@ export const CreateScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
         ))}
+
+        {/* 创作灵感 */}
+        <Text style={[$.secTitle, { color: colors.text }]}>创作灵感</Text>
+        {[
+          { emoji: '🎨', title: '从简单图形开始', desc: '爱心、星星适合新手入门', bg: '#EEF2FF' },
+          { emoji: '📸', title: '照片转拼豆', desc: '拍张照一键生成图纸', bg: '#FEF3C7' },
+          { emoji: '🤖', title: 'AI 帮你画', desc: '描述想法自动生成图案', bg: '#F3E8FF' },
+        ].map((tip, i) => (
+          <TouchableOpacity key={i} activeOpacity={0.7} onPress={() => go(i === 2 ? 'ai' : i === 1 ? 'image' : 'manual')}
+            style={[$.tipItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[$.tipIcon, { backgroundColor: dark ? 'rgba(255,255,255,0.06)' : tip.bg }]}>
+              <Text style={$.tipEmoji}>{tip.emoji}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[$.tipTitle, { color: colors.text }]}>{tip.title}</Text>
+              <Text style={[$.tipDesc, { color: colors.textHint }]}>{tip.desc}</Text>
+            </View>
+            <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,4 +167,20 @@ const $ = StyleSheet.create({
     width: wp(28), height: wp(28), borderRadius: wp(14),
     justifyContent: 'center', alignItems: 'center',
   },
+
+  // 灵感
+  tipItem: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: PAD, marginBottom: wp(8),
+    padding: wp(12), borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+  tipIcon: {
+    width: wp(36), height: wp(36), borderRadius: wp(10),
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: wp(10),
+  },
+  tipEmoji: { fontSize: fp(16) },
+  tipTitle: { fontSize: fp(13), fontWeight: '600' },
+  tipDesc: { fontSize: fp(11), marginTop: wp(1) },
 });

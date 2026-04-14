@@ -44,6 +44,9 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
             </View>
           </View>
 
+          <Text style={[$.welcome, { color: colors.text }]}>欢迎回来</Text>
+          <Text style={[$.welcomeSub, { color: colors.textHint }]}>登录后即可创作和分享拼豆作品</Text>
+
           {/* 用户名 */}
           <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
             <Feather name="user" size={fp(16)} color={colors.textHint} />
@@ -100,7 +103,7 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
 const $ = StyleSheet.create({
   root: { flex: 1 },
 
-  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: wp(30) },
+  logoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: wp(32) },
   logoBox: {
     width: wp(48), height: wp(48), borderRadius: wp(14),
     justifyContent: 'center', alignItems: 'center',
@@ -108,6 +111,9 @@ const $ = StyleSheet.create({
   logoEmoji: { fontSize: fp(24) },
   brand: { fontSize: fp(22), fontWeight: '800' },
   sub: { fontSize: fp(12), marginTop: wp(2) },
+
+  welcome: { fontSize: fp(20), fontWeight: '700', marginBottom: wp(4) },
+  welcomeSub: { fontSize: fp(13), marginBottom: wp(20), lineHeight: fp(19) },
 
   inputBox: {
     flexDirection: 'row', alignItems: 'center',

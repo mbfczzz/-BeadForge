@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, TextInput,
-  ActivityIndicator, GestureResponderEvent,
+  ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { HoverView, ALL_PATTERNS } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { isDoubaoConfigured } from '../../config/doubao';
+import { usePatternStore } from '../../store/usePatternStore';
+import { hapticSelection, hapticLight } from '../../hooks/useFeedback';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
@@ -255,26 +257,6 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     setScrollEnabled(true);
   }, []);
 
-  /* ---- 保存 ---- */
-  const handleSave = useCallback(() => {
-    navigation.navigate('DesignDetail', {
-      item: {
-        id: Date.now(),
-        userId: 1,
-        authorName: '我',
-        title: mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作',
-        description: mode === 'ai' ? `AI 生成：${aiPrompt}` : mode === 'image' ? '图片转换的拼豆图纸' : '手工创作的拼豆图纸',
-        category: '抽象',
-        coverImage: null,
-        designData: grid,
-        status: 'DRAFT',
-        likeCount: 0,
-        viewCount: 0,
-        createdAt: new Date().toISOString().slice(0, 10),
-      },
-    });
-  }, [navigation, grid, mode, aiPrompt]);
-
   /* ---- 统计 ---- */
   const stats = useMemo(() => {
     let beadCount = 0;
@@ -284,6 +266,62 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     }
     return { beadCount, colorCount: colorSet.size };
   }, [grid]);
+
+  /* ---- 保存 / 发布 ---- */
+  const [showPublish, setShowPublish] = useState(false);
+  const [pubTitle, setPubTitle] = useState('');
+  const [pubDesc, setPubDesc] = useState('');
+  const [pubPrice, setPubPrice] = useState('');
+  const [pubCat, setPubCat] = useState('抽象');
+  const publishPattern = usePatternStore((s) => s.publish);
+
+  const handleSave = useCallback(() => {
+    if (stats.beadCount === 0) { Alert.alert('提示', '画布是空的，先画点什么吧'); return; }
+    Alert.alert('完成', '选择操作', [
+      { text: '保存到我的作品', onPress: () => {
+        navigation.navigate('DesignDetail', {
+          item: {
+            id: Date.now(), userId: 1, authorName: '我',
+            title: mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作',
+            description: mode === 'ai' ? `AI 生成：${aiPrompt}` : '手工创作的拼豆图纸',
+            category: '抽象', coverImage: null, designData: grid,
+            status: 'DRAFT', likeCount: 0, viewCount: 0,
+            createdAt: new Date().toISOString().slice(0, 10),
+          },
+        });
+      }},
+      { text: '发布到图纸市场', onPress: () => {
+        setPubTitle(mode === 'ai' ? aiPrompt || '' : '');
+        setPubDesc('');
+        setPubPrice('');
+        setShowPublish(true);
+      }},
+      { text: '取消', style: 'cancel' },
+    ]);
+  }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
+
+  const handlePublish = useCallback(() => {
+    if (!pubTitle.trim()) { Alert.alert('提示', '请输入图纸标题'); return; }
+    const price = parseFloat(pubPrice) || 0;
+    publishPattern({
+      title: pubTitle.trim(),
+      author: '我',
+      authorId: 1,
+      price,
+      free: price <= 0,
+      patIdx: 0,
+      cat: pubCat,
+      cols,
+      rows,
+      desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
+      gridData: grid,
+    });
+    setShowPublish(false);
+    Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
+      { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
+      { text: '继续创作' },
+    ]);
+  }, [pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -416,20 +454,19 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           {PALETTE_ROWS.map((row, ri) => (
             <View key={ri} style={$.paletteRow}>
               {row.map((c) => (
-                <Pressable
+                <TouchableOpacity
                   key={c}
-                  onPress={() => { setColor(c); if (tool === 'eraser') setTool('pen'); }}
-                  style={({ pressed }) => [
+                  activeOpacity={0.6}
+                  onPress={() => { hapticSelection(); setColor(c); if (tool === 'eraser') setTool('pen'); }}
+                  style={[
                     $.paletteCell,
                     { backgroundColor: c },
                     c === color && $.paletteCellActive,
                     c === color && { borderColor: colors.accent },
-                    pressed && { opacity: 0.6, transform: [{ scale: 0.9 }] },
-                    Platform.OS === 'web' && { transitionDuration: '0.12s' } as any,
                   ]}
                 >
                   {c === color && <Feather name="check" size={fp(10)} color={isLightColor(c) ? '#333' : '#fff'} />}
-                </Pressable>
+                </TouchableOpacity>
               ))}
             </View>
           ))}
@@ -439,7 +476,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       {/* ── 底部工具栏 ── */}
       <View style={[$.toolbar, { backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
         {TOOLS.map((t) => (
-          <ToolBtn key={t.key} icon={t.icon} label={t.label} active={tool === t.key} colors={colors} onPress={() => setTool(t.key)} />
+          <ToolBtn key={t.key} icon={t.icon} label={t.label} active={tool === t.key} colors={colors} onPress={() => { hapticSelection(); setTool(t.key); }} />
         ))}
         <View style={{ flex: 1 }} />
         <HoverView onPress={handleSave} style={[$.saveBtn, { backgroundColor: colors.accent }]} hoverScale={1.03} hoverLift={2}>
@@ -447,6 +484,62 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <Text style={$.saveBtnText}>完成</Text>
         </HoverView>
       </View>
+
+      {/* ── 发布到市场弹窗 ── */}
+      <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
+        <Pressable style={$.pubOverlay} onPress={() => setShowPublish(false)}>
+          <Pressable style={[$.pubSheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
+            <Text style={[$.pubTitle, { color: colors.text }]}>发布到图纸市场</Text>
+
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>标题</Text>
+            <TextInput style={[$.pubInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="给你的图纸起个名字" placeholderTextColor={colors.textHint}
+              value={pubTitle} onChangeText={setPubTitle} maxLength={20} />
+
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>描述</Text>
+            <TextInput style={[$.pubInput, $.pubInputMulti, { backgroundColor: colors.inputBg, color: colors.text }]}
+              placeholder="简单描述你的图纸（选填）" placeholderTextColor={colors.textHint}
+              value={pubDesc} onChangeText={setPubDesc} multiline maxLength={100} />
+
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>分类</Text>
+            <View style={$.pubCatRow}>
+              {['抽象', '动物', '卡通', '花卉', '美食', '像素'].map((c) => (
+                <TouchableOpacity key={c} activeOpacity={0.7} onPress={() => setPubCat(c)}
+                  style={[$.pubCatChip, { backgroundColor: pubCat === c ? colors.accent : colors.inputBg }]}>
+                  <Text style={{ fontSize: fp(11), fontWeight: '500', color: pubCat === c ? '#fff' : colors.textSecondary }}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>定价</Text>
+            <View style={$.pubPriceRow}>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => setPubPrice('')}
+                style={[$.pubPriceOpt, { backgroundColor: !pubPrice ? colors.accent : colors.inputBg }]}>
+                <Text style={{ fontSize: fp(12), fontWeight: '600', color: !pubPrice ? '#fff' : colors.textSecondary }}>免费</Text>
+              </TouchableOpacity>
+              <TextInput style={[$.pubPriceInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+                placeholder="输入价格" placeholderTextColor={colors.textHint}
+                value={pubPrice} onChangeText={setPubPrice} keyboardType="numeric" />
+              <Text style={[$.pubPriceUnit, { color: colors.textHint }]}>元</Text>
+            </View>
+
+            <View style={$.pubInfo}>
+              <Feather name="info" size={fp(11)} color={colors.textHint} />
+              <Text style={[$.pubInfoT, { color: colors.textHint }]}>图纸尺寸 {cols}×{rows}，含 {stats.beadCount} 颗珠子，{stats.colorCount} 种颜色</Text>
+            </View>
+
+            <View style={$.pubBtns}>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => setShowPublish(false)} style={[$.pubCancelBtn, { borderColor: colors.border }]}>
+                <Text style={[$.pubCancelT, { color: colors.textSecondary }]}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.8} onPress={handlePublish} style={[$.pubSubmitBtn, { backgroundColor: colors.accent }]}>
+                <Feather name="upload" size={fp(14)} color="#fff" />
+                <Text style={$.pubSubmitT}>发布</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -688,4 +781,25 @@ const $ = StyleSheet.create({
     ...shadow(2, 6, 0.15, '#4b78ff', 3),
   },
   saveBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
+
+  // 发布弹窗
+  pubOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  pubSheet: { borderTopLeftRadius: wp(16), borderTopRightRadius: wp(16), padding: wp(20) },
+  pubTitle: { fontSize: fp(17), fontWeight: '700', marginBottom: wp(14) },
+  pubLabel: { fontSize: fp(12), fontWeight: '600', marginTop: wp(10), marginBottom: wp(6) },
+  pubInput: { height: wp(40), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
+  pubInputMulti: { height: wp(70), paddingTop: wp(10), textAlignVertical: 'top' },
+  pubCatRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  pubCatChip: { paddingHorizontal: wp(12), paddingVertical: wp(5), borderRadius: wp(12), marginRight: wp(6), marginBottom: wp(6) },
+  pubPriceRow: { flexDirection: 'row', alignItems: 'center' },
+  pubPriceOpt: { paddingHorizontal: wp(14), paddingVertical: wp(8), borderRadius: wp(10), marginRight: wp(8) },
+  pubPriceInput: { flex: 1, height: wp(38), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
+  pubPriceUnit: { fontSize: fp(13), marginLeft: wp(6) },
+  pubInfo: { flexDirection: 'row', alignItems: 'center', marginTop: wp(12) },
+  pubInfoT: { fontSize: fp(10), marginLeft: wp(4) },
+  pubBtns: { flexDirection: 'row', marginTop: wp(16) },
+  pubCancelBtn: { flex: 1, height: wp(44), borderRadius: wp(12), borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginRight: wp(10) },
+  pubCancelT: { fontSize: fp(14), fontWeight: '500' },
+  pubSubmitBtn: { flex: 2, height: wp(44), borderRadius: wp(12), flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  pubSubmitT: { color: '#fff', fontSize: fp(14), fontWeight: '700', marginLeft: wp(6) },
 });

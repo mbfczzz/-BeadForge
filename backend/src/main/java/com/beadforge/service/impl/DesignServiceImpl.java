@@ -7,7 +7,9 @@ import com.beadforge.factory.DesignFactory;
 import com.beadforge.model.dto.DesignDTO;
 import com.beadforge.model.entity.Design;
 import com.beadforge.model.enums.DesignStatus;
+import com.beadforge.model.entity.User;
 import com.beadforge.repository.DesignRepository;
+import com.beadforge.repository.UserRepository;
 import com.beadforge.service.DesignService;
 import com.beadforge.strategy.DesignSortContext;
 import com.beadforge.strategy.DesignSortStrategy;
@@ -15,11 +17,15 @@ import com.beadforge.util.ConvertUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class DesignServiceImpl implements DesignService {
 
     private final DesignRepository designRepository;
+    private final UserRepository userRepository;
     private final DesignFactory designFactory;
     private final DesignSortContext sortContext;
 
@@ -34,9 +40,12 @@ public class DesignServiceImpl implements DesignService {
     public DesignDTO getDesignById(Long id) {
         Design design = designRepository.selectById(id);
         if (design == null) {
-            throw new BusinessException("设计不存在");
+            throw new BusinessException(404, "设计不存在");
         }
-        return ConvertUtil.toDesignDTO(design);
+        DesignDTO dto = ConvertUtil.toDesignDTO(design);
+        User author = userRepository.selectById(design.getUserId());
+        if (author != null) dto.setAuthorName(author.getNickname() != null ? author.getNickname() : author.getUsername());
+        return dto;
     }
 
     @Override
@@ -52,9 +61,7 @@ public class DesignServiceImpl implements DesignService {
 
         Page<Design> designPage = designRepository.selectPage(new Page<>(page, size), wrapper);
 
-        Page<DesignDTO> dtoPage = new Page<>(designPage.getCurrent(), designPage.getSize(), designPage.getTotal());
-        dtoPage.setRecords(designPage.getRecords().stream().map(ConvertUtil::toDesignDTO).toList());
-        return dtoPage;
+        return enrichAuthorNames(designPage);
     }
 
     @Override
@@ -63,9 +70,23 @@ public class DesignServiceImpl implements DesignService {
         wrapper.eq("user_id", userId).orderByDesc("created_at");
 
         Page<Design> designPage = designRepository.selectPage(new Page<>(page, size), wrapper);
+        return enrichAuthorNames(designPage);
+    }
+
+    /** 批量填充 authorName */
+    private Page<DesignDTO> enrichAuthorNames(Page<Design> designPage) {
+        List<DesignDTO> dtos = designPage.getRecords().stream().map(ConvertUtil::toDesignDTO).collect(Collectors.toList());
+
+        Set<Long> userIds = designPage.getRecords().stream().map(Design::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nameMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            userRepository.selectBatchIds(userIds).forEach(u ->
+                nameMap.put(u.getId(), u.getNickname() != null ? u.getNickname() : u.getUsername()));
+        }
+        dtos.forEach(dto -> dto.setAuthorName(nameMap.getOrDefault(dto.getUserId(), "未知")));
 
         Page<DesignDTO> dtoPage = new Page<>(designPage.getCurrent(), designPage.getSize(), designPage.getTotal());
-        dtoPage.setRecords(designPage.getRecords().stream().map(ConvertUtil::toDesignDTO).toList());
+        dtoPage.setRecords(dtos);
         return dtoPage;
     }
 
@@ -73,7 +94,7 @@ public class DesignServiceImpl implements DesignService {
     public DesignDTO updateDesign(Long userId, Long designId, DesignDTO dto) {
         Design design = designRepository.selectById(designId);
         if (design == null) {
-            throw new BusinessException("设计不存在");
+            throw new BusinessException(404, "设计不存在");
         }
         if (!design.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权修改此设计");
@@ -92,7 +113,7 @@ public class DesignServiceImpl implements DesignService {
     public void deleteDesign(Long userId, Long designId) {
         Design design = designRepository.selectById(designId);
         if (design == null) {
-            throw new BusinessException("设计不存在");
+            throw new BusinessException(404, "设计不存在");
         }
         if (!design.getUserId().equals(userId)) {
             throw new BusinessException(403, "无权删除此设计");
@@ -104,7 +125,7 @@ public class DesignServiceImpl implements DesignService {
     public DesignDTO duplicateDesign(Long userId, Long sourceDesignId) {
         Design source = designRepository.selectById(sourceDesignId);
         if (source == null) {
-            throw new BusinessException("源设计不存在");
+            throw new BusinessException(404, "源设计不存在");
         }
         Design copy = designFactory.createFromTemplate(userId, source);
         designRepository.insert(copy);

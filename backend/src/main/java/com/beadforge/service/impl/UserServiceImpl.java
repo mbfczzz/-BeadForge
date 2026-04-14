@@ -7,8 +7,10 @@ import com.beadforge.model.dto.RegisterRequest;
 import com.beadforge.model.dto.UserDTO;
 import com.beadforge.model.dto.UserStatsDTO;
 import com.beadforge.model.entity.Design;
+import com.beadforge.model.entity.Follow;
 import com.beadforge.model.entity.User;
 import com.beadforge.repository.DesignRepository;
+import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.UserRepository;
 import com.beadforge.service.UserService;
 import com.beadforge.util.ConvertUtil;
@@ -26,6 +28,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final DesignRepository designRepository;
+    private final FollowRepository followRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
@@ -71,7 +74,7 @@ public class UserServiceImpl implements UserService {
     public UserDTO getUserById(Long id) {
         User user = userRepository.selectById(id);
         if (user == null) {
-            throw new BusinessException("用户不存在");
+            throw new BusinessException(404, "用户不存在");
         }
         return ConvertUtil.toUserDTO(user);
     }
@@ -80,7 +83,7 @@ public class UserServiceImpl implements UserService {
     public UserDTO updateUser(Long id, UserDTO userDTO) {
         User user = userRepository.selectById(id);
         if (user == null) {
-            throw new BusinessException("用户不存在");
+            throw new BusinessException(404, "用户不存在");
         }
         if (userDTO.getNickname() != null) user.setNickname(userDTO.getNickname());
         if (userDTO.getAvatar() != null) user.setAvatar(userDTO.getAvatar());
@@ -103,7 +106,11 @@ public class UserServiceImpl implements UserService {
         long totalLikes = likeResult != null && likeResult.getLikeCount() != null
                 ? likeResult.getLikeCount() : 0;
 
-        // 粉丝/关注功能待实现，暂返回 0
-        return new UserStatsDTO(designCount, totalLikes, 0, 0);
+        long followerCount = followRepository.selectCount(
+                new QueryWrapper<Follow>().eq("following_id", userId));
+        long followingCount = followRepository.selectCount(
+                new QueryWrapper<Follow>().eq("follower_id", userId));
+
+        return new UserStatsDTO(designCount, totalLikes, followerCount, followingCount);
     }
 }

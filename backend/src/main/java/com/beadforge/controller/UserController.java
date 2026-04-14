@@ -4,7 +4,7 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.UserDTO;
 import com.beadforge.model.dto.UserStatsDTO;
 import com.beadforge.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

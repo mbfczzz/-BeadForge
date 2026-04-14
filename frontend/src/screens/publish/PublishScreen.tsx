@@ -12,6 +12,7 @@ import type { ThemeColors } from '../../theme';
 import { Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
+import { hapticLight } from '../../hooks/useFeedback';
 import type { RootStackParamList, FeedItemData } from '../../navigation/types';
 
 const PAD = wp(15);
@@ -133,6 +134,11 @@ export const PublishScreen: React.FC = () => {
     const shouldShow = y > 300;
     setShowTop(shouldShow);
     Animated.timing(fabAnim, { toValue: shouldShow ? 1 : 0, duration: 200, useNativeDriver: true }).start();
+  }, []);
+
+  const onTagPress = useCallback((tag: string) => {
+    setShowSearch(true);
+    setSearchText(tag);
   }, []);
 
   const handlePublish = () => {
@@ -283,13 +289,8 @@ export const PublishScreen: React.FC = () => {
               colors={colors}
               dark={dark}
               isFirst={idx === 0}
-              onPress={() => navigation.navigate('FeedDetail', { feed })}
-              onUserPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })}
-              onTagPress={(tag) => { setShowSearch(true); setSearchText(tag); }}
-              onMake={() => {
-                const p = ALL_PATTERNS[feed.patternIdx % ALL_PATTERNS.length];
-                navigation.navigate('Editor', { mode: 'manual', cols: p[0]?.length || 9, rows: p.length });
-              }}
+              navigation={navigation}
+              onTagPress={onTagPress}
             />
           ))
         )}
@@ -298,7 +299,7 @@ export const PublishScreen: React.FC = () => {
       {/* ═══ 发布 FAB ═══ */}
       <HoverView
         onPress={handlePublish}
-        style={[$.fab, { backgroundColor: colors.accent, ...shadow(3, 12, 0.25, colors.accent, 6) }]}
+        style={[$.fab, { backgroundColor: colors.accent }]}
         hoverScale={1.1}
         hoverLift={3}
       >
@@ -326,9 +327,8 @@ export const PublishScreen: React.FC = () => {
 
 const FeedCard: React.FC<{
   feed: FeedItemData; colors: ThemeColors; dark: boolean; isFirst: boolean;
-  onPress: () => void; onUserPress: () => void; onTagPress: (tag: string) => void;
-  onMake: () => void;
-}> = memo(({ feed, colors, dark, isFirst, onPress, onUserPress, onTagPress, onMake }) => {
+  navigation: any; onTagPress: (tag: string) => void;
+}> = memo(({ feed, colors, dark, isFirst, navigation, onTagPress }) => {
   const [liked, setLiked] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [followed, setFollowed] = useState(false);
@@ -338,6 +338,7 @@ const FeedCard: React.FC<{
   const bs = Math.floor(previewW / (pat[0]?.length || 9)) - 1;
 
   const handleLike = () => {
+    hapticLight();
     setLiked(!liked);
     if (!liked) {
       Animated.sequence([
@@ -348,25 +349,27 @@ const FeedCard: React.FC<{
   };
 
   const handleShare = () => {
+    hapticLight();
     Alert.alert('分享', '已复制链接到剪贴板', [{ text: '好的' }]);
   };
 
   const handleBookmark = () => {
+    hapticLight();
     setBookmarked(!bookmarked);
     if (!bookmarked) Alert.alert('已收藏', '可在「我的 → 收藏」中查看');
   };
 
   return (
-    <PressableScale onPress={onPress} scale={0.985}>
+    <PressableScale onPress={() => navigation.navigate('FeedDetail', { feed })} scale={0.985}>
       <View style={[
         $.feedCard,
         { backgroundColor: colors.surface },
         !isFirst && { marginTop: wp(8) },
-        { borderRadius: BorderRadius.lg, marginHorizontal: PAD, ...shadow(1, 6, 0.06, '#000', 2) },
+        { borderRadius: BorderRadius.lg, marginHorizontal: PAD, borderWidth: 1, borderColor: colors.border },
       ]}>
         {/* 用户头部 */}
         <View style={$.feedHeader}>
-          <Pressable onPress={(e) => { e.stopPropagation?.(); onUserPress(); }} style={$.feedUserRow}>
+          <Pressable onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })} style={$.feedUserRow}>
             <Avatar name={feed.user.name} size={wp(40)} />
             <View style={{ flex: 1, marginLeft: wp(10) }}>
               <Text style={[$.feedUserName, { color: colors.text }]}>{feed.user.name}</Text>
@@ -403,7 +406,7 @@ const FeedCard: React.FC<{
         {/* 标签 */}
         <View style={$.feedTags}>
           {feed.tags.map((tag) => (
-            <Pressable key={tag} onPress={(e) => { e.stopPropagation?.(); onTagPress(tag); }}>
+            <Pressable key={tag} onPress={() => onTagPress(tag)}>
               <View style={[$.feedTag, { backgroundColor: colors.accentLight }]}>
                 <Text style={[$.feedTagText, { color: colors.accent }]}>#{tag}</Text>
               </View>
@@ -413,9 +416,9 @@ const FeedCard: React.FC<{
 
         {/* 图案预览 */}
         <View style={[$.feedPreview, { backgroundColor: dark ? '#222' : '#f8f8fa', borderColor: dark ? '#333' : '#eee' }]}>
-          <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(18))} gap={1} round glossy />
+          <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(18))} gap={1} round />
           <Pressable
-            onPress={(e) => { e.stopPropagation?.(); onMake(); }}
+            onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pat[0]?.length || 9, rows: pat.length })}
             style={[$.makeBtn, { backgroundColor: colors.accent }]}
           >
             <MCI name="palette-outline" size={fp(12)} color="#fff" />
@@ -433,7 +436,7 @@ const FeedCard: React.FC<{
               {formatCount(liked ? feed.likeCount + 1 : feed.likeCount)}
             </Text>
           </Pressable>
-          <Pressable style={$.feedActionBtn} onPress={onPress}>
+          <Pressable style={$.feedActionBtn} onPress={() => navigation.navigate('FeedDetail', { feed })}>
             <View style={[$.feedActionCircle, { backgroundColor: dark ? '#1e2530' : '#f0f4ff' }]}>
               <MCI name="comment-outline" size={fp(16)} color={dark ? '#7B9FD4' : '#8BA4D0'} />
             </View>

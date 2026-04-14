@@ -13,7 +13,7 @@ export function setOnUnauthorized(cb: () => void) {
 }
 
 const client = axios.create({
-  baseURL: 'http://10.0.2.2:8080/api',
+  baseURL: 'http://172.16.2.89:8080/api',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

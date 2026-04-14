@@ -4,7 +4,7 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.LoginRequest;
 import com.beadforge.model.dto.RegisterRequest;
 import com.beadforge.service.UserService;
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

@@ -10,6 +10,8 @@ import type { ThemeColors } from '../../theme';
 import { Avatar, BeadGrid, ALL_PATTERNS } from '../../components/common';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { usePatternStore, MarketPattern } from '../../store/usePatternStore';
+import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
 import type { RootStackParamList } from '../../navigation/types';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 
@@ -45,28 +47,8 @@ const PRODUCTS: Product[] = [
 
 /* ═══════════════════ 图纸数据 ═══════════════════ */
 
-interface Pattern {
-  id: number; title: string; author: string; price: number;
-  free: boolean; patIdx: number; cat: string;
-  downloads: number; rating: number; cols: number; rows: number;
-  desc: string;
-}
-
 const PAT_CATS = ['全部', '动物', '卡通', '花卉', '美食', '抽象', '像素'];
 const PAT_SORTS = ['最新', '最热', '价格↑', '免费'];
-
-const PATTERNS: Pattern[] = [
-  { id: 101, title: '像素爱心', author: '小豆子', price: 0, free: true, patIdx: 0, cat: '抽象', downloads: 3280, rating: 4.9, cols: 10, rows: 9, desc: '经典红色爱心，新手入门首选' },
-  { id: 102, title: '橘猫咪咪', author: '拼豆达人', price: 2.9, free: false, patIdx: 1, cat: '动物', downloads: 2100, rating: 4.8, cols: 9, rows: 8, desc: '超萌橘猫正面照，呆萌表情' },
-  { id: 103, title: '超级蘑菇', author: '游戏迷', price: 1.9, free: false, patIdx: 2, cat: '卡通', downloads: 1800, rating: 4.7, cols: 10, rows: 9, desc: '马里奥经典红蘑菇还原' },
-  { id: 104, title: '粉色小花', author: '花花世界', price: 0, free: true, patIdx: 3, cat: '花卉', downloads: 900, rating: 4.6, cols: 9, rows: 10, desc: '春日樱花主题，做胸针很好看' },
-  { id: 105, title: '闪耀金星', author: '星空漫步', price: 1.5, free: false, patIdx: 4, cat: '抽象', downloads: 750, rating: 4.5, cols: 9, rows: 9, desc: '五角星经典造型，适合做挂件' },
-  { id: 106, title: '双子樱桃', author: '水果控', price: 0, free: true, patIdx: 5, cat: '美食', downloads: 1400, rating: 4.7, cols: 9, rows: 8, desc: '可爱的樱桃挂件，配色清新' },
-  { id: 107, title: '冰蓝钻石', author: '珠宝匠', price: 3.9, free: false, patIdx: 6, cat: '抽象', downloads: 1100, rating: 4.8, cols: 9, rows: 7, desc: '闪闪发光的钻石造型' },
-  { id: 108, title: '七色彩虹', author: '彩虹桥', price: 1.9, free: false, patIdx: 7, cat: '像素', downloads: 1600, rating: 4.9, cols: 9, rows: 7, desc: '经典彩虹图案，7 种颜色' },
-  { id: 109, title: '迷你猫爪', author: '猫奴一号', price: 0, free: true, patIdx: 1, cat: '动物', downloads: 2400, rating: 4.8, cols: 9, rows: 8, desc: '超小猫爪挂件，粉粉嫩嫩' },
-  { id: 110, title: '像素剑', author: '游戏迷', price: 2.5, free: false, patIdx: 4, cat: '像素', downloads: 890, rating: 4.4, cols: 9, rows: 9, desc: '8bit 风格宝剑，游戏迷最爱' },
-];
 
 /* ═══════════════════ 主屏幕 ═══════════════════ */
 
@@ -139,6 +121,7 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
   const cartTotal = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
   const showToast = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 1200); }, []);
   const addToCart = useCallback((p: Product) => {
+    hapticLight();
     setCart((prev) => { const e = prev.find((c) => c.product.id === p.id); return e ? prev.map((c) => c.product.id === p.id ? { ...c, qty: c.qty + 1 } : c) : [...prev, { product: p, qty: 1 }]; });
     showToast(`已加入：${p.name}`);
   }, [showToast]);
@@ -187,7 +170,7 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
       {toast.length > 0 && <Toast text={toast} colors={colors} />}
 
       {/* 详情 */}
-      <Modal visible={!!detail} animationType="slide" transparent onRequestClose={() => setDetail(null)}>
+      <Modal visible={!!detail} animationType="fade" transparent onRequestClose={() => setDetail(null)}>
         <Pressable style={$.overlay} onPress={() => setDetail(null)}>
           <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.72 }]} onPress={() => {}}>
             {detail && <MatDetail p={detail} colors={colors} onAdd={() => { addToCart(detail); setDetail(null); }} onClose={() => setDetail(null)} />}
@@ -196,9 +179,9 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
       </Modal>
 
       {/* 购物车 */}
-      <Modal visible={showCart} animationType="slide" transparent onRequestClose={() => setShowCart(false)}>
+      <Modal visible={showCart} animationType="fade" transparent onRequestClose={() => setShowCart(false)}>
         <Pressable style={$.overlay} onPress={() => setShowCart(false)}>
-          <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.6 }]} onPress={() => {}}>
+          <Pressable style={[$.sheet, { backgroundColor: colors.surface }]} onPress={() => {}}>
             <CartSheet cart={cart} colors={colors} cartTotal={cartTotal} cartCount={cartCount}
               onClose={() => setShowCart(false)} onRemove={removeFromCart} onChangeQty={changeQty}
               onClear={() => { setCart([]); showToast('已清空'); }}
@@ -215,20 +198,50 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
 
 const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, dark }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const listings = usePatternStore((s) => s.listings);
+  const buy = usePatternStore((s) => s.buy);
+  const hasBought = usePatternStore((s) => s.hasBought);
   const [catIdx, setCatIdx] = useState(0);
   const [sortIdx, setSortIdx] = useState(0);
   const [search, setSearch] = useState('');
-  const [detail, setDetail] = useState<Pattern | null>(null);
+  const [detail, setDetail] = useState<MarketPattern | null>(null);
 
   const filtered = useMemo(() => {
-    let list = [...PATTERNS];
+    let list = [...listings];
     if (catIdx > 0) list = list.filter((p) => p.cat === PAT_CATS[catIdx]);
     if (search.trim()) { const kw = search.toLowerCase(); list = list.filter((p) => p.title.toLowerCase().includes(kw) || p.author.toLowerCase().includes(kw)); }
     if (sortIdx === 1) list.sort((a, b) => b.downloads - a.downloads);
     else if (sortIdx === 2) list.sort((a, b) => a.price - b.price);
     else if (sortIdx === 3) list = list.filter((p) => p.free);
     return list;
-  }, [catIdx, sortIdx, search]);
+  }, [listings, catIdx, sortIdx, search]);
+
+  const handleBuy = useCallback((p: MarketPattern) => {
+    if (hasBought(p.id)) {
+      // 已拥有 → 直接用
+      navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows });
+      setDetail(null);
+      return;
+    }
+    if (p.free) {
+      buy(p.id);
+      Alert.alert('下载成功', `「${p.title}」已保存`, [
+        { text: '去制作', onPress: () => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows }); } },
+        { text: '继续逛' },
+      ]);
+    } else {
+      Alert.alert('确认购买', `「${p.title}」 ¥${p.price}`, [
+        { text: '取消', style: 'cancel' },
+        { text: '购买', onPress: () => {
+          buy(p.id);
+          Alert.alert('购买成功', `「${p.title}」已保存到已购图纸`, [
+            { text: '去制作', onPress: () => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows }); } },
+            { text: '好的' },
+          ]);
+        }},
+      ]);
+    }
+  }, [buy, hasBought, navigation]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -258,17 +271,18 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
         ListEmptyComponent={<EmptyState icon="file" text="没有找到图纸" colors={colors} />}
         renderItem={({ item }) => (
           <View style={{ width: CARD_W, marginBottom: wp(10) }}>
-            <PatCard p={item} colors={colors} dark={dark} onPress={() => setDetail(item)} />
+            <PatCard p={item} colors={colors} dark={dark} owned={hasBought(item.id)} onPress={() => setDetail(item)} />
           </View>
         )}
       />
 
       {/* 图纸详情 */}
-      <Modal visible={!!detail} animationType="slide" transparent onRequestClose={() => setDetail(null)}>
+      <Modal visible={!!detail} animationType="fade" transparent onRequestClose={() => setDetail(null)}>
         <Pressable style={$.overlay} onPress={() => setDetail(null)}>
           <Pressable style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.78 }]} onPress={() => {}}>
-            {detail && <PatDetail p={detail} colors={colors} dark={dark} onClose={() => setDetail(null)}
-              onMake={(cols, rows) => navigation.navigate('Editor', { mode: 'manual', cols, rows })} />}
+            {detail && <PatDetail p={detail} colors={colors} dark={dark} owned={hasBought(detail.id)}
+              onClose={() => setDetail(null)} onBuy={() => handleBuy(detail)}
+              onMake={() => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: detail.cols, rows: detail.rows }); }} />}
           </Pressable>
         </Pressable>
       </Modal>
@@ -329,13 +343,19 @@ const MatCard: React.FC<{ p: Product; colors: ThemeColors; dark: boolean; onPres
 
 /* ═══════════════════ 图纸卡片 ═══════════════════ */
 
-const PatCard: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onPress: () => void }> = memo(({ p, colors, dark, onPress }) => {
+const PatCard: React.FC<{ p: MarketPattern; colors: ThemeColors; dark: boolean; owned: boolean; onPress: () => void }> = memo(({ p, colors, dark, owned, onPress }) => {
   const pat = ALL_PATTERNS[p.patIdx % ALL_PATTERNS.length];
   const bs = Math.floor((CARD_W - wp(20)) / (pat[0]?.length || 9));
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
       <View style={[$.patPreview, { backgroundColor: dark ? '#222' : '#f8f8f8' }]}>
-        <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(10))} gap={1} round />
+        <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(7))} gap={1} round />
+        {owned && (
+          <View style={$.ownedBadge}>
+            <Feather name="check" size={fp(9)} color="#fff" />
+            <Text style={$.ownedBadgeT}>已拥有</Text>
+          </View>
+        )}
       </View>
       <View style={{ padding: wp(8) }}>
         <Text style={[$.cardName, { color: colors.text }]} numberOfLines={1}>{p.title}</Text>
@@ -344,9 +364,11 @@ const PatCard: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onPres
           <Text style={[$.patDl, { color: colors.textHint }]}>{p.downloads > 1000 ? (p.downloads / 1000).toFixed(1) + 'k' : p.downloads} 下载</Text>
         </View>
         <View style={$.patPriceRow}>
-          {p.free
-            ? <View style={$.freeTag}><Text style={$.freeTagT}>免费</Text></View>
-            : <Text style={$.priceT}>¥{p.price}</Text>
+          {owned
+            ? <View style={[$.freeTag, { backgroundColor: '#EEF2FF' }]}><Text style={[$.freeTagT, { color: '#4b78ff' }]}>去制作</Text></View>
+            : p.free
+              ? <View style={$.freeTag}><Text style={$.freeTagT}>免费</Text></View>
+              : <Text style={$.priceT}>¥{p.price}</Text>
           }
           <View style={$.ratingSmall}>
             <Feather name="star" size={fp(10)} color="#FBBF24" />
@@ -385,7 +407,7 @@ const MatDetail: React.FC<{ p: Product; colors: ThemeColors; onAdd: () => void; 
 
 /* ═══════════════════ 图纸详情 ═══════════════════ */
 
-const PatDetail: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onClose: () => void; onMake: (cols: number, rows: number) => void }> = ({ p, colors, dark, onClose, onMake }) => {
+const PatDetail: React.FC<{ p: MarketPattern; colors: ThemeColors; dark: boolean; owned: boolean; onClose: () => void; onBuy: () => void; onMake: () => void }> = ({ p, colors, dark, owned, onClose, onBuy, onMake }) => {
   const pat = ALL_PATTERNS[p.patIdx % ALL_PATTERNS.length];
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
@@ -410,16 +432,27 @@ const PatDetail: React.FC<{ p: Pattern; colors: ThemeColors; dark: boolean; onCl
         <View style={[$.specC, { backgroundColor: colors.inputBg }]}><Text style={[$.specCT, { color: colors.textSecondary }]}>{p.downloads} 次下载</Text></View>
       </View>
       <View style={[$.dtFoot, { borderTopColor: colors.divider }]}>
-        {p.free ? <View style={[$.freeTag, { paddingHorizontal: wp(12), paddingVertical: wp(4) }]}><Text style={[$.freeTagT, { fontSize: fp(14) }]}>免费</Text></View> : <Text style={$.dtPrice}>¥{p.price}</Text>}
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity activeOpacity={0.8} onPress={() => { onClose(); Alert.alert(p.free ? '下载成功' : '购买成功', `图纸「${p.title}」已保存到我的收藏`); }} style={[$.dtAddBtn, { backgroundColor: colors.accent }]}>
-          <Feather name={p.free ? 'download' : 'shopping-cart'} size={fp(13)} color="#fff" />
-          <Text style={$.dtAddBtnT}>{p.free ? '免费下载' : '购买图纸'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => { onClose(); onMake(p.cols, p.rows); }} style={[$.dtAddBtn, { backgroundColor: '#20C997', marginLeft: wp(8) }]}>
-          <Feather name="play" size={fp(13)} color="#fff" />
-          <Text style={$.dtAddBtnT}>开始制作</Text>
-        </TouchableOpacity>
+        {owned ? (
+          <>
+            <View style={[$.freeTag, { backgroundColor: '#EEF2FF', paddingHorizontal: wp(10), paddingVertical: wp(4) }]}>
+              <Text style={[$.freeTagT, { color: '#4b78ff', fontSize: fp(12) }]}>已拥有</Text>
+            </View>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity activeOpacity={0.8} onPress={onMake} style={[$.dtAddBtn, { backgroundColor: colors.accent }]}>
+              <Feather name="play" size={fp(13)} color="#fff" />
+              <Text style={$.dtAddBtnT}>开始制作</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            {p.free ? <View style={[$.freeTag, { paddingHorizontal: wp(12), paddingVertical: wp(4) }]}><Text style={[$.freeTagT, { fontSize: fp(14) }]}>免费</Text></View> : <Text style={$.dtPrice}>¥{p.price}</Text>}
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity activeOpacity={0.8} onPress={onBuy} style={[$.dtAddBtn, { backgroundColor: colors.accent }]}>
+              <Feather name={p.free ? 'download' : 'shopping-cart'} size={fp(13)} color="#fff" />
+              <Text style={$.dtAddBtnT}>{p.free ? '免费下载' : '购买图纸'}</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </ScrollView>
   );
@@ -432,21 +465,24 @@ const CartSheet: React.FC<{
   onClose: () => void; onRemove: (id: number) => void; onChangeQty: (id: number, d: number) => void;
   onClear: () => void; onCheckout: () => void;
 }> = ({ cart, colors, cartTotal, cartCount, onClose, onRemove, onChangeQty, onClear, onCheckout }) => (
-  <View style={{ flex: 1 }}>
+  <View>
+    {/* 头部 */}
     <View style={$.cartHead}>
       <Text style={[$.cartHeadT, { color: colors.text }]}>购物车</Text>
       {cart.length > 0 && <TouchableOpacity onPress={onClear} activeOpacity={0.6}><Text style={[$.clearT, { color: colors.textHint }]}>清空</Text></TouchableOpacity>}
       <View style={{ flex: 1 }} />
       <TouchableOpacity onPress={onClose} activeOpacity={0.7}><Feather name="x" size={fp(18)} color={colors.text} /></TouchableOpacity>
     </View>
+
     {cart.length === 0 ? (
       <View style={$.cartEmpty}>
         <Feather name="shopping-bag" size={fp(32)} color={colors.textHint} />
         <Text style={[$.emptyT, { color: colors.textHint }]}>购物车是空的</Text>
       </View>
     ) : (
-      <>
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+      <View>
+        {/* 商品列表 — 固定最大高度，超出可滚动 */}
+        <ScrollView style={{ maxHeight: H * 0.35 }} showsVerticalScrollIndicator={false}>
           {cart.map((c) => (
             <View key={c.product.id} style={[$.cartRow, { borderBottomColor: colors.divider }]}>
               <View style={[$.cartRowIcon, { backgroundColor: c.product.color + '12' }]}>
@@ -468,12 +504,19 @@ const CartSheet: React.FC<{
             </View>
           ))}
         </ScrollView>
+
+        {/* 结算栏 — 始终在底部 */}
         <View style={[$.cartFoot, { borderTopColor: colors.divider }]}>
-          <View><Text style={[$.cartFootL, { color: colors.textHint }]}>合计</Text><Text style={$.cartFootP}>¥{cartTotal.toFixed(1)}</Text></View>
+          <View>
+            <Text style={[$.cartFootL, { color: colors.textHint }]}>合计</Text>
+            <Text style={$.cartFootP}>¥{cartTotal.toFixed(1)}</Text>
+          </View>
           <View style={{ flex: 1 }} />
-          <TouchableOpacity activeOpacity={0.8} onPress={onCheckout} style={[$.checkBtn, { backgroundColor: colors.accent }]}><Text style={$.checkBtnT}>结算 ({cartCount})</Text></TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.8} onPress={onCheckout} style={[$.checkBtn, { backgroundColor: colors.accent }]}>
+            <Text style={$.checkBtnT}>结算 ({cartCount})</Text>
+          </TouchableOpacity>
         </View>
-      </>
+      </View>
     )}
   </View>
 );
@@ -536,6 +579,8 @@ const $ = StyleSheet.create({
 
   // 图纸卡片
   patPreview: { height: wp(80), justifyContent: 'center', alignItems: 'center', borderTopLeftRadius: BorderRadius.lg, borderTopRightRadius: BorderRadius.lg },
+  ownedBadge: { position: 'absolute', top: wp(5), right: wp(5), flexDirection: 'row', alignItems: 'center', backgroundColor: '#4b78ff', paddingHorizontal: wp(5), paddingVertical: wp(2), borderRadius: wp(4) },
+  ownedBadgeT: { color: '#fff', fontSize: fp(8), fontWeight: '700', marginLeft: wp(2) },
   patMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: wp(2) },
   patAuthor: { fontSize: fp(10) },
   patDl: { fontSize: fp(10) },
