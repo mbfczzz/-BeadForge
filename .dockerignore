@@ -2,8 +2,8 @@
 **/target
 **/.idea
 **/*.iml
-**/dist
 **/.expo
 **/.git
 *.stackdump
 img/
+frontend/dist/
