@@ -1,5 +1,5 @@
 # ========== Stage 1: 前端构建 ==========
-FROM node:18 AS frontend-build
+FROM node:20 AS frontend-build
 WORKDIR /app/frontend
 
 # 先复制依赖文件，利用缓存
