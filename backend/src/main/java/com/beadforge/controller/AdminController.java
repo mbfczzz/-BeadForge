@@ -152,9 +152,12 @@ public class AdminController {
 
     @PutMapping("/api-config/{id}")
     public ApiResponse<ApiConfig> updateApiConfig(@PathVariable Long id, @RequestBody ApiConfig config) {
-        config.setId(id);
-        apiConfigRepo.updateById(config);
-        return ApiResponse.success("更新成功", config);
+        ApiConfig existing = apiConfigRepo.selectById(id);
+        if (existing == null) return ApiResponse.error(404, "配置不存在");
+        if (config.getConfigValue() != null) existing.setConfigValue(config.getConfigValue());
+        if (config.getDescription() != null) existing.setDescription(config.getDescription());
+        apiConfigRepo.updateById(existing);
+        return ApiResponse.success("更新成功", existing);
     }
 
     @DeleteMapping("/api-config/{id}")
