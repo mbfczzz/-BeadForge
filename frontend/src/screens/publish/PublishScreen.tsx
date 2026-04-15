@@ -350,13 +350,12 @@ const FeedCard: React.FC<{
 
   const handleShare = () => {
     hapticLight();
-    Alert.alert('分享', '已复制链接到剪贴板', [{ text: '好的' }]);
+    // 视觉反馈由 haptic 提供，不阻塞用户
   };
 
   const handleBookmark = () => {
     hapticLight();
     setBookmarked(!bookmarked);
-    if (!bookmarked) Alert.alert('已收藏', '可在「我的 → 收藏」中查看');
   };
 
   return (

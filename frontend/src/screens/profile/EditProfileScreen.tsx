@@ -78,7 +78,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
           {/* 头像区域 */}
           <TouchableOpacity
             style={$.avatarSection}
-            onPress={() => Alert.alert('更换头像', '暂不支持上传，后续版本开放')}
+            onPress={() => Alert.alert('更换头像', '头像上传功能开发中')}
             activeOpacity={0.7}
           >
             <View style={$.avatarOuter}>

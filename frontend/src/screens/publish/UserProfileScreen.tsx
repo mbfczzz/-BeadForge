@@ -201,7 +201,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
               <MCI name="chat-outline" size={fp(18)} color={colors.text} />
             </HoverView>
             <HoverView
-              onPress={() => Alert.alert('分享', '已复制用户主页链接', [{ text: '好的' }])}
+              onPress={() => {}}
               style={[$.msgBtn, { borderColor: colors.border }]}
               hoverScale={1.03} hoverLift={0}
             >

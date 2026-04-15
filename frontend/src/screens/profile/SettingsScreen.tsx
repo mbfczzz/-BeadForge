@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Switch, Alert,
+  View, Text, StyleSheet, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import { HoverView, PressableScale } from '../../components/common';
+import { Toast } from '../../components/common/Toast';
+import { useToast } from '../../hooks/useFeedback';
+import { hapticLight } from '../../hooks/useFeedback';
 import { wp, fp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
@@ -72,11 +75,13 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toast = useToast();
   const handleNav = (key: string) => {
-    if (key === 'cache') Alert.alert('清除缓存', '已清除 12.3 MB 缓存');
-    else if (key === 'feedback') Alert.alert('意见反馈', '感谢您的反馈！请发送邮件至 support@beadforge.app');
-    else if (key === 'privacy') Alert.alert('隐私政策', 'BeadForge 尊重并保护您的隐私');
-    else Alert.alert('提示', '设置已保存');
+    hapticLight();
+    if (key === 'cache') toast.show('已清除 12.3 MB 缓存');
+    else if (key === 'feedback') toast.show('感谢反馈！support@beadforge.app');
+    else if (key === 'privacy') toast.show('BeadForge 尊重并保护您的隐私');
+    else toast.show('设置已保存');
   };
 
   return (
@@ -128,6 +133,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
           </View>
         ))}
       </ScrollView>
+      <Toast message={toast.msg} />
     </SafeAreaView>
   );
 };

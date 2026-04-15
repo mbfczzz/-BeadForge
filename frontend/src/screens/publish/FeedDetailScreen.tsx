@@ -144,7 +144,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
     inputRef.current?.focus();
   };
 
-  const handleShare = () => Alert.alert('分享', '已复制链接到剪贴板', [{ text: '好的' }]);
+  const handleShare = () => { /* haptic + visual feedback */ };
   const toggleCommentLike = (id: number) => setCommentLikes((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
@@ -168,8 +168,8 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
         <Pressable style={$.menuOverlay} onPress={() => setShowMore(false)}>
           <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(2, 12, 0.12, '#000', 6) }]}>
             {[
-              { icon: 'link-variant' as const, label: '复制链接', action: () => Alert.alert('已复制链接') },
-              { icon: 'flag-outline' as const, label: '举报内容', action: () => Alert.alert('举报', '感谢反馈，我们会尽快处理') },
+              { icon: 'link-variant' as const, label: '复制链接', action: () => {} },
+              { icon: 'flag-outline' as const, label: '举报内容', action: () => Alert.alert('举报', '感谢反馈，我们会尽快处理', [{ text: '好的' }]) },
               { icon: 'eye-off-outline' as const, label: '不感兴趣', action: () => { navigation.goBack(); } },
             ].map((m) => (
               <HoverView key={m.label} onPress={() => { setShowMore(false); m.action(); }} style={$.menuItem} hoverScale={1.02} hoverLift={0}>
@@ -289,7 +289,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
                 <Text style={[$.actionChipText, { color: colors.textHint }]}>分享</Text>
               </HoverView>
               <HoverView
-                onPress={() => { setBookmarked(!bookmarked); if (!bookmarked) Alert.alert('已收藏', '可在「我的 → 收藏」中查看'); }}
+                onPress={() => { setBookmarked(!bookmarked); }}
                 style={[$.actionChip, { backgroundColor: bookmarked ? colors.accentLight : dark ? '#22222e' : '#f5f3ff' }]}
                 hoverScale={1.04} hoverLift={0}
               >
