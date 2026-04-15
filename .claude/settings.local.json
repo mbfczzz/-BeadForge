@@ -28,7 +28,8 @@
       "Bash(curl -s \"http://localhost:8085/api/patterns/list?page=1&size=1\")",
       "Bash(curl -s \"http://localhost:8085/api/feeds/list?page=1&size=1\")",
       "Bash(curl -s \"http://localhost:8085/api/wallet/balance\")",
-      "Bash(curl -s \"http://localhost:8085/api/products/999\")"
+      "Bash(curl -s \"http://localhost:8085/api/products/999\")",
+      "Bash(awk '{print $5, \"bytes\"}')"
     ]
   }
 }

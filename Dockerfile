@@ -36,5 +36,6 @@ WORKDIR /app
 COPY --from=backend-build /app/backend/target/*.jar app.jar
 EXPOSE 8080
 ENV JAVA_OPTS="-Xmx512m" \
-    TZ=Asia/Shanghai
+    TZ=Asia/Shanghai \
+    SERVER_PORT=8080
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
