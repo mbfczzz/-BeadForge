@@ -155,8 +155,16 @@ public class AdminController {
         try {
             ApiConfig existing = apiConfigRepo.selectById(id);
             if (existing == null) return ApiResponse.error(404, "配置不存在");
-            if (body.containsKey("configValue")) existing.setConfigValue(body.get("configValue"));
-            if (body.containsKey("description")) existing.setDescription(body.get("description"));
+            boolean changed = false;
+            if (body.containsKey("configValue") && body.get("configValue") != null) {
+                existing.setConfigValue(body.get("configValue"));
+                changed = true;
+            }
+            if (body.containsKey("description") && body.get("description") != null) {
+                existing.setDescription(body.get("description"));
+                changed = true;
+            }
+            if (!changed) return ApiResponse.success("无需更新", existing);
             apiConfigRepo.updateById(existing);
             return ApiResponse.success("更新成功", existing);
         } catch (Exception e) {
