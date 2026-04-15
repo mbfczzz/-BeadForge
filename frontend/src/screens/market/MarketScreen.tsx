@@ -65,7 +65,15 @@ export const MarketScreen: React.FC = () => {
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* 顶部 */}
       <View style={[$.header, { backgroundColor: colors.accent }]}>
-        <Text style={$.headerTitle}>市场</Text>
+        <View style={$.headerBrand}>
+          <View style={$.headerDot}>
+            <Feather name="shopping-bag" size={fp(14)} color="#fff" />
+          </View>
+          <View>
+            <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400', fontSize: fp(13) }}>市场</Text></Text>
+            <Text style={$.headerSub}>材料·图纸·一站购齐</Text>
+          </View>
+        </View>
       </View>
 
       {/* 频道 Tab — 胶囊卡片式 */}
@@ -517,7 +525,14 @@ const CartSheet: React.FC<{
 const $ = StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(10) },
-  headerTitle: { fontSize: fp(18), fontWeight: '800', color: '#fff' },
+  headerBrand: { flexDirection: 'row', alignItems: 'center' },
+  headerDot: {
+    width: wp(30), height: wp(30), borderRadius: wp(9),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+  },
+  headerTitle: { fontSize: fp(16), fontWeight: '800', color: '#fff' },
+  headerSub: { fontSize: fp(9), color: 'rgba(255,255,255,0.65)', marginTop: wp(1) },
   tabBar: {
     flexDirection: 'row', paddingHorizontal: PAD, paddingVertical: wp(10),
     borderBottomWidth: StyleSheet.hairlineWidth,

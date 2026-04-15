@@ -46,8 +46,11 @@ export const CreateScreen: React.FC = () => {
       {/* 顶部 — 品牌色渐变 */}
       <View style={[$.header, { backgroundColor: colors.accent }]}>
         <View style={$.headerRow}>
-          <View>
-            <Text style={$.headerTitle}>创作工坊</Text>
+          <View style={$.headerIconWrap}>
+            <Feather name="edit-2" size={fp(14)} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400', fontSize: fp(13) }}>创作</Text></Text>
             <Text style={$.headerSub}>选择方式，开始拼豆之旅</Text>
           </View>
           <View style={$.headerDeco}>
@@ -131,7 +134,12 @@ const $ = StyleSheet.create({
   // 顶部
   header: { paddingHorizontal: PAD, paddingTop: wp(12), paddingBottom: wp(16) },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: fp(22), fontWeight: '800', color: '#fff' },
+  headerIconWrap: {
+    width: wp(30), height: wp(30), borderRadius: wp(9),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+  },
+  headerTitle: { fontSize: fp(16), fontWeight: '800', color: '#fff' },
   headerSub: { fontSize: fp(12), color: 'rgba(255,255,255,0.7)', marginTop: wp(3) },
   headerDeco: {
     width: wp(44), height: wp(44), borderRadius: wp(14),
