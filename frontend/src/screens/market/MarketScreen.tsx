@@ -63,40 +63,27 @@ export const MarketScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部 */}
+      {/* 顶部：品牌 + Tab 一体化 */}
       <View style={[$.header, { backgroundColor: colors.accent }]}>
-        <View style={$.headerBrand}>
+        <View style={$.headerTop}>
           <View style={$.headerDot}>
-            <Feather name="shopping-bag" size={fp(14)} color="#fff" />
+            <Feather name="shopping-bag" size={fp(13)} color="#fff" />
           </View>
-          <View>
-            <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400', fontSize: fp(13) }}>市场</Text></Text>
-            <Text style={$.headerSub}>材料·图纸·一站购齐</Text>
-          </View>
+          <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400' }}>市场</Text></Text>
         </View>
-      </View>
-
-      {/* 频道 Tab — 胶囊卡片式 */}
-      <View style={[$.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        {TABS_DEF.map((t) => {
-          const on = tab === t.key;
-          return (
-            <TouchableOpacity
-              key={t.key}
-              activeOpacity={0.8}
-              onPress={() => setTab(t.key)}
-              style={[$.tabCard, on ? { backgroundColor: colors.accent } : { backgroundColor: colors.inputBg }]}
-            >
-              <View style={[$.tabIconCircle, { backgroundColor: on ? 'rgba(255,255,255,0.2)' : colors.border }]}>
-                <Feather name={t.icon} size={fp(15)} color={on ? '#fff' : colors.textHint} />
-              </View>
-              <View>
-                <Text style={[$.tabLabel, { color: on ? '#fff' : colors.text }]}>{t.label}</Text>
-                <Text style={[$.tabSub, { color: on ? 'rgba(255,255,255,0.7)' : colors.textHint }]}>{t.sub}</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {/* 频道切换 */}
+        <View style={$.tabRow}>
+          {TABS_DEF.map((t) => {
+            const on = tab === t.key;
+            return (
+              <TouchableOpacity key={t.key} activeOpacity={0.8} onPress={() => setTab(t.key)}
+                style={[$.tabChip, on && $.tabChipOn]}>
+                <Feather name={t.icon} size={fp(13)} color={on ? '#fff' : 'rgba(255,255,255,0.5)'} />
+                <Text style={[$.tabChipText, { color: on ? '#fff' : 'rgba(255,255,255,0.5)' }]}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
       {tab === 'material' ? <MaterialTab colors={colors} dark={dark} /> : <PatternTab colors={colors} dark={dark} />}
@@ -524,30 +511,22 @@ const CartSheet: React.FC<{
 
 const $ = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(10) },
-  headerBrand: { flexDirection: 'row', alignItems: 'center' },
+  header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(12) },
+  headerTop: { flexDirection: 'row', alignItems: 'center' },
   headerDot: {
-    width: wp(30), height: wp(30), borderRadius: wp(9),
+    width: wp(28), height: wp(28), borderRadius: wp(8),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
   },
   headerTitle: { fontSize: fp(16), fontWeight: '800', color: '#fff' },
-  headerSub: { fontSize: fp(9), color: 'rgba(255,255,255,0.65)', marginTop: wp(1) },
-  tabBar: {
-    flexDirection: 'row', paddingHorizontal: PAD, paddingVertical: wp(10),
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  tabRow: { flexDirection: 'row', marginTop: wp(10) },
+  tabChip: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: wp(14), paddingVertical: wp(7),
+    borderRadius: wp(16), marginRight: wp(8),
   },
-  tabCard: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: wp(12), paddingVertical: wp(10),
-    borderRadius: wp(12), marginHorizontal: wp(4),
-  },
-  tabIconCircle: {
-    width: wp(32), height: wp(32), borderRadius: wp(10),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
-  },
-  tabLabel: { fontSize: fp(13), fontWeight: '700' },
-  tabSub: { fontSize: fp(9), marginTop: wp(1) },
+  tabChipOn: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  tabChipText: { fontSize: fp(13), fontWeight: '600', marginLeft: wp(5) },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingVertical: wp(8), borderBottomWidth: StyleSheet.hairlineWidth },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', height: wp(34), borderRadius: wp(17), paddingHorizontal: wp(10) },
