@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/admin/'),
   routes: [
     { path: '/login', component: () => import('../views/Login.vue'), meta: { noAuth: true } },
     {

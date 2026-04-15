@@ -22,7 +22,7 @@ client.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('admin_token')
-      window.location.href = '/login'
+      window.location.href = '/admin/login'
     }
     return Promise.reject(new Error(err.response?.data?.message || '网络错误'))
   },
