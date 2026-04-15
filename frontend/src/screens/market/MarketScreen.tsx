@@ -63,23 +63,19 @@ export const MarketScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部：品牌 + Tab 一体化 */}
-      <View style={[$.header, { backgroundColor: colors.accent }]}>
-        <View style={$.headerTop}>
-          <View style={$.headerDot}>
-            <Feather name="shopping-bag" size={fp(13)} color="#fff" />
-          </View>
-          <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400' }}>市场</Text></Text>
-        </View>
-        {/* 频道切换 */}
-        <View style={$.tabRow}>
+      {/* 顶部 */}
+      <View style={[$.header, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+        <Text style={[$.headerTitle, { color: colors.text }]}>市场</Text>
+        <View style={{ flex: 1 }} />
+        {/* 频道切换 — 胶囊滑块 */}
+        <View style={[$.tabPill, { backgroundColor: colors.inputBg }]}>
           {TABS_DEF.map((t) => {
             const on = tab === t.key;
             return (
               <TouchableOpacity key={t.key} activeOpacity={0.8} onPress={() => setTab(t.key)}
-                style={[$.tabChip, on && $.tabChipOn]}>
-                <Feather name={t.icon} size={fp(13)} color={on ? '#fff' : 'rgba(255,255,255,0.5)'} />
-                <Text style={[$.tabChipText, { color: on ? '#fff' : 'rgba(255,255,255,0.5)' }]}>{t.label}</Text>
+                style={[$.tabPillItem, on && { backgroundColor: colors.accent }]}>
+                <Feather name={t.icon} size={fp(12)} color={on ? '#fff' : colors.textHint} />
+                <Text style={[$.tabPillText, { color: on ? '#fff' : colors.textSecondary }]}>{t.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -511,22 +507,21 @@ const CartSheet: React.FC<{
 
 const $ = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: PAD, paddingTop: wp(8), paddingBottom: wp(12) },
-  headerTop: { flexDirection: 'row', alignItems: 'center' },
-  headerDot: {
-    width: wp(28), height: wp(28), borderRadius: wp(8),
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
-  },
-  headerTitle: { fontSize: fp(16), fontWeight: '800', color: '#fff' },
-  tabRow: { flexDirection: 'row', marginTop: wp(10) },
-  tabChip: {
+  header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: wp(14), paddingVertical: wp(7),
-    borderRadius: wp(16), marginRight: wp(8),
+    paddingHorizontal: PAD, height: wp(50),
+    borderBottomWidth: 1,
   },
-  tabChipOn: { backgroundColor: 'rgba(255,255,255,0.2)' },
-  tabChipText: { fontSize: fp(13), fontWeight: '600', marginLeft: wp(5) },
+  headerTitle: { fontSize: fp(18), fontWeight: '800' },
+  tabPill: {
+    flexDirection: 'row', borderRadius: wp(18), padding: wp(3),
+  },
+  tabPillItem: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: wp(12), paddingVertical: wp(6),
+    borderRadius: wp(16),
+  },
+  tabPillText: { fontSize: fp(12), fontWeight: '600', marginLeft: wp(4) },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingVertical: wp(8), borderBottomWidth: StyleSheet.hairlineWidth },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', height: wp(34), borderRadius: wp(17), paddingHorizontal: wp(10) },
