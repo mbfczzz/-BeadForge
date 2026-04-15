@@ -118,13 +118,13 @@ public class PaymentController {
 
         // 记录流水
         String methodName = "wechat".equals(req.getMethod()) ? "微信支付" : "支付宝";
-        WalletLog log = new WalletLog();
-        log.setUserId(userId);
-        log.setAmount(coins);
-        log.setBalanceAfter(w.getBalance());
-        log.setType("CHARGE");
-        log.setDescription("充值 " + coins + " 拼豆币（" + methodName + " ¥" + req.getAmount() + "）");
-        logRepo.insert(log);
+        WalletLog walletLog = new WalletLog();
+        walletLog.setUserId(userId);
+        walletLog.setAmount(coins);
+        walletLog.setBalanceAfter(w.getBalance());
+        walletLog.setType("CHARGE");
+        walletLog.setDescription("充值 " + coins + " 拼豆币（" + methodName + " ¥" + req.getAmount() + "）");
+        logRepo.insert(walletLog);
 
         log.info("支付确认: userId={}, amount=¥{}, coins={}, method={}, orderId={}",
                 userId, req.getAmount(), coins, req.getMethod(), req.getOrderId());
