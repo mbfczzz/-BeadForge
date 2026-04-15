@@ -79,7 +79,15 @@ INSERT IGNORE INTO t_api_config (config_key, config_value, description) VALUES
 ('hot_like_weight', '3', '热度算法-点赞权重'),
 ('hot_view_weight', '1', '热度算法-浏览权重'),
 ('recommend_new_ratio', '0.3', '推荐-新作品占比'),
-('recommend_hot_ratio', '0.7', '推荐-热门作品占比');
+('recommend_hot_ratio', '0.7', '推荐-热门作品占比'),
+('wechat_app_id', '', '微信支付-AppID'),
+('wechat_mch_id', '', '微信支付-商户号'),
+('wechat_api_key', '', '微信支付-APIv3密钥'),
+('alipay_app_id', '', '支付宝-AppID'),
+('alipay_private_key', '', '支付宝-应用私钥'),
+('alipay_public_key', '', '支付宝-支付宝公钥'),
+('payment_enabled', 'false', '是否开启真实支付(false=模拟)'),
+('coin_rate', '1', '拼豆币兑换率(1元=N拼豆币)');
 
 -- 一些关注关系
 INSERT IGNORE INTO t_follow (follower_id, following_id) VALUES
