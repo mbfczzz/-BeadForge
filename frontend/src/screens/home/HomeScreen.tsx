@@ -90,7 +90,17 @@ export const HomeScreen: React.FC = () => {
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* 导航栏 */}
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <Text style={[$.navTitle, { color: colors.text }]}>BeadForge</Text>
+        <View style={$.brandRow}>
+          <View style={[$.brandDot, { backgroundColor: colors.accent }]}>
+            <Text style={$.brandEmoji}>🧩</Text>
+          </View>
+          <View>
+            <Text style={[$.brandName, { color: colors.text }]}>
+              B<Text style={{ color: colors.accent }}>ead</Text>Forge
+            </Text>
+            <Text style={[$.brandSub, { color: colors.textHint }]}>拼出你的创意世界</Text>
+          </View>
+        </View>
         <View style={{ flex: 1 }} />
         <HoverView onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
           <Feather name={dark ? 'sun' : 'moon'} size={fp(16)} color={colors.textSecondary} />
@@ -253,7 +263,14 @@ const $ = StyleSheet.create({
     height: wp(50), paddingHorizontal: PAD,
     borderBottomWidth: 1,
   },
-  navTitle: { fontSize: fp(18), fontWeight: '700', letterSpacing: -0.3 },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
+  brandDot: {
+    width: wp(30), height: wp(30), borderRadius: wp(9),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+  },
+  brandEmoji: { fontSize: fp(15) },
+  brandName: { fontSize: fp(17), fontWeight: '900', letterSpacing: 0.5 },
+  brandSub: { fontSize: fp(9), marginTop: wp(1), letterSpacing: 0.3 },
   navBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
