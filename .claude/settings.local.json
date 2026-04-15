@@ -18,7 +18,9 @@
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('expo:', p.dependencies.expo\\); console.log\\('react:', p.dependencies.react\\); console.log\\('react-native:', p.dependencies['react-native']\\);\")",
       "Bash(node -e ':*)",
       "Bash(node -e \"const p=require\\('./node_modules/expo/package.json'\\); console.log\\('Expo SDK:', p.version\\)\")",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(curl -s -X POST \"http://localhost:8080/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"username\":\"test1\",\"password\":\"123456\"}')",
+      "Bash(grep \"client\\\\.\\\\\\(get\\\\|post\\\\|put\\\\|delete\\\\\\)\" D:/mbfczzzz/claude/BeadForge/admin/src/views/*.vue)"
     ]
   }
 }

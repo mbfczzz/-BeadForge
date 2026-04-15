@@ -3,15 +3,15 @@ package com.beadforge.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beadforge.model.dto.ApiResponse;
+import com.beadforge.model.dto.DesignDTO;
 import com.beadforge.model.entity.*;
 import com.beadforge.repository.*;
+import com.beadforge.util.ConvertUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/admin")
@@ -23,7 +23,6 @@ public class AdminController {
     private final ProductRepository productRepo;
     private final PatternListingRepository patternRepo;
     private final FeedRepository feedRepo;
-    private final FollowRepository followRepo;
     private final ApiConfigRepository apiConfigRepo;
 
     // ═══════ 统计 ═══════
@@ -31,11 +30,11 @@ public class AdminController {
     @GetMapping("/stats")
     public ApiResponse<Map<String, Long>> stats() {
         Map<String, Long> m = new HashMap<>();
-        m.put("users", userRepo.selectCount(new QueryWrapper<User>().eq("deleted", 0)));
-        m.put("designs", designRepo.selectCount(new QueryWrapper<Design>().eq("deleted", 0)));
-        m.put("products", productRepo.selectCount(new QueryWrapper<Product>().eq("deleted", 0)));
-        m.put("feeds", feedRepo.selectCount(new QueryWrapper<Feed>().eq("deleted", 0)));
-        m.put("patterns", patternRepo.selectCount(new QueryWrapper<PatternListing>().eq("deleted", 0)));
+        m.put("users", userRepo.selectCount(null));
+        m.put("designs", designRepo.selectCount(null));
+        m.put("products", productRepo.selectCount(null));
+        m.put("feeds", feedRepo.selectCount(null));
+        m.put("patterns", patternRepo.selectCount(null));
         return ApiResponse.success(m);
     }
 
@@ -48,11 +47,10 @@ public class AdminController {
             @RequestParam(required = false) String keyword) {
         QueryWrapper<User> qw = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
-            qw.like("username", keyword).or().like("nickname", keyword);
+            qw.and(w -> w.like("username", keyword).or().like("nickname", keyword));
         }
         qw.orderByDesc("created_at");
         Page<User> result = userRepo.selectPage(new Page<>(page, size), qw);
-        // 清除密码
         result.getRecords().forEach(u -> u.setPassword(null));
         return ApiResponse.success(result);
     }
@@ -63,17 +61,34 @@ public class AdminController {
         return ApiResponse.success("删除成功", null);
     }
 
-    // ═══════ 作品管理 ═══════
+    // ═══════ 作品管理（带 authorName） ═══════
 
     @GetMapping("/designs")
-    public ApiResponse<Page<Design>> designs(
+    public ApiResponse<Page<DesignDTO>> designs(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String category) {
         QueryWrapper<Design> qw = new QueryWrapper<>();
         if (category != null && !category.isEmpty()) qw.eq("category", category);
         qw.orderByDesc("created_at");
-        return ApiResponse.success(designRepo.selectPage(new Page<>(page, size), qw));
+        Page<Design> raw = designRepo.selectPage(new Page<>(page, size), qw);
+
+        // 填充 authorName
+        Set<Long> uids = raw.getRecords().stream().map(Design::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nameMap = new HashMap<>();
+        if (!uids.isEmpty()) {
+            userRepo.selectBatchIds(uids).forEach(u ->
+                nameMap.put(u.getId(), u.getNickname() != null ? u.getNickname() : u.getUsername()));
+        }
+
+        Page<DesignDTO> result = new Page<>(raw.getCurrent(), raw.getSize(), raw.getTotal());
+        result.setRecords(raw.getRecords().stream().map(d -> {
+            DesignDTO dto = ConvertUtil.toDesignDTO(d);
+            dto.setAuthorName(nameMap.getOrDefault(d.getUserId(), "未知"));
+            return dto;
+        }).collect(Collectors.toList()));
+
+        return ApiResponse.success(result);
     }
 
     @DeleteMapping("/designs/{id}")
@@ -87,6 +102,8 @@ public class AdminController {
     @PostMapping("/products")
     public ApiResponse<Product> addProduct(@RequestBody Product product) {
         product.setStatus("ACTIVE");
+        if (product.getSales() == null) product.setSales(0);
+        if (product.getRating() == null) product.setRating(java.math.BigDecimal.valueOf(5.0));
         productRepo.insert(product);
         return ApiResponse.success("添加成功", product);
     }
