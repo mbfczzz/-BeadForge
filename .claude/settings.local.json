@@ -20,7 +20,9 @@
       "Bash(node -e \"const p=require\\('./node_modules/expo/package.json'\\); console.log\\('Expo SDK:', p.version\\)\")",
       "Bash(npx vite:*)",
       "Bash(curl -s -X POST \"http://localhost:8080/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"username\":\"test1\",\"password\":\"123456\"}')",
-      "Bash(grep \"client\\\\.\\\\\\(get\\\\|post\\\\|put\\\\|delete\\\\\\)\" D:/mbfczzzz/claude/BeadForge/admin/src/views/*.vue)"
+      "Bash(grep \"client\\\\.\\\\\\(get\\\\|post\\\\|put\\\\|delete\\\\\\)\" D:/mbfczzzz/claude/BeadForge/admin/src/views/*.vue)",
+      "Bash(curl -s \"http://localhost:8080/api/designs/public/list?page=1&size=1\")",
+      "Read(//d/mbfczzzz/claude/BeadForge/**)"
     ]
   }
 }

@@ -66,18 +66,25 @@ const designs = ref<any[]>([])
 const feeds = ref<any[]>([])
 
 onMounted(async () => {
+  // 分开请求，互不影响：stats 需要认证，列表是公开接口
   try {
-    const [statsRes, dRes, fRes]: any[] = await Promise.all([
-      client.get('/admin/stats'),
-      client.get('/designs/public/list', { params: { page: 1, size: 5 } }),
-      client.get('/feeds/list', { params: { page: 1, size: 5 } }),
-    ])
+    const statsRes: any = await client.get('/admin/stats')
     const s = statsRes.data
     statCards.value[0].value = s.users || 0
     statCards.value[1].value = s.designs || 0
     statCards.value[2].value = s.products || 0
     statCards.value[3].value = s.feeds || 0
+  } catch {
+    // token 过期会跳登录页，这里不处理
+  }
+
+  try {
+    const dRes: any = await client.get('/designs/public/list', { params: { page: 1, size: 5 } })
     designs.value = dRes.data?.records || []
+  } catch {}
+
+  try {
+    const fRes: any = await client.get('/feeds/list', { params: { page: 1, size: 5 } })
     feeds.value = fRes.data?.records || []
   } catch {}
 })
