@@ -46,11 +46,11 @@ export const CreateScreen: React.FC = () => {
       {/* 顶部 — 品牌色渐变 */}
       <View style={[$.header, { backgroundColor: colors.accent }]}>
         <View style={$.headerRow}>
-          <View style={$.headerIconWrap}>
+          <View style={[$.headerIconWrap, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
             <Feather name="edit-2" size={fp(14)} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={$.headerTitle}>BeadForge <Text style={{ fontWeight: '400', fontSize: fp(13) }}>创作</Text></Text>
+            <Text style={$.headerTitle}>创作工坊</Text>
             <Text style={$.headerSub}>选择方式，开始拼豆之旅</Text>
           </View>
           <View style={$.headerDeco}>

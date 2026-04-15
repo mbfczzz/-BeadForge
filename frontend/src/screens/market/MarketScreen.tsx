@@ -66,13 +66,12 @@ export const MarketScreen: React.FC = () => {
       {/* 顶部 — 和发现页统一风格 */}
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <View style={$.brandRow}>
-          <View style={[$.brandDot, { backgroundColor: colors.accent }]}>
+          <View style={[$.brandDot, { backgroundColor: '#F97316' }]}>
             <Feather name="shopping-bag" size={fp(13)} color="#fff" />
           </View>
           <View>
             <Text style={[$.brandName, { color: colors.text }]}>
-              B<Text style={{ color: colors.accent }}>ead</Text>Forge
-              <Text style={{ fontWeight: '400', color: colors.textHint }}> 市场</Text>
+              拼豆<Text style={{ color: '#F97316' }}>市场</Text>
             </Text>
             <Text style={[$.brandSub, { color: colors.textHint }]}>材料·图纸·一站购齐</Text>
           </View>
