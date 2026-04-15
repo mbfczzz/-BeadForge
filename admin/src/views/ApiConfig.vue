@@ -83,7 +83,10 @@ const submitForm = async () => {
   submitting.value = true
   try {
     if (editingId.value) {
-      await client.put(`/admin/api-config/${editingId.value}`, form)
+      await client.put(`/admin/api-config/${editingId.value}`, {
+        configValue: form.configValue,
+        description: form.description,
+      })
     } else {
       await client.post('/admin/api-config', form)
     }

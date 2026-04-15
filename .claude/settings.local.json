@@ -23,7 +23,12 @@
       "Bash(grep \"client\\\\.\\\\\\(get\\\\|post\\\\|put\\\\|delete\\\\\\)\" D:/mbfczzzz/claude/BeadForge/admin/src/views/*.vue)",
       "Bash(curl -s \"http://localhost:8080/api/designs/public/list?page=1&size=1\")",
       "Read(//d/mbfczzzz/claude/BeadForge/**)",
-      "Bash(curl -s -X POST \"http://localhost:8085/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"username\":\"test1\",\"password\":\"123456\"}')"
+      "Bash(curl -s -X POST \"http://localhost:8085/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"username\":\"test1\",\"password\":\"123456\"}')",
+      "Bash(curl -s \"http://localhost:8085/api/products/list?page=1&size=1\")",
+      "Bash(curl -s \"http://localhost:8085/api/patterns/list?page=1&size=1\")",
+      "Bash(curl -s \"http://localhost:8085/api/feeds/list?page=1&size=1\")",
+      "Bash(curl -s \"http://localhost:8085/api/wallet/balance\")",
+      "Bash(curl -s \"http://localhost:8085/api/products/999\")"
     ]
   }
 }
