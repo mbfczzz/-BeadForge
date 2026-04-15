@@ -75,7 +75,11 @@ INSERT IGNORE INTO t_feed (id, user_id, content, design_id, tags, like_count, co
 INSERT IGNORE INTO t_api_config (config_key, config_value, description) VALUES
 ('doubao_api_key', 'aa74c59c-9d1d-46b2-a8c1-b1bacb1997cc', '豆包文生图 API Key'),
 ('doubao_model', 'doubao-seedream-5-0-260128', '豆包文生图模型ID'),
-('doubao_base_url', 'https://ark.cn-beijing.volces.com/api/v3', '豆包API地址');
+('doubao_base_url', 'https://ark.cn-beijing.volces.com/api/v3', '豆包API地址'),
+('hot_like_weight', '3', '热度算法-点赞权重'),
+('hot_view_weight', '1', '热度算法-浏览权重'),
+('recommend_new_ratio', '0.3', '推荐-新作品占比'),
+('recommend_hot_ratio', '0.7', '推荐-热门作品占比');
 
 -- 一些关注关系
 INSERT IGNORE INTO t_follow (follower_id, following_id) VALUES
