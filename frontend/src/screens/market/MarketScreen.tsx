@@ -66,14 +66,18 @@ export const MarketScreen: React.FC = () => {
       {/* 顶部 */}
       <View style={[$.header, { backgroundColor: colors.accent }]}>
         <Text style={$.headerTitle}>市场</Text>
-        {/* 频道 — 白底分段控制器 */}
-        <View style={$.segmentWrap}>
+      </View>
+
+      {/* 频道切换 — 独立一行 */}
+      <View style={[$.segmentBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View style={[$.segmentWrap, { backgroundColor: colors.inputBg }]}>
           {TABS_DEF.map((t) => {
             const on = tab === t.key;
             return (
               <TouchableOpacity key={t.key} activeOpacity={0.85} onPress={() => setTab(t.key)}
-                style={[$.segmentItem, on && $.segmentItemOn]}>
-                <Text style={[$.segmentText, on && $.segmentTextOn]}>{t.label}</Text>
+                style={[$.segmentItem, on && { backgroundColor: colors.accent }]}>
+                <Feather name={t.icon} size={fp(13)} color={on ? '#fff' : colors.textHint} />
+                <Text style={[$.segmentText, { color: on ? '#fff' : colors.textSecondary }]}>{t.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -505,21 +509,20 @@ const CartSheet: React.FC<{
 
 const $ = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: PAD, paddingTop: wp(10), paddingBottom: wp(14) },
+  header: { paddingHorizontal: PAD, paddingTop: wp(10), paddingBottom: wp(12) },
   headerTitle: { fontSize: fp(20), fontWeight: '800', color: '#fff' },
+  segmentBar: {
+    paddingHorizontal: PAD, paddingVertical: wp(10),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   segmentWrap: {
-    flexDirection: 'row', marginTop: wp(10),
-    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: wp(10), padding: wp(3),
+    flexDirection: 'row', borderRadius: wp(10), padding: wp(3),
   },
   segmentItem: {
-    flex: 1, alignItems: 'center',
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     paddingVertical: wp(8), borderRadius: wp(8),
   },
-  segmentItemOn: {
-    backgroundColor: '#fff',
-  },
-  segmentText: { fontSize: fp(13), fontWeight: '600', color: 'rgba(255,255,255,0.6)' },
-  segmentTextOn: { color: '#4b78ff', fontWeight: '700' },
+  segmentText: { fontSize: fp(13), fontWeight: '600', marginLeft: wp(5) },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingVertical: wp(8), borderBottomWidth: StyleSheet.hairlineWidth },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', height: wp(34), borderRadius: wp(17), paddingHorizontal: wp(10) },
