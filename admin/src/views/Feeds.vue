@@ -1,8 +1,6 @@
 <template>
   <el-card>
-    <template #header>
-      <span>动态管理 ({{ total }} 条)</span>
-    </template>
+    <template #header>动态管理 ({{ total }})</template>
     <el-table :data="list" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column label="用户" width="100">
@@ -11,15 +9,17 @@
       <el-table-column prop="content" label="内容" show-overflow-tooltip />
       <el-table-column label="标签" width="160">
         <template #default="{ row }">
-          <el-tag v-for="t in (row.tags || [])" :key="t" size="small" style="margin-right: 4px">{{ t }}</el-tag>
+          <el-tag v-for="t in (row.tags || [])" :key="t" size="small" style="margin: 0 2px">{{ t }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="likeCount" label="点赞" width="70" sortable />
       <el-table-column prop="commentCount" label="评论" width="70" />
       <el-table-column prop="timeAgo" label="时间" width="100" />
-      <el-table-column label="操作" width="100">
+      <el-table-column label="操作" width="80" fixed="right">
         <template #default="{ row }">
-          <el-button type="danger" link size="small" @click="deleteItem(row)">删除</el-button>
+          <el-popconfirm title="确定删除此动态？" @confirm="deleteItem(row.id)">
+            <template #reference><el-button type="danger" link size="small">删除</el-button></template>
+          </el-popconfirm>
         </template>
       </el-table-column>
     </el-table>
@@ -28,7 +28,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import client from '../api/client'
 
 const list = ref<any[]>([])
@@ -45,10 +45,9 @@ const fetchData = async () => {
   finally { loading.value = false }
 }
 
-const deleteItem = (row: any) => {
-  ElMessageBox.confirm(`确定删除该动态？`, '警告', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功（需后端admin API）'))
-    .catch(() => {})
+const deleteItem = async (id: number) => {
+  try { await client.delete(`/admin/feeds/${id}`); ElMessage.success('删除成功'); fetchData() }
+  catch (e: any) { ElMessage.error(e.message) }
 }
 
 onMounted(fetchData)

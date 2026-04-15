@@ -2,13 +2,10 @@
   <el-card>
     <template #header>
       <div style="display: flex; justify-content: space-between; align-items: center">
-        <span>作品管理 ({{ total }} 件)</span>
-        <div style="display: flex; gap: 8px">
-          <el-select v-model="category" placeholder="分类" clearable style="width: 120px" @change="fetchData">
-            <el-option v-for="c in cats" :key="c" :label="c" :value="c" />
-          </el-select>
-          <el-input v-model="search" placeholder="搜索标题" prefix-icon="Search" style="width: 200px" clearable @input="fetchData" />
-        </div>
+        <span>作品管理 ({{ total }})</span>
+        <el-select v-model="category" placeholder="分类" clearable style="width: 120px" @change="() => { page = 1; fetchData() }">
+          <el-option v-for="c in cats" :key="c" :label="c" :value="c" />
+        </el-select>
       </div>
     </template>
     <el-table :data="list" v-loading="loading" stripe>
@@ -26,31 +23,30 @@
         </template>
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="170" />
-      <el-table-column label="操作" width="100">
+      <el-table-column label="操作" width="100" fixed="right">
         <template #default="{ row }">
-          <el-button type="danger" link size="small" @click="deleteItem(row)">删除</el-button>
+          <el-popconfirm title="确定删除此作品？" @confirm="deleteItem(row.id)">
+            <template #reference>
+              <el-button type="danger" link size="small">删除</el-button>
+            </template>
+          </el-popconfirm>
         </template>
       </el-table-column>
     </el-table>
-    <el-pagination
-      v-if="total > pageSize"
-      style="margin-top: 16px; justify-content: center"
-      :current-page="page" :page-size="pageSize" :total="total"
-      layout="prev, pager, next"
-      @current-change="(p: number) => { page = p; fetchData() }"
-    />
+    <el-pagination v-if="total > pageSize" style="margin-top: 16px; justify-content: center"
+      :current-page="page" :page-size="pageSize" :total="total" layout="prev, pager, next"
+      @current-change="(p: number) => { page = p; fetchData() }" />
   </el-card>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import client from '../api/client'
 
 const cats = ['动物', '卡通', '花卉', '美食', '风景', '抽象', '像素']
 const list = ref<any[]>([])
 const loading = ref(false)
-const search = ref('')
 const category = ref('')
 const page = ref(1)
 const pageSize = 10
@@ -59,19 +55,19 @@ const total = ref(0)
 const fetchData = async () => {
   loading.value = true
   try {
-    const res: any = await client.get('/designs/public/list', {
-      params: { page: page.value, size: pageSize, category: category.value || undefined },
-    })
+    const res: any = await client.get('/admin/designs', { params: { page: page.value, size: pageSize, category: category.value || undefined } })
     list.value = res.data?.records || []
     total.value = res.data?.total || 0
   } catch (e: any) { ElMessage.error(e.message) }
   finally { loading.value = false }
 }
 
-const deleteItem = (row: any) => {
-  ElMessageBox.confirm(`确定删除「${row.title}」？`, '警告', { type: 'warning' })
-    .then(() => ElMessage.success('删除成功（需后端admin API）'))
-    .catch(() => {})
+const deleteItem = async (id: number) => {
+  try {
+    await client.delete(`/admin/designs/${id}`)
+    ElMessage.success('删除成功')
+    fetchData()
+  } catch (e: any) { ElMessage.error(e.message) }
 }
 
 onMounted(fetchData)

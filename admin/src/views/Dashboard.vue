@@ -1,8 +1,7 @@
 <template>
   <div>
-    <!-- 统计卡片 -->
     <el-row :gutter="16" style="margin-bottom: 20px">
-      <el-col :span="6" v-for="stat in stats" :key="stat.label">
+      <el-col :span="6" v-for="stat in statCards" :key="stat.label">
         <el-card shadow="hover">
           <div style="display: flex; align-items: center; gap: 16px">
             <div :style="{ background: stat.color + '15', color: stat.color, width: '48px', height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }">
@@ -17,7 +16,6 @@
       </el-col>
     </el-row>
 
-    <!-- 最近数据 -->
     <el-row :gutter="16">
       <el-col :span="12">
         <el-card>
@@ -58,7 +56,7 @@
 import { ref, onMounted } from 'vue'
 import client from '../api/client'
 
-const stats = ref([
+const statCards = ref([
   { label: '用户总数', value: 0, icon: 'User', color: '#4b78ff' },
   { label: '作品总数', value: 0, icon: 'Picture', color: '#22C55E' },
   { label: '商品总数', value: 0, icon: 'ShoppingBag', color: '#F97316' },
@@ -69,17 +67,18 @@ const feeds = ref<any[]>([])
 
 onMounted(async () => {
   try {
-    const [dRes, fRes, pRes]: any[] = await Promise.all([
+    const [statsRes, dRes, fRes]: any[] = await Promise.all([
+      client.get('/admin/stats'),
       client.get('/designs/public/list', { params: { page: 1, size: 5 } }),
       client.get('/feeds/list', { params: { page: 1, size: 5 } }),
-      client.get('/products/list', { params: { page: 1, size: 1 } }),
     ])
+    const s = statsRes.data
+    statCards.value[0].value = s.users || 0
+    statCards.value[1].value = s.designs || 0
+    statCards.value[2].value = s.products || 0
+    statCards.value[3].value = s.feeds || 0
     designs.value = dRes.data?.records || []
     feeds.value = fRes.data?.records || []
-    stats.value[1].value = dRes.data?.total || 0
-    stats.value[3].value = fRes.data?.total || 0
-    stats.value[2].value = pRes.data?.total || 0
-    stats.value[0].value = designs.value.length > 0 ? 10 : 0 // 暂无用户列表API
   } catch {}
 })
 </script>
