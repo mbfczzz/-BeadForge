@@ -31,10 +31,10 @@ const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','
 const CAT_FOLD_LIMIT = 10;
 
 const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#4b78ff' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#d6b161' },
-  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#549da5' },
-  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#bf60fe' },
+  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#4b78ff', sort: 'hot', cat: '' },
+  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#d6b161', sort: 'popular', cat: 'animal' },
+  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#549da5', sort: 'popular', cat: 'pixel' },
+  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#bf60fe', sort: 'latest', cat: 'flower' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -108,7 +108,7 @@ export const HomeScreen: React.FC = () => {
               placeholderTextColor={colors.textHint} value={searchKeyword} onChangeText={handleSearch}
               onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
             {searchKeyword.length > 0 && (
-              <TouchableOpacity onPress={() => handleSearch('')}><Feather name="x-circle" size={fp(15)} color={colors.textHint} /></TouchableOpacity>
+              <TouchableOpacity onPress={() => handleSearch('')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ padding: wp(6) }}><Feather name="x-circle" size={fp(16)} color={colors.textHint} /></TouchableOpacity>
             )}
           </View>
         </View>
@@ -119,7 +119,7 @@ export const HomeScreen: React.FC = () => {
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + wp(10))))}
           contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) }}>
           {BANNERS.map((b) => (
-            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} style={[$.banner, { width: BW, backgroundColor: b.bg }]}>
+            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} onPress={() => { setFilter(b.sort, b.cat || null); }} style={[$.banner, { width: BW, backgroundColor: b.bg }]}>
               <View style={$.bannerInner}>
                 <Text style={$.bannerT}>{b.title}</Text>
                 <Text style={$.bannerS}>{b.sub}</Text>
@@ -155,11 +155,26 @@ export const HomeScreen: React.FC = () => {
           )}
         </View>
 
-        {/* 标题 */}
+        {/* 排序 + 标题 */}
         <View style={$.secRow}>
           <Text style={[$.secT, { color: colors.text }]}>作品广场</Text>
           {filtered.length > 0 && <Text style={[$.secN, { color: colors.textHint }]}>{filtered.length} 个作品</Text>}
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: wp(8) }}>
+          {[
+            { key: 'latest', label: '最新' },
+            { key: 'hot', label: '热度' },
+            { key: 'popular', label: '点赞' },
+            { key: 'views', label: '浏览' },
+          ].map((s) => {
+            const on = useDesignStore.getState().sortBy === s.key;
+            return (
+              <TouchableOpacity key={s.key} activeOpacity={0.7} onPress={() => setFilter(s.key)} style={{ marginRight: wp(12) }}>
+                <Text style={{ fontSize: fp(12), fontWeight: on ? '700' : '400', color: on ? colors.accent : colors.textHint }}>{s.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
         {/* 骨架屏 */}
         {isFirstLoad && (

@@ -16,9 +16,9 @@ const Tab = createBottomTabNavigator();
 
 const TABS: { name: string; label: string; icon: string; color: string; center?: boolean }[] = [
   { name: 'Home', label: '发现', icon: 'compass', color: '#4b78ff' },
-  { name: 'Market', label: '市场', icon: 'shopping-bag', color: '#F97316' },
-  { name: 'Create', label: '创作', icon: 'plus', color: '#8B5CF6', center: true },
   { name: 'Publish', label: '动态', icon: 'zap', color: '#22C55E' },
+  { name: 'Create', label: '创作', icon: 'plus', color: '#8B5CF6', center: true },
+  { name: 'Market', label: '市场', icon: 'shopping-bag', color: '#F97316' },
   { name: 'Profile', label: '我的', icon: 'user', color: '#EC4899' },
 ];
 
