@@ -63,20 +63,28 @@ export const MarketScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部 */}
-      <View style={[$.header, { backgroundColor: colors.accent }]}>
-        <Text style={$.headerTitle}>市场</Text>
-      </View>
-
-      {/* 频道切换 — 独立一行 */}
-      <View style={[$.segmentBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      {/* 顶部 — 和发现页统一风格 */}
+      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
+        <View style={$.brandRow}>
+          <View style={[$.brandDot, { backgroundColor: colors.accent }]}>
+            <Feather name="shopping-bag" size={fp(13)} color="#fff" />
+          </View>
+          <View>
+            <Text style={[$.brandName, { color: colors.text }]}>
+              B<Text style={{ color: colors.accent }}>ead</Text>Forge
+              <Text style={{ fontWeight: '400', color: colors.textHint }}> 市场</Text>
+            </Text>
+            <Text style={[$.brandSub, { color: colors.textHint }]}>材料·图纸·一站购齐</Text>
+          </View>
+        </View>
+        <View style={{ flex: 1 }} />
+        {/* 频道切换 */}
         <View style={[$.segmentWrap, { backgroundColor: colors.inputBg }]}>
           {TABS_DEF.map((t) => {
             const on = tab === t.key;
             return (
               <TouchableOpacity key={t.key} activeOpacity={0.85} onPress={() => setTab(t.key)}
                 style={[$.segmentItem, on && { backgroundColor: colors.accent }]}>
-                <Feather name={t.icon} size={fp(13)} color={on ? '#fff' : colors.textHint} />
                 <Text style={[$.segmentText, { color: on ? '#fff' : colors.textSecondary }]}>{t.label}</Text>
               </TouchableOpacity>
             );
@@ -509,20 +517,25 @@ const CartSheet: React.FC<{
 
 const $ = StyleSheet.create({
   root: { flex: 1 },
-  header: { paddingHorizontal: PAD, paddingTop: wp(10), paddingBottom: wp(12) },
-  headerTitle: { fontSize: fp(20), fontWeight: '800', color: '#fff' },
-  segmentBar: {
-    paddingHorizontal: PAD, paddingVertical: wp(10),
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  nav: {
+    flexDirection: 'row', alignItems: 'center',
+    height: wp(54), paddingHorizontal: PAD,
+    borderBottomWidth: 1,
   },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
+  brandDot: {
+    width: wp(30), height: wp(30), borderRadius: wp(9),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+  },
+  brandName: { fontSize: fp(17), fontWeight: '900', letterSpacing: 0.5 },
+  brandSub: { fontSize: fp(9), marginTop: wp(1) },
   segmentWrap: {
-    flexDirection: 'row', borderRadius: wp(10), padding: wp(3),
+    flexDirection: 'row', borderRadius: wp(8), padding: wp(2),
   },
   segmentItem: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: wp(8), borderRadius: wp(8),
+    paddingHorizontal: wp(10), paddingVertical: wp(5), borderRadius: wp(6),
   },
-  segmentText: { fontSize: fp(13), fontWeight: '600', marginLeft: wp(5) },
+  segmentText: { fontSize: fp(12), fontWeight: '600' },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingVertical: wp(8), borderBottomWidth: StyleSheet.hairlineWidth },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', height: wp(34), borderRadius: wp(17), paddingHorizontal: wp(10) },
