@@ -1,6 +1,11 @@
 -- BeadForge 初始数据
 USE beadforge;
 
+-- 修复缺失的 deleted 字段
+ALTER TABLE t_api_config ADD COLUMN IF NOT EXISTS deleted INT DEFAULT 0;
+ALTER TABLE t_wallet ADD COLUMN IF NOT EXISTS deleted INT DEFAULT 0;
+ALTER TABLE t_wallet_log ADD COLUMN IF NOT EXISTS deleted INT DEFAULT 0;
+
 -- 用户数据（密码都是 bcrypt 加密的 "123456"）
 INSERT IGNORE INTO t_user (id, username, password, nickname, email) VALUES
 (1, 'beadlover', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z6FZV0.mOiZnfPfLqHU1DXTK', '拼豆爱好者', 'beadlover@test.com'),
