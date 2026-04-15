@@ -10,6 +10,7 @@ import { DesignDetailScreen } from './src/screens/detail/DesignDetailScreen';
 import { EditorScreen } from './src/screens/create/EditorScreen';
 import { FeedDetailScreen } from './src/screens/publish/FeedDetailScreen';
 import { UserProfileScreen } from './src/screens/publish/UserProfileScreen';
+import { ProductDetailScreen } from './src/screens/market/ProductDetailScreen';
 import type { RootStackParamList } from './src/navigation/types';
 import { useAuthStore } from './src/store/useAuthStore';
 import { ThemeProvider, useTheme } from './src/theme';
@@ -41,6 +42,7 @@ function AppContent() {
         <Stack.Screen name="Editor" component={EditorScreen} />
         <Stack.Screen name="FeedDetail" component={FeedDetailScreen} />
         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

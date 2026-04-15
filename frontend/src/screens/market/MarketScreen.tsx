@@ -99,11 +99,11 @@ export const MarketScreen: React.FC = () => {
 /* ═══════════════════ 材料 Tab ═══════════════════ */
 
 const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, dark }) => {
+  const matNav = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [catIdx, setCatIdx] = useState(0);
   const [sortIdx, setSortIdx] = useState(0);
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [detail, setDetail] = useState<Product | null>(null);
   const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState('');
 
@@ -162,21 +162,12 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
         ListEmptyComponent={<EmptyState icon="inbox" text="没有找到商品" colors={colors} />}
         renderItem={({ item }) => (
           <View style={{ width: CARD_W, marginBottom: wp(10) }}>
-            <MatCard p={item} colors={colors} dark={dark} onPress={() => setDetail(item)} onAdd={() => addToCart(item)} />
+            <MatCard p={item} colors={colors} dark={dark} onPress={() => matNav.navigate('ProductDetail', { product: { ...item, description: item.desc, category: item.cat, specs: JSON.stringify(item.specs) } as any })} onAdd={() => addToCart(item)} />
           </View>
         )}
       />
 
       {toast.length > 0 && <Toast text={toast} colors={colors} />}
-
-      {/* 详情 */}
-      <Modal visible={!!detail} animationType="fade" transparent onRequestClose={() => setDetail(null)}>
-        <TouchableOpacity style={$.overlay} activeOpacity={1} onPress={() => setDetail(null)}>
-          <View style={[$.sheet, { backgroundColor: colors.surface, maxHeight: H * 0.72 }]} onStartShouldSetResponder={() => true}>
-            {detail && <MatDetail p={detail} colors={colors} onAdd={() => { addToCart(detail); setDetail(null); }} onClose={() => setDetail(null)} />}
-          </View>
-        </TouchableOpacity>
-      </Modal>
 
       {/* 购物车 */}
       <Modal visible={showCart} animationType="fade" transparent onRequestClose={() => setShowCart(false)}>

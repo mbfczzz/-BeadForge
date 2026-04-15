@@ -18,12 +18,20 @@ export interface FeedItemData {
 }
 
 /** 根 Stack 路由参数表 */
+/** 商品数据 */
+export interface ProductData {
+  id: number; name: string; description: string; price: number;
+  originalPrice?: number; sales: number; rating: number;
+  tag?: string; color: string; icon: string; category: string; specs?: string;
+}
+
 export type RootStackParamList = {
   Main: undefined;
   DesignDetail: { item: DesignItem };
   Editor: { mode: EditorMode; cols: number; rows: number };
   FeedDetail: { feed: FeedItemData };
   UserProfile: { userName: string };
+  ProductDetail: { product: ProductData };
 };
 
 /** 快捷类型：某个 Screen 的 Props */
