@@ -151,13 +151,17 @@ public class AdminController {
     }
 
     @PutMapping("/api-config/{id}")
-    public ApiResponse<ApiConfig> updateApiConfig(@PathVariable Long id, @RequestBody ApiConfig config) {
-        ApiConfig existing = apiConfigRepo.selectById(id);
-        if (existing == null) return ApiResponse.error(404, "配置不存在");
-        if (config.getConfigValue() != null) existing.setConfigValue(config.getConfigValue());
-        if (config.getDescription() != null) existing.setDescription(config.getDescription());
-        apiConfigRepo.updateById(existing);
-        return ApiResponse.success("更新成功", existing);
+    public ApiResponse updateApiConfig(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        try {
+            ApiConfig existing = apiConfigRepo.selectById(id);
+            if (existing == null) return ApiResponse.error(404, "配置不存在");
+            if (body.containsKey("configValue")) existing.setConfigValue(body.get("configValue"));
+            if (body.containsKey("description")) existing.setDescription(body.get("description"));
+            apiConfigRepo.updateById(existing);
+            return ApiResponse.success("更新成功", existing);
+        } catch (Exception e) {
+            return ApiResponse.error(500, "更新失败: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/api-config/{id}")
