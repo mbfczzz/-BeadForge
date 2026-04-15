@@ -21,13 +21,14 @@ import { SettingsScreen } from './SettingsScreen';
 import { MyFeedsScreen } from './MyFeedsScreen';
 import { PurchasedScreen } from './PurchasedScreen';
 import { FollowListScreen } from './FollowListScreen';
+import { WalletScreen } from './WalletScreen';
 
 const PAD = wp(16);
 
 type SubPage =
   | 'none' | 'editProfile' | 'myDesigns' | 'favorites'
   | 'likes' | 'settings' | 'myFeeds' | 'purchased'
-  | 'followers' | 'following';
+  | 'followers' | 'following' | 'wallet';
 
 const QUICK = [
   { key: 'myDesigns', label: '作品', icon: 'grid' as const, color: '#5B5FFF', bg: '#EEF0FF' },
@@ -37,6 +38,7 @@ const QUICK = [
 ];
 
 const MENU_CONTENT = [
+  { key: 'wallet', label: '拼豆币钱包', icon: 'dollar-sign' as const, desc: '充值·余额·交易记录', iconColor: '#F59E0B', iconBg: '#FFF9E6' },
   { key: 'myFeeds', label: '我的动态', icon: 'message-circle' as const, desc: '查看已发布的动态', iconColor: '#8B5CF6', iconBg: '#F3EEFF' },
   { key: 'purchased', label: '已购图纸', icon: 'shopping-bag' as const, desc: '已购买的图纸资源', iconColor: '#0EA5E9', iconBg: '#E8F7FE' },
 ];
@@ -80,6 +82,7 @@ export const ProfileScreen: React.FC = () => {
   if (subPage === 'settings') return <SettingsScreen onBack={() => setSubPage('none')} />;
   if (subPage === 'myFeeds') return <MyFeedsScreen onBack={() => setSubPage('none')} />;
   if (subPage === 'purchased') return <PurchasedScreen onBack={() => setSubPage('none')} />;
+  if (subPage === 'wallet') return <WalletScreen onBack={() => setSubPage('none')} />;
   if (subPage === 'followers') return <FollowListScreen type="followers" onBack={() => setSubPage('none')} />;
   if (subPage === 'following') return <FollowListScreen type="following" onBack={() => setSubPage('none')} />;
 
@@ -89,6 +92,7 @@ export const ProfileScreen: React.FC = () => {
     else if (key === 'myLikes') setSubPage('likes');
     else if (key === 'myFeeds') setSubPage('myFeeds');
     else if (key === 'purchased') setSubPage('purchased');
+    else if (key === 'wallet') setSubPage('wallet');
     else if (key === 'settings') setSubPage('settings');
     else if (key === 'about') Alert.alert('BeadForge', 'v1.0.0\n拼豆设计与分享平台');
   };
