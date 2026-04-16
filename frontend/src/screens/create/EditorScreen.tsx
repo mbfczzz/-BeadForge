@@ -126,7 +126,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       const result = await doubaoGenerate(prompt, cols, rows, PALETTE);
       if (result) { pushHistory(result); return; }
     } catch (e: any) {
-      console.warn('豆包 API 失败，使用 mock:', e?.message);
+      // AI 失败，静默 fallback
       setGenError(useRealApi ? '生成失败，已使用本地图案' : '');
     }
     // fallback: mock
