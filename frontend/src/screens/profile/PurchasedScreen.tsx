@@ -1,237 +1,148 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import {
-  View, Text, StyleSheet, FlatList, RefreshControl,
-} from 'react-native';
+import React from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
-import { HoverView, StateView } from '../../components/common';
-import { wp, fp, screenW } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
-import client from '../../api/client';
+import { usePatternStore } from '../../store/usePatternStore';
+import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
-const GAP = wp(10);
-const CARD_W = (screenW - PAD * 2 - GAP) / 2;
 
-interface PatternItem {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  price: number;
-  isFree: boolean;
-  cols: number;
-  rows: number;
-  downloads: number;
-  rating: number;
+interface Props {
+  onBack: () => void;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  '抽象': '#8B5CF6', '动物': '#F97316', '卡通': '#EF4444',
-  '花卉': '#EC4899', '美食': '#22C55E', '像素': '#0EA5E9',
-  '风景': '#14B8A6',
-};
-
-interface Props { onBack: () => void }
-
 export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
-  const { colors, dark } = useTheme();
-  const [patterns, setPatterns] = useState<PatternItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
+  const listings = usePatternStore((state) => state.listings);
+  const purchased = usePatternStore((state) => state.purchased);
+  const myListings = usePatternStore((state) => state.myListings);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [idsRes, listRes]: any[] = await Promise.all([
-        client.get('/patterns/purchased'),
-        client.get('/patterns/list', { params: { page: 1, size: 100 } }),
-      ]);
-      const ids: number[] = idsRes.data || [];
-      const all: PatternItem[] = listRes.data?.records || listRes.data || [];
-      setPatterns(all.filter((p) => ids.includes(p.id)));
-    } catch {
-      setPatterns([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-  const onRefresh = () => { setRefreshing(true); fetchData(); };
-
-  const renderStars = (rating: number) => {
-    const full = Math.floor(rating);
-    const half = rating - full >= 0.5;
-    return (
-      <View style={$.starsRow}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <Feather
-            key={i}
-            name="star"
-            size={fp(9)}
-            color={i < full ? '#FBBF24' : i === full && half ? '#FBBF24' : colors.border}
-          />
-        ))}
-        <Text style={[$.ratingNum, { color: colors.textHint }]}>{rating}</Text>
-      </View>
-    );
-  };
-
-  const renderItem = ({ item }: { item: PatternItem }) => {
-    const catColor = CATEGORY_COLORS[item.category] || colors.accent;
-    return (
-      <View style={[$.card, {
-        backgroundColor: colors.surface,
-        borderColor: dark ? colors.border : '#F0F0F0',
-        ...shadow(2, 6, dark ? 0 : 0.06),
-      }]}>
-        {/* 封面占位 */}
-        <View style={[$.cardCover, { backgroundColor: dark ? '#1e1e1e' : '#FAFAFA' }]}>
-          {/* 网格装饰 */}
-          <View style={$.gridDeco}>
-            {Array.from({ length: 9 }, (_, i) => (
-              <View key={i} style={[$.gridCell, {
-                backgroundColor: i % 3 === 1 ? catColor + '30' : (dark ? '#2a2a2a' : '#ECECEC'),
-              }]} />
-            ))}
-          </View>
-          <Text style={[$.cardSize, { color: colors.textHint }]}>{item.cols} x {item.rows}</Text>
-
-          {/* 分类标签 */}
-          <View style={[$.catBadge, { backgroundColor: catColor + '18' }]}>
-            <Text style={[$.catText, { color: catColor }]}>{item.category}</Text>
-          </View>
-        </View>
-
-        {/* 信息 */}
-        <View style={$.cardBody}>
-          <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-          <Text style={[$.cardDesc, { color: colors.textHint }]} numberOfLines={1}>{item.description}</Text>
-
-          {renderStars(item.rating)}
-
-          <View style={$.cardFooter}>
-            <View style={$.downloadStat}>
-              <Feather name="download-cloud" size={fp(10)} color={colors.textHint} />
-              <Text style={[$.downloadNum, { color: colors.textHint }]}>{item.downloads}</Text>
-            </View>
-            <View style={[$.priceBadge, {
-              backgroundColor: item.isFree ? '#22C55E12' : catColor + '12',
-            }]}>
-              <Text style={[$.priceText, { color: item.isFree ? '#22C55E' : catColor }]}>
-                {item.isFree ? '免费' : `¥${item.price}`}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  };
+  const owned = listings.filter((item) => purchased.has(item.id) || myListings.has(item.id));
+  const displayItems = owned.length > 0 ? owned : listings.slice(0, 4);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={onBack} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
+        <TouchableOpacity style={$.navButton} onPress={onBack} activeOpacity={0.75}>
           <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </HoverView>
+        </TouchableOpacity>
         <Text style={[$.navTitle, { color: colors.text }]}>已购图纸</Text>
         <View style={{ width: wp(34) }} />
       </View>
 
-      {/* 统计条 */}
-      {!loading && patterns.length > 0 && (
-        <View style={[$.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.divider }]}>
-          <Text style={[$.statsText, { color: colors.textSecondary }]}>共 {patterns.length} 份图纸</Text>
+      {owned.length === 0 ? (
+        <View style={[$.notice, { backgroundColor: colors.accentLight }]}>
+          <Text style={[$.noticeText, { color: colors.accent }]}>当前展示的是本地演示图纸。</Text>
         </View>
-      )}
+      ) : null}
 
       <FlatList
-        data={patterns}
-        keyExtractor={(i) => i.id.toString()}
-        renderItem={renderItem}
+        data={displayItems}
+        keyExtractor={(item) => item.id.toString()}
         numColumns={2}
-        columnWrapperStyle={{ gap: GAP }}
-        contentContainerStyle={{ padding: PAD, gap: GAP, paddingBottom: wp(40) }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
-        ListEmptyComponent={loading
-          ? <StateView loading />
-          : (
-            <View style={$.emptyWrap}>
-              <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a2a' : '#E8F7FE' }]}>
-                <Feather name="shopping-bag" size={fp(28)} color="#0EA5E9" />
-              </View>
-              <Text style={[$.emptyTitle, { color: colors.text }]}>还没有购买图纸</Text>
-              <Text style={[$.emptySub, { color: colors.textHint }]}>去图纸市场逛逛吧</Text>
+        columnWrapperStyle={$.column}
+        contentContainerStyle={{ padding: PAD, paddingBottom: wp(40) }}
+        renderItem={({ item }) => (
+          <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[$.cover, { backgroundColor: colors.inputBg }]}>
+              <BeadGrid
+                pixels={ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length]}
+                beadSize={wp(5)}
+                gap={0.5}
+                round
+              />
             </View>
-          )
-        }
+            <Text style={[$.title, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+            <Text style={[$.desc, { color: colors.textHint }]} numberOfLines={2}>{item.desc}</Text>
+            <View style={$.metaRow}>
+              <Text style={[$.metaText, { color: colors.textHint }]}>{item.cols} x {item.rows}</Text>
+              <Text style={[$.priceText, { color: item.free ? '#22c55e' : colors.text }]}>
+                {item.free ? '免费' : `¥ ${item.price}`}
+              </Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={<StateView empty emptyText="暂无已购图纸" />}
       />
     </SafeAreaView>
   );
 };
 
 const $ = StyleSheet.create({
-  root: { flex: 1 },
+  root: {
+    flex: 1,
+  },
   nav: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(50), paddingHorizontal: PAD,
-    borderBottomWidth: 1, gap: wp(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: PAD,
+    height: wp(52),
+    borderBottomWidth: 1,
   },
-  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '700', textAlign: 'center' },
-  navBtn: {
-    width: wp(34), height: wp(34), borderRadius: wp(17),
-    justifyContent: 'center', alignItems: 'center',
+  navButton: {
+    width: wp(34),
+    height: wp(34),
+    borderRadius: wp(17),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
-  statsBar: {
-    paddingHorizontal: PAD, paddingVertical: wp(8),
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  navTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: fp(16),
+    fontWeight: '700',
   },
-  statsText: { fontSize: fp(12), fontWeight: '500' },
-
+  notice: {
+    marginHorizontal: PAD,
+    marginTop: wp(14),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(12),
+    borderRadius: wp(14),
+  },
+  noticeText: {
+    fontSize: fp(12),
+    fontWeight: '600',
+  },
+  column: {
+    justifyContent: 'space-between',
+    marginBottom: wp(12),
+  },
   card: {
-    width: CARD_W, borderRadius: wp(14), borderWidth: 1, overflow: 'hidden',
+    width: '48%' as const,
+    borderRadius: wp(18),
+    borderWidth: 1,
+    padding: wp(12),
   },
-  cardCover: {
-    height: wp(95), justifyContent: 'center', alignItems: 'center',
-    position: 'relative',
+  cover: {
+    height: wp(116),
+    borderRadius: wp(14),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: wp(12),
   },
-  gridDeco: {
-    width: wp(42), height: wp(42),
-    flexDirection: 'row', flexWrap: 'wrap', gap: wp(3),
-    marginBottom: wp(4),
+  title: {
+    fontSize: fp(13),
+    fontWeight: '700',
   },
-  gridCell: {
-    width: wp(12), height: wp(12), borderRadius: wp(2),
+  desc: {
+    fontSize: fp(11),
+    lineHeight: fp(17),
+    marginTop: wp(6),
+    minHeight: fp(34),
   },
-  cardSize: { fontSize: fp(9), fontWeight: '500' },
-  catBadge: {
-    position: 'absolute', top: wp(6), right: wp(6),
-    paddingHorizontal: wp(6), paddingVertical: wp(2),
-    borderRadius: wp(4),
+  metaRow: {
+    marginTop: wp(10),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  catText: { fontSize: fp(9), fontWeight: '700' },
-
-  cardBody: { padding: wp(10), gap: wp(3) },
-  cardTitle: { fontSize: fp(13), fontWeight: '700' },
-  cardDesc: { fontSize: fp(10), lineHeight: fp(14) },
-
-  starsRow: { flexDirection: 'row', alignItems: 'center', gap: wp(1), marginTop: wp(2) },
-  ratingNum: { fontSize: fp(9), marginLeft: wp(3), fontWeight: '500' },
-
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: wp(4) },
-  downloadStat: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
-  downloadNum: { fontSize: fp(10) },
-  priceBadge: { paddingHorizontal: wp(7), paddingVertical: wp(2), borderRadius: wp(5) },
-  priceText: { fontSize: fp(10), fontWeight: '700' },
-
-  emptyWrap: { alignItems: 'center', paddingTop: wp(60) },
-  emptyIcon: {
-    width: wp(72), height: wp(72), borderRadius: wp(36),
-    justifyContent: 'center', alignItems: 'center', marginBottom: wp(16),
+  metaText: {
+    fontSize: fp(10),
   },
-  emptyTitle: { fontSize: fp(16), fontWeight: '700', marginBottom: wp(6) },
-  emptySub: { fontSize: fp(13) },
+  priceText: {
+    fontSize: fp(11),
+    fontWeight: '700',
+  },
 });

@@ -1,10 +1,12 @@
+import './global.css';
 import React, { useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { HeroUINativeProviderRaw } from 'heroui-native/provider-raw';
 import { TabNavigator } from './src/navigation/TabNavigator';
 import { DesignDetailScreen } from './src/screens/detail/DesignDetailScreen';
 import { EditorScreen } from './src/screens/create/EditorScreen';
@@ -19,11 +21,14 @@ import { injectWebHoverStyles } from './src/utils/webHover';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppContent() {
-  const loadToken = useAuthStore((s) => s.loadToken);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const loadToken = useAuthStore((state) => state.loadToken);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const { colors, dark } = useTheme();
 
-  useEffect(() => { loadToken(); injectWebHoverStyles(); }, []);
+  useEffect(() => {
+    void loadToken();
+    injectWebHoverStyles();
+  }, [loadToken]);
 
   if (isLoading) {
     return (
@@ -50,14 +55,25 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <HeroUINativeProviderRaw>
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
+        </HeroUINativeProviderRaw>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  splash: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  root: {
+    flex: 1,
+  },
+  splash: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

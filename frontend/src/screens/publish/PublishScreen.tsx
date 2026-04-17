@@ -1,200 +1,168 @@
-import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
+﻿import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert,
   TextInput, RefreshControl, Animated, NativeSyntheticEvent, NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
+import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme, FontSize, BorderRadius } from '../../theme';
+import { Avatar as HeroAvatar, Button, Card, Chip } from 'heroui-native';
+import { SvgXml } from 'react-native-svg';
+import { useTheme } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } from '../../components/common';
+import { HoverView, ALL_PATTERNS, PressableScale } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
-import { hapticLight } from '../../hooks/useFeedback';
 import type { RootStackParamList, FeedItemData } from '../../navigation/types';
+import {
+  ALL_FEEDS,
+  COMMUNITY_TABS,
+  FOLLOWING_NAMES,
+  HOT_TOPICS,
+} from '../../mock/app';
+import { getFeedMockPhoto } from '../../utils/feedMedia';
 
 const PAD = wp(15);
+const PREVIEW_WIDTH = screenW - PAD * 2 - wp(12);
+const TAG_COLORS = ['accent', 'default', 'success', 'warning'] as const;
 
-/* ──────────────── Mock 数据 ──────────────── */
-
-const ALL_FEEDS: FeedItemData[] = [
-  {
-    id: 1, user: { name: '小豆子', title: '拼豆达人 Lv.5' },
-    content: '第一次尝试做橘猫，熨烫的时候差点烫歪了 😂 不过最终效果还不错！分享给大家~',
-    patternIdx: 1, likeCount: 128, commentCount: 23, shareCount: 5, timeAgo: '2小时前',
-    tags: ['猫咪', '新手'],
-  },
-  {
-    id: 2, user: { name: '像素艺术家', title: '创作者' },
-    content: '用 AI 生成了一个星空主题的图案，然后手动调整了配色。AI + 手工 = 完美搭配！',
-    patternIdx: 4, likeCount: 256, commentCount: 41, shareCount: 18, timeAgo: '3小时前',
-    tags: ['AI创作', '星空'],
-  },
-  {
-    id: 3, user: { name: '花花世界', title: '拼豆达人 Lv.3' },
-    content: '春天来了，做了一朵小花送给妈妈当胸针 🌸 她超开心的！',
-    patternIdx: 3, likeCount: 342, commentCount: 56, shareCount: 12, timeAgo: '5小时前',
-    tags: ['花卉', '礼物'],
-  },
-  {
-    id: 4, user: { name: '游戏迷', title: '像素爱好者' },
-    content: '马里奥蘑菇完成！用了两种红色做渐变，比单色版好看多了。下一个目标：做一套完整角色~',
-    patternIdx: 2, likeCount: 189, commentCount: 34, shareCount: 8, timeAgo: '8小时前',
-    tags: ['游戏', '马里奥'],
-  },
-  {
-    id: 5, user: { name: '彩虹桥', title: '手作达人' },
-    content: '给闺蜜做了一对樱桃耳环，用 2.6mm 迷你珠，精致到哭！配件用的是市场上买的 S925 耳钩',
-    patternIdx: 5, likeCount: 467, commentCount: 89, shareCount: 31, timeAgo: '昨天',
-    tags: ['饰品', '耳环'],
-  },
-  {
-    id: 6, user: { name: '钻石控', title: '新人创作者' },
-    content: '宝石拼豆第一弹！蓝色钻石搞定✨ 接下来挑战红宝石',
-    patternIdx: 6, likeCount: 95, commentCount: 12, shareCount: 3, timeAgo: '昨天',
-    tags: ['宝石', '新手'],
-  },
-  {
-    id: 7, user: { name: '拼豆小屋', title: '拼豆达人 Lv.8' },
-    content: '彩虹挂画完成了！这个用了快 600 颗珠子，7 种颜色。推荐新手从这个练起，配色简单效果好。',
-    patternIdx: 7, likeCount: 521, commentCount: 78, shareCount: 45, timeAgo: '2天前',
-    tags: ['彩虹', '教程'],
-  },
-];
-
-// 热门话题
-const HOT_TOPICS = [
-  { tag: '春日手作', count: '1.2w' },
-  { tag: 'AI创作挑战', count: '8.6k' },
-  { tag: '新手打卡', count: '5.3k' },
-  { tag: '迷你珠饰品', count: '3.8k' },
-];
-
-// 活跃用户 Stories — 渐变色环
-const STORY_USERS = [
-  { name: '小豆子', hasNew: true, ring: ['#FF6B6B', '#FF8E53'] },
-  { name: '像素艺术家', hasNew: true, ring: ['#5B5FFF', '#C084FC'] },
-  { name: '彩虹桥', hasNew: true, ring: ['#F5A623', '#FF6B6B'] },
-  { name: '拼豆小屋', hasNew: false, ring: ['#ccc', '#ddd'] },
-  { name: '花花世界', hasNew: false, ring: ['#ccc', '#ddd'] },
-  { name: '游戏迷', hasNew: true, ring: ['#20C997', '#38D9A9'] },
-  { name: '钻石控', hasNew: false, ring: ['#ccc', '#ddd'] },
-];
-
-const FOLLOWING_NAMES = new Set(['小豆子', '彩虹桥', '拼豆小屋']);
-
-const TABS = ['推荐', '关注', '最新'];
-
-function formatCount(n: number): string {
-  if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
-  return String(n);
+function formatCount(value: number) {
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  return String(value);
 }
 
-/* ──────────────── 主屏幕 ──────────────── */
+function getAvatarFallback(name: string) {
+  const plain = name.trim().replace(/\s+/g, '');
+  return plain.slice(0, Math.min(2, plain.length)) || 'BF';
+}
+
+function rotateFeeds(feeds: FeedItemData[], step: number) {
+  if (feeds.length <= 1) {
+    return feeds;
+  }
+
+  const offset = step % feeds.length;
+  if (offset === 0) {
+    return feeds;
+  }
+
+  return [...feeds.slice(offset), ...feeds.slice(0, offset)];
+}
 
 export const PublishScreen: React.FC = () => {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [tabIdx, setTabIdx] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshRound, setRefreshRound] = useState(0);
   const [showTop, setShowTop] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const fabAnim = useRef(new Animated.Value(0)).current;
+  const topAnim = useRef(new Animated.Value(0)).current;
+
+  const baseFeeds = useMemo(() => {
+    const rotated = rotateFeeds(ALL_FEEDS, refreshRound);
+
+    return rotated.map((feed, index) => ({
+      ...feed,
+      likeCount: feed.likeCount + ((refreshRound + index) % 3 === 0 ? refreshRound % 4 : 0),
+      commentCount: feed.commentCount + ((refreshRound + index) % 5 === 0 ? 1 : 0),
+      shareCount: feed.shareCount + ((refreshRound + index) % 4 === 0 ? 1 : 0),
+      timeAgo: refreshRound > 0 && index < 2 ? '刚刚' : feed.timeAgo,
+    }));
+  }, [refreshRound]);
 
   const filteredFeeds = useMemo(() => {
-    let feeds = ALL_FEEDS;
+    let feeds = [...baseFeeds];
+
     if (tabIdx === 1) {
-      feeds = feeds.filter((f) => FOLLOWING_NAMES.has(f.user.name));
+      feeds = feeds.filter((feed) => FOLLOWING_NAMES.has(feed.user.name));
     } else if (tabIdx === 2) {
-      feeds = [...feeds].sort((a, b) => a.id - b.id).reverse();
+      feeds.sort((a, b) => b.id - a.id);
     }
+
     if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase();
-      feeds = feeds.filter((f) =>
-        f.content.toLowerCase().includes(q) ||
-        f.user.name.toLowerCase().includes(q) ||
-        f.tags.some((t) => t.toLowerCase().includes(q))
+      const keyword = searchText.trim().toLowerCase();
+      feeds = feeds.filter((feed) =>
+        feed.content.toLowerCase().includes(keyword) ||
+        feed.user.name.toLowerCase().includes(keyword) ||
+        feed.tags.some((tag) => tag.toLowerCase().includes(keyword)),
       );
     }
+
     return feeds;
-  }, [tabIdx, searchText]);
+  }, [baseFeeds, searchText, tabIdx]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    setTimeout(() => {
+      setRefreshRound((value) => value + 1);
+      setRefreshing(false);
+    }, 700);
   }, []);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const y = e.nativeEvent.contentOffset.y;
-    const shouldShow = y > 300;
+    const shouldShow = e.nativeEvent.contentOffset.y > 320;
     setShowTop(shouldShow);
-    Animated.timing(fabAnim, { toValue: shouldShow ? 1 : 0, duration: 200, useNativeDriver: true }).start();
-  }, []);
+    Animated.timing(topAnim, {
+      toValue: shouldShow ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
+  }, [topAnim]);
 
   const onTagPress = useCallback((tag: string) => {
     setShowSearch(true);
     setSearchText(tag);
   }, []);
 
-  const handlePublish = () => {
-    Alert.alert('发布动态', '选择发布方式', [
-      { text: '图文动态', onPress: () => Alert.alert('提示', '图文发布功能即将上线~') },
-      { text: '分享作品', onPress: () => Alert.alert('提示', '可以在「创作」中完成作品后直接分享到动态哦~') },
-      { text: '取消', style: 'cancel' },
-    ]);
-  };
+  const handlePublish = useCallback(() => {
+    Alert.alert('发布动态', '当前演示环境只展示 mock 数据，发布能力暂不接入。');
+  }, []);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* ═══ 顶栏 ═══ */}
       <View style={[$.header, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <Text style={[$.headerTitle, { color: colors.text, letterSpacing: -0.3 }]}>动态</Text>
         <View style={$.tabRow}>
-          {TABS.map((t, i) => {
-            const active = i === tabIdx;
+          {COMMUNITY_TABS.map((tab, index) => {
+            const active = index === tabIdx;
             return (
-              <HoverView
-                key={t}
-                onPress={() => setTabIdx(i)}
-                style={[$.tab]}
-                hoverScale={1.05} hoverLift={0}
-              >
-                <Text style={[
-                  $.tabText,
-                  { color: active ? colors.text : colors.textHint },
-                  active && { fontWeight: '700' },
-                ]}>{t}</Text>
+              <HoverView key={tab} onPress={() => setTabIdx(index)} style={$.tab} hoverScale={1.04} hoverLift={0}>
+                <Text style={[$.tabText, { color: active ? colors.text : colors.textHint }, active && $.tabTextActive]}>{tab}</Text>
                 {active && <View style={[$.tabIndicator, { backgroundColor: colors.accent }]} />}
               </HoverView>
             );
           })}
         </View>
-        <HoverView onPress={() => { setShowSearch(!showSearch); if (showSearch) setSearchText(''); }} style={[$.iconBtn, { backgroundColor: showSearch ? colors.accentLight : colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
+        <HoverView
+          onPress={() => {
+            setShowSearch((value) => !value);
+            if (showSearch) setSearchText('');
+          }}
+          style={[$.iconBtn, { backgroundColor: showSearch ? colors.accentLight : colors.inputBg }]}
+          hoverScale={1.08}
+          hoverLift={0}
+        >
           <MCI name={showSearch ? 'close' : 'magnify'} size={fp(18)} color={showSearch ? colors.accent : colors.textHint} />
         </HoverView>
       </View>
 
-      {/* ═══ 搜索栏 ═══ */}
       {showSearch && (
         <View style={[$.searchBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <View style={[$.searchInputWrap, { backgroundColor: colors.inputBg, borderColor: searchText ? colors.accent + '40' : 'transparent' }]}>
+          <View style={[$.searchInputWrap, { backgroundColor: colors.inputBg, borderColor: searchText ? `${colors.accent}40` : 'transparent' }]}>
             <MCI name="magnify" size={fp(16)} color={colors.textHint} />
             <TextInput
               style={[$.searchInput, { color: colors.text }]}
-              placeholder="搜索动态、用户、标签..."
+              placeholder="搜索动态、作者或标签..."
               placeholderTextColor={colors.textHint}
               value={searchText}
               onChangeText={setSearchText}
               autoFocus
-              returnKeyType="search"
             />
             {searchText.length > 0 && (
-              <HoverView onPress={() => setSearchText('')} hoverScale={1.1} hoverLift={0}>
+              <HoverView onPress={() => setSearchText('')} hoverScale={1.08} hoverLift={0}>
                 <MCI name="close-circle" size={fp(16)} color={colors.textHint} />
               </HoverView>
             )}
@@ -205,45 +173,11 @@ export const PublishScreen: React.FC = () => {
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: wp(80) + BOTTOM_SAFE_H }}
+        contentContainerStyle={{ paddingBottom: wp(84) + BOTTOM_SAFE_H }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
         onScroll={onScroll}
         scrollEventThrottle={64}
       >
-        {/* ═══ Stories 用户行 ═══ */}
-        {!showSearch && tabIdx !== 1 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={$.storyRow}
-            style={[$.storyContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
-          >
-            {/* 我的动态入口 */}
-            <Pressable onPress={handlePublish} style={$.storyItem}>
-              <View style={[$.storyRingOuter, { borderColor: colors.border }]}>
-                <View style={[$.storyAddCircle, { backgroundColor: colors.inputBg }]}>
-                  <MCI name="plus" size={fp(22)} color={colors.accent} />
-                </View>
-              </View>
-              <Text style={[$.storyName, { color: colors.textHint }]}>发动态</Text>
-            </Pressable>
-            {STORY_USERS.map((u) => (
-              <Pressable
-                key={u.name}
-                onPress={() => navigation.navigate('UserProfile', { userName: u.name })}
-                style={$.storyItem}
-              >
-                <View style={[$.storyRingOuter, { borderColor: u.hasNew ? u.ring[0] : colors.border }]}>
-                  <Avatar name={u.name} size={wp(46)} />
-                </View>
-                {u.hasNew && <View style={[$.storyDot, { backgroundColor: u.ring[0], borderColor: colors.surface }]} />}
-                <Text style={[$.storyName, { color: colors.text }]} numberOfLines={1}>{u.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        )}
-
-        {/* ═══ 热门话题 ═══ */}
         {!showSearch && tabIdx === 0 && (
           <View style={[$.topicsSection, { backgroundColor: colors.surface }]}>
             <View style={$.topicsHeader}>
@@ -253,68 +187,71 @@ export const PublishScreen: React.FC = () => {
               <Text style={[$.topicsTitle, { color: colors.text }]}>热门话题</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={$.topicsPills}>
-              {HOT_TOPICS.map((t) => (
+              {HOT_TOPICS.map((topic) => (
                 <HoverView
-                  key={t.tag}
-                  onPress={() => { setShowSearch(true); setSearchText(t.tag); }}
-                  style={[$.topicPill, { backgroundColor: colors.accentLight, borderColor: colors.accent + '20' }]}
-                  hoverScale={1.04} hoverLift={0}
+                  key={topic.tag}
+                  onPress={() => onTagPress(topic.tag)}
+                  style={[$.topicPill, { backgroundColor: colors.accentLight, borderColor: `${colors.accent}20` }]}
+                  hoverScale={1.04}
+                  hoverLift={0}
                 >
-                  <Text style={[$.topicTag, { color: colors.accent }]}>#{t.tag}</Text>
-                  <Text style={[$.topicCount, { color: colors.accent + 'AA' }]}>{t.count}</Text>
+                  <Text style={[$.topicTag, { color: colors.accent }]}>#{topic.tag}</Text>
+                  <Text style={[$.topicCount, { color: `${colors.accent}AA` }]}>{topic.count}</Text>
                 </HoverView>
               ))}
             </ScrollView>
           </View>
         )}
 
-        {/* ═══ Feed 列表 ═══ */}
+        {refreshRound > 0 && filteredFeeds.length > 0 && (
+          <View style={$.refreshNotice}>
+            <Chip variant="soft" color="accent" animation="disable-all">
+              <Chip.Label>{`已为你刷新 ${Math.min(filteredFeeds.length, 3)} 条新分享`}</Chip.Label>
+            </Chip>
+          </View>
+        )}
+
         {filteredFeeds.length === 0 ? (
           <View style={$.emptyState}>
             <View style={[$.emptyIcon, { backgroundColor: colors.inputBg }]}>
               <MCI name={searchText ? 'text-search' : tabIdx === 1 ? 'account-group-outline' : 'tray-alert'} size={fp(30)} color={colors.textHint} />
             </View>
             <Text style={[$.emptyTitle, { color: colors.text }]}>
-              {searchText ? '没有找到相关动态' : tabIdx === 1 ? '还没有关注的人' : '暂无动态'}
+              {searchText ? '没有找到相关动态' : tabIdx === 1 ? '还没有关注的作者' : '暂无动态'}
             </Text>
             <Text style={[$.emptyHint, { color: colors.textHint }]}>
-              {searchText ? '换个关键词试试~' : tabIdx === 1 ? '去「推荐」页关注感兴趣的创作者吧' : '下拉刷新试试看~'}
+              {searchText ? '换个关键词试试' : tabIdx === 1 ? '先从推荐流里挑几个感兴趣的作者' : '下拉刷新后再看看'}
             </Text>
           </View>
         ) : (
-          filteredFeeds.map((feed, idx) => (
+          filteredFeeds.map((feed, index) => (
             <FeedCard
               key={feed.id}
               feed={feed}
               colors={colors}
-              dark={dark}
-              isFirst={idx === 0}
               navigation={navigation}
               onTagPress={onTagPress}
+              isFirst={index === 0}
+              isFresh={refreshRound > 0 && index < 2}
             />
           ))
         )}
       </ScrollView>
 
-      {/* ═══ 发布 FAB ═══ */}
-      <HoverView
-        onPress={handlePublish}
-        style={[$.fab, { backgroundColor: colors.accent }]}
-        hoverScale={1.1}
-        hoverLift={3}
-      >
+      <HoverView onPress={handlePublish} style={[$.fab, { backgroundColor: colors.accent }]} hoverScale={1.08} hoverLift={3}>
         <MCI name="pencil-plus-outline" size={fp(22)} color="#fff" />
       </HoverView>
 
-      {/* ═══ 回顶部 ═══ */}
       {showTop && (
-        <Animated.View style={[$.topFab, {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: fabAnim,
-          transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
-        }]}>
-          <HoverView onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} hoverScale={1.1} hoverLift={0} style={$.topFabInner}>
+        <Animated.View
+          style={[$.topFab, {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            opacity: topAnim,
+            transform: [{ translateY: topAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+          }]}
+        >
+          <HoverView onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} hoverScale={1.08} hoverLift={0} style={$.topFabInner}>
             <MCI name="arrow-up" size={fp(18)} color={colors.textHint} />
           </HoverView>
         </Animated.View>
@@ -323,292 +260,306 @@ export const PublishScreen: React.FC = () => {
   );
 };
 
-/* ──────────────── 动态卡片 ──────────────── */
-
 const FeedCard: React.FC<{
-  feed: FeedItemData; colors: ThemeColors; dark: boolean; isFirst: boolean;
-  navigation: any; onTagPress: (tag: string) => void;
-}> = memo(({ feed, colors, dark, isFirst, navigation, onTagPress }) => {
+  feed: FeedItemData;
+  colors: ThemeColors;
+  navigation: NativeStackNavigationProp<RootStackParamList>;
+  onTagPress: (tag: string) => void;
+  isFirst: boolean;
+  isFresh: boolean;
+}> = memo(({ feed, colors, navigation, onTagPress, isFirst, isFresh }) => {
   const [liked, setLiked] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
-  const [followed, setFollowed] = useState(false);
-  const likeAnim = useRef(new Animated.Value(1)).current;
-  const pat = ALL_PATTERNS[feed.patternIdx % ALL_PATTERNS.length];
-  const previewW = screenW - PAD * 2 - wp(24);
-  const bs = Math.floor(previewW / (pat[0]?.length || 9)) - 1;
-
-  const handleLike = () => {
-    hapticLight();
-    setLiked(!liked);
-    if (!liked) {
-      Animated.sequence([
-        Animated.timing(likeAnim, { toValue: 1.3, duration: 120, useNativeDriver: true }),
-        Animated.timing(likeAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
-      ]).start();
-    }
-  };
-
-  const handleShare = () => {
-    hapticLight();
-    // 视觉反馈由 haptic 提供，不阻塞用户
-  };
-
-  const handleBookmark = () => {
-    hapticLight();
-    setBookmarked(!bookmarked);
-  };
+  const [saved, setSaved] = useState(false);
+  const pattern = ALL_PATTERNS[feed.patternIdx % ALL_PATTERNS.length];
+  const media = useMemo(() => getFeedMockPhoto(feed), [feed]);
+  const previewHeight = PREVIEW_WIDTH / media.aspectRatio;
 
   return (
-    <PressableScale onPress={() => navigation.navigate('FeedDetail', { feed })} scale={0.985}>
-      <View style={[
-        $.feedCard,
-        { backgroundColor: colors.surface },
-        !isFirst && { marginTop: wp(8) },
-        { borderRadius: BorderRadius.lg, marginHorizontal: PAD, borderWidth: 1, borderColor: colors.border },
-      ]}>
-        {/* 用户头部 */}
-        <View style={$.feedHeader}>
-          <Pressable onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })} style={$.feedUserRow}>
-            <Avatar name={feed.user.name} size={wp(40)} />
-            <View style={{ flex: 1, marginLeft: wp(10) }}>
+    <PressableScale
+      scale={0.985}
+      style={{ marginHorizontal: PAD, marginTop: isFirst ? wp(12) : wp(10) }}
+      onPress={() => navigation.navigate('FeedDetail', { feed })}
+      dataClass="card"
+    >
+      <Card variant="secondary" style={[$.feedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Card.Header style={$.feedHeader}>
+          <Pressable style={$.feedUserRow} onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })}>
+            <HeroAvatar alt={feed.user.name} size="md" variant="soft" color="accent" animation="disable-all">
+              <HeroAvatar.Fallback>{getAvatarFallback(feed.user.name)}</HeroAvatar.Fallback>
+            </HeroAvatar>
+            <View style={$.feedUserInfo}>
               <Text style={[$.feedUserName, { color: colors.text }]}>{feed.user.name}</Text>
-              <View style={$.feedMetaRow}>
-                <View style={[$.levelBadge, { backgroundColor: colors.accentLight }]}>
-                  <Text style={[$.levelText, { color: colors.accent }]}>{feed.user.title}</Text>
-                </View>
-                <Text style={[$.feedTime, { color: colors.textHint }]}>{feed.timeAgo}</Text>
+              <Text style={[$.feedUserTitle, { color: colors.textHint }]}>{feed.user.title} · {feed.timeAgo}</Text>
+            </View>
+          </Pressable>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            feedbackVariant="scale"
+            onPress={() => Alert.alert('提示', '当前演示环境不记录关注状态。')}
+            style={$.followBtn}
+          >
+            <Button.Label>关注</Button.Label>
+          </Button>
+        </Card.Header>
+
+        <Card.Body style={$.feedBody}>
+          <Text style={[$.feedContent, { color: colors.textSecondary }]}>{feed.content}</Text>
+
+          <View style={$.tagWrap}>
+            {feed.tags.map((tag, index) => (
+              <Chip
+                key={`${feed.id}-${tag}`}
+                size="sm"
+                variant="soft"
+                color={TAG_COLORS[index % TAG_COLORS.length]}
+                onPress={() => onTagPress(tag)}
+                animation="disable-all"
+                style={$.tagChip}
+              >
+                <Chip.Label>{`#${tag}`}</Chip.Label>
+              </Chip>
+            ))}
+          </View>
+
+          <View style={[$.mediaWrap, { height: previewHeight, borderColor: `${media.accent}20` }]}>
+            <SvgXml xml={media.xml} width={PREVIEW_WIDTH} height={previewHeight} />
+
+            <View style={$.mediaTopBar}>
+              {isFresh ? (
+                <Chip size="sm" variant="secondary" color="accent" animation="disable-all">
+                  <Chip.Label>刚刚更新</Chip.Label>
+                </Chip>
+              ) : (
+                <View />
+              )}
+              <Chip size="sm" variant="secondary" color="default" animation="disable-all">
+                <Chip.Label>{feed.tags[0] ? `#${feed.tags[0]}` : '分享'}</Chip.Label>
+              </Chip>
+            </View>
+
+            <View style={$.mediaBottomBar}>
+              <View style={$.mediaMetaBlock}>
+                <Text style={$.mediaMetaTitle}>{feed.user.name}</Text>
+                <Text style={$.mediaMetaHint}>{`${feed.user.title} · ${feed.timeAgo}`}</Text>
+              </View>
+              <View style={$.mediaMetaStat}>
+                <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(16)} color="#FFFFFF" />
+                <Text style={$.mediaMetaStatText}>{formatCount(feed.likeCount + (liked ? 1 : 0))}</Text>
               </View>
             </View>
-          </Pressable>
-          <HoverView
-            onPress={() => setFollowed(!followed)}
-            style={[$.feedFollowBtn, {
-              borderColor: followed ? colors.border : colors.accent,
-              backgroundColor: followed ? colors.inputBg : colors.accent + '10',
-            }]}
-            hoverScale={1.05} hoverLift={0}
-          >
-            {followed ? (
-              <MCI name="check" size={fp(14)} color={colors.textHint} />
-            ) : (
-              <MCI name="plus" size={fp(14)} color={colors.accent} />
-            )}
-            <Text style={[$.feedFollowText, { color: followed ? colors.textHint : colors.accent }]}>
-              {followed ? '已关注' : '关注'}
-            </Text>
-          </HoverView>
-        </View>
+          </View>
+        </Card.Body>
 
-        {/* 内容 */}
-        <Text style={[$.feedContent, { color: colors.text }]} numberOfLines={4}>{feed.content}</Text>
+        <Card.Footer style={$.feedFooter}>
+          <View style={$.actionRow}>
+            <HoverView onPress={() => setLiked((value) => !value)} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(18)} color={liked ? '#EF4444' : colors.textHint} />
+              <Text style={[$.actionText, { color: liked ? '#EF4444' : colors.textHint }]}>{formatCount(feed.likeCount + (liked ? 1 : 0))}</Text>
+            </HoverView>
+            <HoverView onPress={() => navigation.navigate('FeedDetail', { feed })} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <MCI name="comment-outline" size={fp(18)} color={colors.textHint} />
+              <Text style={[$.actionText, { color: colors.textHint }]}>{formatCount(feed.commentCount)}</Text>
+            </HoverView>
+            <HoverView onPress={() => Alert.alert('分享', '当前演示环境不接入系统分享。')} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <MCI name="share-outline" size={fp(18)} color={colors.textHint} />
+              <Text style={[$.actionText, { color: colors.textHint }]}>{formatCount(feed.shareCount)}</Text>
+            </HoverView>
+          </View>
 
-        {/* 标签 */}
-        <View style={$.feedTags}>
-          {feed.tags.map((tag) => (
-            <Pressable key={tag} onPress={() => onTagPress(tag)}>
-              <View style={[$.feedTag, { backgroundColor: colors.accentLight }]}>
-                <Text style={[$.feedTagText, { color: colors.accent }]}>#{tag}</Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* 图案预览 */}
-        <View style={[$.feedPreview, { backgroundColor: dark ? '#222' : '#f8f8fa', borderColor: dark ? '#333' : '#eee' }]}>
-          <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(18))} gap={1} round />
-          <Pressable
-            onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pat[0]?.length || 9, rows: pat.length })}
-            style={[$.makeBtn, { backgroundColor: colors.accent }]}
-          >
-            <MCI name="palette-outline" size={fp(12)} color="#fff" />
-            <Text style={$.makeBtnText}>制作</Text>
-          </Pressable>
-        </View>
-
-        {/* 互动栏 */}
-        <View style={[$.feedActions, { borderTopColor: colors.border }]}>
-          <Pressable style={$.feedActionBtn} onPress={(e) => { e.stopPropagation?.(); handleLike(); }}>
-            <Animated.View style={[$.feedActionCircle, { backgroundColor: liked ? '#FEE2E2' : dark ? '#2a2226' : '#faf5f5', transform: [{ scale: likeAnim }] }]}>
-              <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(16)} color={liked ? '#EF4444' : '#E8A0A0'} />
-            </Animated.View>
-            <Text style={[$.feedActionLabel, { color: liked ? '#EF4444' : colors.textHint }]}>
-              {formatCount(liked ? feed.likeCount + 1 : feed.likeCount)}
-            </Text>
-          </Pressable>
-          <Pressable style={$.feedActionBtn} onPress={() => navigation.navigate('FeedDetail', { feed })}>
-            <View style={[$.feedActionCircle, { backgroundColor: dark ? '#1e2530' : '#f0f4ff' }]}>
-              <MCI name="comment-outline" size={fp(16)} color={dark ? '#7B9FD4' : '#8BA4D0'} />
-            </View>
-            <Text style={[$.feedActionLabel, { color: colors.textHint }]}>{formatCount(feed.commentCount)}</Text>
-          </Pressable>
-          <Pressable style={$.feedActionBtn} onPress={(e) => { e.stopPropagation?.(); handleShare(); }}>
-            <View style={[$.feedActionCircle, { backgroundColor: dark ? '#1e2e28' : '#f0faf5' }]}>
-              <MCI name="share-outline" size={fp(16)} color={dark ? '#6DC4A0' : '#6BB89D'} />
-            </View>
-            <Text style={[$.feedActionLabel, { color: colors.textHint }]}>{formatCount(feed.shareCount)}</Text>
-          </Pressable>
-          <View style={{ flex: 1 }} />
-          <Pressable style={$.feedActionBtn} onPress={(e) => { e.stopPropagation?.(); handleBookmark(); }}>
-            <View style={[$.feedActionCircle, { backgroundColor: bookmarked ? colors.accentLight : dark ? '#22222e' : '#f5f3ff' }]}>
-              <MCI name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={fp(16)} color={bookmarked ? colors.accent : dark ? '#9B8FCF' : '#A99BD4'} />
-            </View>
-          </Pressable>
-        </View>
-      </View>
+          <View style={$.actionRowRight}>
+            <HoverView onPress={() => setSaved((value) => !value)} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <MCI name={saved ? 'bookmark' : 'bookmark-outline'} size={fp(18)} color={saved ? colors.accent : colors.textHint} />
+            </HoverView>
+            <Button
+              size="sm"
+              variant="primary"
+              feedbackVariant="scale"
+              onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length })}
+              style={$.makeBtn}
+            >
+              <Button.Label>制作同款</Button.Label>
+            </Button>
+          </View>
+        </Card.Footer>
+      </Card>
     </PressableScale>
   );
 });
 
-/* ──────────────── 样式 ──────────────── */
-
 const $ = StyleSheet.create({
   root: { flex: 1 },
-
-  /* 顶栏 */
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(50), paddingHorizontal: PAD, borderBottomWidth: 1,
-    gap: wp(6),
+    height: wp(52),
+    paddingHorizontal: PAD,
+    borderBottomWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
-  headerTitle: { fontSize: fp(20), fontWeight: '800', marginRight: wp(6) },
-  tabRow: { flex: 1, flexDirection: 'row', gap: wp(2) },
-  tab: { paddingHorizontal: wp(10), paddingVertical: wp(6), alignItems: 'center' },
-  tabText: { fontSize: FontSize.md },
-  tabIndicator: {
-    width: wp(16), height: wp(3), borderRadius: wp(2),
-    marginTop: wp(3),
-  },
+  headerTitle: { fontSize: fp(18), fontWeight: '800' },
+  tabRow: { flexDirection: 'row', alignItems: 'center', gap: wp(14), justifyContent: 'center' },
+  tab: { alignItems: 'center', justifyContent: 'center' },
+  tabText: { fontSize: fp(13), paddingVertical: wp(2) },
+  tabTextActive: { fontWeight: '700' },
+  tabIndicator: { width: wp(18), height: wp(3), borderRadius: wp(2), marginTop: wp(4) },
   iconBtn: {
-    width: wp(34), height: wp(34), borderRadius: wp(17),
-    justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    right: PAD,
+    top: wp(9),
+    width: wp(34),
+    height: wp(34),
+    borderRadius: wp(17),
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
-  /* 搜索栏 */
   searchBar: {
-    paddingHorizontal: PAD, paddingVertical: wp(8),
+    paddingHorizontal: PAD,
+    paddingVertical: wp(10),
     borderBottomWidth: 1,
   },
   searchInputWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(8),
-    paddingHorizontal: wp(12), borderRadius: BorderRadius.md, borderWidth: 1,
-    height: wp(36),
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: wp(12),
+    paddingHorizontal: wp(12),
+    minHeight: wp(42),
   },
-  searchInput: {
-    flex: 1, fontSize: FontSize.sm, padding: 0,
-  },
-
-  /* Stories */
-  storyContainer: { borderBottomWidth: 1 },
-  storyRow: { paddingHorizontal: PAD, paddingVertical: wp(12), gap: wp(12) },
-  storyItem: { alignItems: 'center', width: wp(60) },
-  storyRingOuter: {
-    padding: wp(2.5), borderRadius: wp(28), borderWidth: 2.5,
-  },
-  storyAddCircle: {
-    width: wp(46), height: wp(46), borderRadius: wp(23),
-    justifyContent: 'center', alignItems: 'center',
-  },
-  storyDot: {
-    position: 'absolute', top: wp(2), right: wp(6),
-    width: wp(10), height: wp(10), borderRadius: wp(5),
-    borderWidth: 2,
-  },
-  storyName: { fontSize: fp(10), marginTop: wp(4), textAlign: 'center' },
-
-  /* 热门话题 */
-  topicsSection: { paddingVertical: wp(10) },
+  searchInput: { flex: 1, fontSize: fp(13), marginLeft: wp(8), paddingVertical: wp(8) },
+  topicsSection: { marginTop: wp(10), paddingVertical: wp(14) },
+  topicsHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD },
   topicsIconCircle: {
-    width: wp(22), height: wp(22), borderRadius: wp(11),
-    justifyContent: 'center', alignItems: 'center',
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: wp(8),
   },
-  topicsHeader: { flexDirection: 'row', alignItems: 'center', gap: wp(6), paddingHorizontal: PAD, marginBottom: wp(8) },
-  topicsTitle: { fontSize: FontSize.sm, fontWeight: '600' },
-  topicsPills: { paddingHorizontal: PAD, gap: wp(8) },
+  topicsTitle: { fontSize: fp(14), fontWeight: '700' },
+  topicsPills: { paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(8) },
   topicPill: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(5),
-    paddingHorizontal: wp(12), paddingVertical: wp(6),
-    borderRadius: BorderRadius.full, borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: wp(14),
+    paddingHorizontal: wp(12),
+    paddingVertical: wp(8),
+    gap: wp(8),
   },
-  topicTag: { fontSize: fp(12), fontWeight: '600' },
-  topicCount: { fontSize: fp(10) },
-
-  /* 空状态 */
-  emptyState: { alignItems: 'center', paddingTop: wp(60), paddingHorizontal: wp(40) },
+  topicTag: { fontSize: fp(12), fontWeight: '700' },
+  topicCount: { fontSize: fp(11) },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: PAD, paddingVertical: wp(60) },
   emptyIcon: {
-    width: wp(64), height: wp(64), borderRadius: wp(32),
-    justifyContent: 'center', alignItems: 'center', marginBottom: wp(14),
+    width: wp(54),
+    height: wp(54),
+    borderRadius: wp(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: wp(14),
   },
-  emptyTitle: { fontSize: FontSize.md, fontWeight: '600', marginBottom: wp(6) },
-  emptyHint: { fontSize: FontSize.sm, textAlign: 'center', lineHeight: fp(19) },
-
-  /* 动态卡片 */
+  emptyTitle: { fontSize: fp(15), fontWeight: '700' },
+  emptyHint: { fontSize: fp(12), marginTop: wp(6), textAlign: 'center' },
+  refreshNotice: { marginTop: wp(10), marginHorizontal: PAD, alignItems: 'center' },
   feedCard: {
-    paddingHorizontal: wp(14), paddingTop: wp(14), paddingBottom: wp(4),
+    borderRadius: wp(24),
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  feedHeader: { flexDirection: 'row', alignItems: 'center' },
+  feedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(14),
+    paddingTop: wp(14),
+    paddingBottom: wp(6),
+  },
+  feedBody: {
+    paddingHorizontal: wp(14),
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
   feedUserRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  feedUserName: { fontSize: FontSize.md, fontWeight: '600' },
-  feedMetaRow: { flexDirection: 'row', alignItems: 'center', gap: wp(6), marginTop: wp(3) },
-  levelBadge: { paddingHorizontal: wp(6), paddingVertical: wp(1), borderRadius: wp(3) },
-  levelText: { fontSize: fp(10), fontWeight: '500' },
-  feedTime: { fontSize: fp(11) },
-  feedFollowBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(3),
-    paddingHorizontal: wp(10), paddingVertical: wp(5),
-    borderRadius: BorderRadius.full, borderWidth: 1,
-  },
-  feedFollowText: { fontSize: fp(11), fontWeight: '600' },
-  feedContent: {
-    fontSize: FontSize.md, lineHeight: fp(22),
-    marginTop: wp(10),
-  },
-  feedTags: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: wp(6),
-    marginTop: wp(8),
-  },
-  feedTag: {
-    paddingHorizontal: wp(8), paddingVertical: wp(3),
-    borderRadius: wp(4),
-  },
-  feedTagText: { fontSize: fp(11), fontWeight: '500' },
-  feedPreview: {
-    marginTop: wp(10), borderRadius: BorderRadius.md,
-    padding: wp(12), alignItems: 'center',
+  feedUserInfo: { marginLeft: wp(10), flex: 1 },
+  feedUserName: { fontSize: fp(14), fontWeight: '700' },
+  feedUserTitle: { fontSize: fp(11), marginTop: wp(2) },
+  followBtn: { minWidth: wp(70) },
+  feedContent: { marginTop: wp(12), fontSize: fp(13), lineHeight: fp(19) },
+  tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8), marginTop: wp(12) },
+  tagChip: { alignSelf: 'flex-start' },
+  mediaWrap: {
+    marginTop: wp(14),
+    borderRadius: wp(22),
+    overflow: 'hidden',
     borderWidth: 1,
+    position: 'relative',
+    backgroundColor: '#F7FAFF',
   },
-  makeBtn: {
-    position: 'absolute', bottom: wp(8), right: wp(8),
-    flexDirection: 'row', alignItems: 'center', gap: wp(3),
-    paddingHorizontal: wp(10), paddingVertical: wp(5),
-    borderRadius: BorderRadius.full,
+  mediaTopBar: {
+    position: 'absolute',
+    top: wp(12),
+    left: wp(12),
+    right: wp(12),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  makeBtnText: { fontSize: fp(11), fontWeight: '600', color: '#fff' },
-  feedActions: {
-    flexDirection: 'row', alignItems: 'center',
-    marginTop: wp(8), paddingTop: wp(8), borderTopWidth: StyleSheet.hairlineWidth,
+  mediaBottomBar: {
+    position: 'absolute',
+    left: wp(14),
+    right: wp(14),
+    bottom: wp(14),
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: wp(10),
   },
-  feedActionBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: wp(5),
-    paddingHorizontal: wp(6), paddingVertical: wp(6),
+  mediaMetaBlock: { flex: 1, paddingRight: wp(10) },
+  mediaMetaTitle: { color: '#FFFFFF', fontSize: fp(14), fontWeight: '700' },
+  mediaMetaHint: { color: 'rgba(255,255,255,0.82)', fontSize: fp(11), marginTop: wp(4) },
+  mediaMetaStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(4),
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(8),
+    borderRadius: wp(999),
+    backgroundColor: 'rgba(15,23,42,0.28)',
   },
-  feedActionCircle: {
-    width: wp(30), height: wp(30), borderRadius: wp(15),
-    justifyContent: 'center', alignItems: 'center',
+  mediaMetaStatText: { color: '#FFFFFF', fontSize: fp(11), fontWeight: '700' },
+  feedFooter: {
+    marginTop: wp(2),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  feedActionLabel: { fontSize: FontSize.xs, fontWeight: '500' },
-
-  /* FAB */
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: wp(14) },
+  actionRowRight: { flexDirection: 'row', alignItems: 'center', gap: wp(12) },
+  actionItem: { flexDirection: 'row', alignItems: 'center', gap: wp(5) },
+  actionText: { fontSize: fp(11), fontWeight: '600' },
+  makeBtn: { minWidth: wp(90) },
   fab: {
-    position: 'absolute', right: wp(18), bottom: wp(22) + BOTTOM_SAFE_H,
-    width: wp(52), height: wp(52), borderRadius: wp(26),
-    justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    right: PAD,
+    bottom: wp(22) + BOTTOM_SAFE_H,
+    width: wp(52),
+    height: wp(52),
+    borderRadius: wp(26),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topFab: {
-    position: 'absolute', right: wp(18), bottom: wp(82) + BOTTOM_SAFE_H,
-    width: wp(38), height: wp(38), borderRadius: wp(19),
+    position: 'absolute',
+    right: PAD,
+    bottom: wp(84) + BOTTOM_SAFE_H,
+    width: wp(42),
+    height: wp(42),
+    borderRadius: wp(21),
     borderWidth: 1,
-    ...shadow(1, 4, 0.08, '#000', 2),
   },
-  topFabInner: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  topFabInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
