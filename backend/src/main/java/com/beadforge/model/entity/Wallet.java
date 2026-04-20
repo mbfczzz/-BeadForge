@@ -13,6 +13,8 @@ public class Wallet {
     private Integer balance;
     private Integer totalCharged;
     private Integer totalSpent;
+    @Version
+    private Integer version;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

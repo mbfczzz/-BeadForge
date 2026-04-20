@@ -12,6 +12,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -46,6 +47,7 @@ public class SecurityConfig {
                 .antMatchers("/products/**").permitAll()
                 .antMatchers("/patterns/list").permitAll()
                 .antMatchers("/feeds/list").permitAll()
+                .antMatchers("/admin/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             .and()
             .exceptionHandling()
@@ -76,11 +78,13 @@ public class SecurityConfig {
                     String token = header.substring(7);
                     if (jwtUtil.isTokenValid(token)) {
                         Long userId = jwtUtil.getUserIdFromToken(token);
+                        String role = jwtUtil.getRoleFromToken(token);
                         request.setAttribute("userId", userId);
 
-                        // 设置 Spring Security Authentication
+                        // 设置 Spring Security Authentication（携带角色权限）
                         UsernamePasswordAuthenticationToken auth =
-                            new UsernamePasswordAuthenticationToken(userId, null, Collections.emptyList());
+                            new UsernamePasswordAuthenticationToken(userId, null,
+                                Collections.singletonList(new SimpleGrantedAuthority(role)));
                         SecurityContextHolder.getContext().setAuthentication(auth);
                     }
                 }

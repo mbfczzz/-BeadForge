@@ -40,7 +40,7 @@ const BANNERS = [
 export const HomeScreen: React.FC = () => {
   const { colors, dark, toggle } = useTheme();
   const {
-    designs, loading, refreshing, error, hasMore, category, searchKeyword,
+    designs, loading, refreshing, error, hasMore, category, searchKeyword, sortBy,
     setFilter, setSearchKeyword, fetchDesigns,
   } = useDesignStore();
 
@@ -177,7 +177,7 @@ export const HomeScreen: React.FC = () => {
             { key: 'popular', label: '点赞' },
             { key: 'views', label: '浏览' },
           ].map((s) => {
-            const on = useDesignStore.getState().sortBy === s.key;
+            const on = sortBy === s.key;
             return (
               <TouchableOpacity key={s.key} activeOpacity={0.7} onPress={() => setFilter(s.key)} style={{ marginRight: wp(12) }}>
                 <Text style={{ fontSize: fp(12), fontWeight: on ? '700' : '400', color: on ? colors.accent : colors.textHint }}>{s.label}</Text>

@@ -124,7 +124,7 @@ public class AiController {
 
         } catch (Exception e) {
             log.error("AI生图异常: {}", e.getMessage(), e);
-            return ApiResponse.error(500, "AI服务异常: " + e.getMessage());
+            return ApiResponse.error(500, "AI服务异常，请稍后重试");
         }
     }
 

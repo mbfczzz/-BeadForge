@@ -95,3 +95,18 @@ INSERT IGNORE INTO t_follow (follower_id, following_id) VALUES
 (1, 2), (1, 3), (1, 9),
 (2, 3), (2, 5),
 (3, 2), (3, 9);
+
+-- ═══════ 增量迁移：为已有表补充新字段 ═══════
+
+-- 用户表加角色字段（已存在则跳过）
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='role');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN role VARCHAR(16) DEFAULT ''USER'' COMMENT ''角色: USER / ADMIN''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 钱包表加乐观锁版本号（已存在则跳过）
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_wallet' AND COLUMN_NAME='version');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_wallet ADD COLUMN version INT DEFAULT 0 COMMENT ''乐观锁版本号''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- 确保 test1 用户有 ADMIN 角色（方便管理后台登录）
+UPDATE t_user SET role = 'ADMIN' WHERE username = 'test1' AND (role IS NULL OR role != 'ADMIN');

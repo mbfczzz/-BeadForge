@@ -168,7 +168,7 @@ public class AdminController {
             apiConfigRepo.updateById(existing);
             return ApiResponse.success("更新成功", existing);
         } catch (Exception e) {
-            return ApiResponse.error(500, "更新失败: " + e.getMessage());
+            return ApiResponse.error(500, "更新失败");
         }
     }
 

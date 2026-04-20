@@ -63,7 +63,8 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException("用户名或密码错误");
         }
 
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
+        String role = user.getRole() != null ? user.getRole() : "USER";
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), role);
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("user", ConvertUtil.toUserDTO(user));

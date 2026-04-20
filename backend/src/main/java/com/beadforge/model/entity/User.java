@@ -27,6 +27,9 @@ public class User {
 
     private String phone;
 
+    /** 角色: USER / ADMIN */
+    private String role;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 

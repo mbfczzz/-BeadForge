@@ -29,13 +29,24 @@ public class JwtUtil {
     }
 
     public String generateToken(Long userId, String username) {
+        return generateToken(userId, username, "USER");
+    }
+
+    public String generateToken(Long userId, String username, String role) {
         return Jwts.builder()
                 .setSubject(userId.toString())
                 .claim("username", username)
+                .claim("role", role != null ? role : "USER")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = parseToken(token);
+        String role = (String) claims.get("role");
+        return role != null ? role : "USER";
     }
 
     public Claims parseToken(String token) {

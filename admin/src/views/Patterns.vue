@@ -40,7 +40,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import client from '../api/client'
 
-const cats = ['动物', '卡通', '花卉', '美食', '抽象', '像素']
+const cats = ['动物', '卡通', '花卉', '美食', '风景', '抽象', '像素']
 const list = ref<any[]>([])
 const loading = ref(false)
 const total = ref(0)

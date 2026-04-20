@@ -108,8 +108,6 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
   const [followed, setFollowed] = useState(false);
   const [profileTab, setProfileTab] = useState(0);
 
-  const gridSize = (screenW - PAD * 2 - wp(10)) / 2;
-
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* ═══ 顶栏 ═══ */}
@@ -241,26 +239,30 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
               <View style={$.worksGrid}>
                 {works.map((p, i) => {
                   const pat = ALL_PATTERNS[p.patternIdx % ALL_PATTERNS.length];
-                  const bs = Math.floor((gridSize - wp(20)) / (pat[0]?.length || 9)) - 1;
+                  const patCols = pat[0]?.length || 9;
+                  const patRows = pat.length || 9;
+                  const bs = Math.max(Math.min(wp(10), Math.floor(wp(100) / Math.max(patCols, patRows))), wp(3));
                   return (
-                    <PressableScale key={i} scale={0.97} style={{ width: gridSize }}
-                      onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pat[0]?.length || 9, rows: pat.length })}
-                    >
-                      <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
-                        <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#f8f8fa' }]}>
-                          <BeadGrid pixels={pat} beadSize={Math.min(bs, wp(14))} gap={1} round glossy />
-                        </View>
-                        <View style={$.workInfo}>
-                          <Text style={[$.workTitle, { color: colors.text }]} numberOfLines={1}>{p.title}</Text>
-                          <View style={$.workStats}>
-                            <MCI name="heart-outline" size={fp(12)} color={colors.textHint} />
-                            <Text style={[$.workStatText, { color: colors.textHint }]}>{p.likeCount}</Text>
-                            <MCI name="comment-outline" size={fp(12)} color={colors.textHint} />
-                            <Text style={[$.workStatText, { color: colors.textHint }]}>{p.commentCount}</Text>
+                    <View key={i} style={$.workCol}>
+                      <PressableScale scale={0.97}
+                        onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: patCols, rows: patRows })}
+                      >
+                        <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
+                          <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#f8f8fa' }]}>
+                            <BeadGrid pixels={pat} beadSize={bs} gap={1} round glossy />
+                          </View>
+                          <View style={$.workInfo}>
+                            <Text style={[$.workTitle, { color: colors.text }]} numberOfLines={1}>{p.title}</Text>
+                            <View style={$.workStats}>
+                              <MCI name="heart-outline" size={fp(12)} color={colors.textHint} />
+                              <Text style={[$.workStatText, { color: colors.textHint }]}>{p.likeCount}</Text>
+                              <MCI name="comment-outline" size={fp(12)} color={colors.textHint} />
+                              <Text style={[$.workStatText, { color: colors.textHint }]}>{p.commentCount}</Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    </PressableScale>
+                      </PressableScale>
+                    </View>
                   );
                 })}
               </View>
@@ -415,9 +417,10 @@ const $ = StyleSheet.create({
 
   /* 作品网格 */
   worksContainer: { paddingHorizontal: PAD, paddingTop: wp(10) },
-  worksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(10) },
+  worksGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -wp(5) },
+  workCol: { width: '50%', paddingHorizontal: wp(5), marginBottom: wp(10) },
   workCard: { borderRadius: BorderRadius.lg, overflow: 'hidden' },
-  workPreview: { padding: wp(10), alignItems: 'center' },
+  workPreview: { padding: wp(10), alignItems: 'center', justifyContent: 'center', height: wp(120) },
   workInfo: { paddingHorizontal: wp(10), paddingBottom: wp(10) },
   workTitle: { fontSize: FontSize.sm, fontWeight: '600' },
   workStats: { flexDirection: 'row', alignItems: 'center', gap: wp(3), marginTop: wp(4) },
