@@ -1,4 +1,4 @@
-import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Alert, Dimensions,
   TextInput, TouchableOpacity, Modal, FlatList, RefreshControl, ActivityIndicator,
@@ -94,15 +94,22 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 请求序列号 + mounted 标志：确保快速切换排序时老请求不覆盖新结果，卸载后不 setState
+  const reqSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const loadProducts = useCallback(async (sort: 'default' | 'sales' | 'price_asc' | 'price_desc') => {
+    const seq = ++reqSeqRef.current;
     setLoading(true);
     try {
       const res = await productApi.list({ page: 1, size: 50, sortBy: sort });
+      if (!mountedRef.current || seq !== reqSeqRef.current) return;
       setProducts((res.data?.records || []).map(toProductView));
     } catch {
       // 拉取失败保持原列表；用户仍可看到购物车等本地状态
     } finally {
-      setLoading(false);
+      if (mountedRef.current && seq === reqSeqRef.current) setLoading(false);
     }
   }, []);
 

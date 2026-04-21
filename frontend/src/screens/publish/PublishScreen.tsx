@@ -63,21 +63,30 @@ export const PublishScreen: React.FC = () => {
   const [feeds, setFeeds] = useState<FeedItemData[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // 请求序列号 + mounted 标志：快速切换 tab 时老请求不覆盖新结果
+  const feedSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const fetchFeeds = useCallback(async () => {
+    const seq = ++feedSeqRef.current;
+    const currentTab = tabIdx;
     setRefreshing(true);
     setLoadError(null);
     try {
-      const isFollowing = tabIdx === 1;
+      const isFollowing = currentTab === 1;
       const res = isFollowing
         ? await feedApi.following({ page: 1, size: 20 })
-        : await feedApi.list({ page: 1, size: 20, tab: tabIdx === 2 ? 'latest' : 'recommend' });
+        : await feedApi.list({ page: 1, size: 20, tab: currentTab === 2 ? 'latest' : 'recommend' });
+      if (!mountedRef.current || seq !== feedSeqRef.current) return;
       setFeeds((res.data?.records || []).map(toFeedItem));
     } catch (e: any) {
+      if (!mountedRef.current || seq !== feedSeqRef.current) return;
       setLoadError(e?.message || '加载失败');
-      // 关注 Tab 未登录会 401；保留空列表，下面空态会提示
-      if (tabIdx === 1) setFeeds([]);
+      // 任一错误（含未登录 401）都清空，避免跨 tab 的陈旧数据
+      setFeeds([]);
     } finally {
-      setRefreshing(false);
+      if (mountedRef.current && seq === feedSeqRef.current) setRefreshing(false);
     }
   }, [tabIdx]);
 

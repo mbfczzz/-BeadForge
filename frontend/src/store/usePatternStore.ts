@@ -74,6 +74,9 @@ const PAT_COUNT_GUESS = 16;
 
 const FETCH_TTL_MS = 30 * 1000;
 
+/** 正在进行中的购买请求 id 集合（模块级，避免 zustand set 触发重渲染） */
+const buyingIds = new Set<number>();
+
 export const usePatternStore = create<PatternState>((set, get) => ({
   listings: [],
   purchased: new Set<number>(),
@@ -100,18 +103,26 @@ export const usePatternStore = create<PatternState>((set, get) => ({
       const res = await patternApi.purchased();
       set({ purchased: new Set<number>(res.data || []) });
     } catch {
-      // 未登录会 401；静默吞掉，保持空集合
+      // 拉取失败（未登录 / 网络错误）：清空，避免账号切换后上一个用户的 purchased 误标"已拥有"
+      set({ purchased: new Set<number>() });
     }
   },
 
   buy: async (id) => {
-    await patternApi.buy(id);
-    // 乐观更新：加入 purchased，同时本地 downloads+1
-    set((s) => {
-      const np = new Set(s.purchased); np.add(id);
-      const nl = s.listings.map((p) => (p.id === id ? { ...p, downloads: p.downloads + 1 } : p));
-      return { purchased: np, listings: nl };
-    });
+    // 防重入：同一张图纸并发点击只发一次请求；重复请求抛错让 UI 不弹出虚假成功提示
+    if (buyingIds.has(id)) throw new Error('正在处理中，请稍候');
+    buyingIds.add(id);
+    try {
+      await patternApi.buy(id);
+      // 乐观更新：加入 purchased，同时本地 downloads+1
+      set((s) => {
+        const np = new Set(s.purchased); np.add(id);
+        const nl = s.listings.map((p) => (p.id === id ? { ...p, downloads: p.downloads + 1 } : p));
+        return { purchased: np, listings: nl };
+      });
+    } finally {
+      buyingIds.delete(id);
+    }
   },
 
   publish: async (pattern) => {

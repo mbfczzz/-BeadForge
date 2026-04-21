@@ -273,7 +273,10 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [pubDesc, setPubDesc] = useState('');
   const [pubPrice, setPubPrice] = useState('');
   const [pubCat, setPubCat] = useState('抽象');
+  const [publishing, setPublishing] = useState(false);
   const publishPattern = usePatternStore((s) => s.publish);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const handleSave = useCallback(() => {
     if (stats.beadCount === 0) { Alert.alert('提示', '画布是空的，先画点什么吧'); return; }
@@ -301,8 +304,10 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
 
   const handlePublish = useCallback(async () => {
+    if (publishing) return; // 防重复点击
     if (!pubTitle.trim()) { Alert.alert('提示', '请输入图纸标题'); return; }
     const price = parseFloat(pubPrice) || 0;
+    setPublishing(true);
     try {
       await publishPattern({
         title: pubTitle.trim(),
@@ -317,15 +322,19 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
         gridData: grid,
       });
+      if (!mountedRef.current) return;
       setShowPublish(false);
       Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
         { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
         { text: '继续创作' },
       ]);
     } catch (e: any) {
+      if (!mountedRef.current) return;
       Alert.alert('发布失败', e?.message || '请稍后重试（可能需要先登录）');
+    } finally {
+      if (mountedRef.current) setPublishing(false);
     }
-  }, [pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
+  }, [publishing, pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -533,12 +542,14 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
             </View>
 
             <View style={$.pubBtns}>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setShowPublish(false)} style={[$.pubCancelBtn, { borderColor: colors.border }]}>
+              <TouchableOpacity activeOpacity={0.7} disabled={publishing} onPress={() => setShowPublish(false)} style={[$.pubCancelBtn, { borderColor: colors.border }]}>
                 <Text style={[$.pubCancelT, { color: colors.textSecondary }]}>取消</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.8} onPress={handlePublish} style={[$.pubSubmitBtn, { backgroundColor: colors.accent }]}>
-                <Feather name="upload" size={fp(14)} color="#fff" />
-                <Text style={$.pubSubmitT}>发布</Text>
+              <TouchableOpacity activeOpacity={0.8} disabled={publishing} onPress={handlePublish} style={[$.pubSubmitBtn, { backgroundColor: colors.accent, opacity: publishing ? 0.6 : 1 }]}>
+                {publishing
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Feather name="upload" size={fp(14)} color="#fff" />}
+                <Text style={$.pubSubmitT}>{publishing ? '发布中...' : '发布'}</Text>
               </TouchableOpacity>
             </View>
           </View>
