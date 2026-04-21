@@ -7,12 +7,15 @@ import com.beadforge.model.dto.DesignDTO;
 import com.beadforge.model.entity.*;
 import com.beadforge.repository.*;
 import com.beadforge.util.ConvertUtil;
+import com.beadforge.util.SqlUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -47,7 +50,8 @@ public class AdminController {
             @RequestParam(required = false) String keyword) {
         QueryWrapper<User> qw = new QueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
-            qw.and(w -> w.like("username", keyword).or().like("nickname", keyword));
+            String safe = SqlUtil.escapeLike(keyword);
+            qw.and(w -> w.like("username", safe).or().like("nickname", safe));
         }
         qw.orderByDesc("created_at");
         Page<User> result = userRepo.selectPage(new Page<>(page, size), qw);
@@ -139,42 +143,64 @@ public class AdminController {
 
     // ═══════ API 配置 ═══════
 
+    /** list 时 configValue 脱敏（只返回首4+尾4），避免密钥泄露 */
     @GetMapping("/api-config")
     public ApiResponse<List<ApiConfig>> listApiConfig() {
-        return ApiResponse.success(apiConfigRepo.selectList(null));
+        List<ApiConfig> all = apiConfigRepo.selectList(null);
+        all.forEach(c -> c.setConfigValue(maskSecret(c.getConfigValue())));
+        return ApiResponse.success(all);
+    }
+
+    /** 单条获取完整值：仅在管理员显式要求时才返回；可在此加审计日志 */
+    @GetMapping("/api-config/{id}/reveal")
+    public ApiResponse<ApiConfig> revealApiConfig(@PathVariable Long id) {
+        ApiConfig c = apiConfigRepo.selectById(id);
+        if (c == null) return ApiResponse.error(404, "配置不存在");
+        log.warn("[SECURITY_AUDIT] reveal api-config id={} key={}", id, c.getConfigKey());
+        return ApiResponse.success(c);
     }
 
     @PostMapping("/api-config")
     public ApiResponse<ApiConfig> addApiConfig(@RequestBody ApiConfig config) {
         apiConfigRepo.insert(config);
-        return ApiResponse.success("添加成功", config);
+        // 返回时也脱敏，避免回显原文
+        ApiConfig safe = new ApiConfig();
+        safe.setId(config.getId());
+        safe.setConfigKey(config.getConfigKey());
+        safe.setConfigValue(maskSecret(config.getConfigValue()));
+        safe.setDescription(config.getDescription());
+        return ApiResponse.success("添加成功", safe);
     }
 
     @PutMapping("/api-config/{id}")
-    public ApiResponse updateApiConfig(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        try {
-            ApiConfig existing = apiConfigRepo.selectById(id);
-            if (existing == null) return ApiResponse.error(404, "配置不存在");
-            boolean changed = false;
-            if (body.containsKey("configValue") && body.get("configValue") != null) {
-                existing.setConfigValue(body.get("configValue"));
-                changed = true;
-            }
-            if (body.containsKey("description") && body.get("description") != null) {
-                existing.setDescription(body.get("description"));
-                changed = true;
-            }
-            if (!changed) return ApiResponse.success("无需更新", existing);
-            apiConfigRepo.updateById(existing);
-            return ApiResponse.success("更新成功", existing);
-        } catch (Exception e) {
-            return ApiResponse.error(500, "更新失败");
+    public ApiResponse<ApiConfig> updateApiConfig(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        ApiConfig existing = apiConfigRepo.selectById(id);
+        if (existing == null) return ApiResponse.error(404, "配置不存在");
+        boolean changed = false;
+        if (body.containsKey("configValue") && body.get("configValue") != null && !body.get("configValue").isEmpty()) {
+            existing.setConfigValue(body.get("configValue"));
+            changed = true;
         }
+        if (body.containsKey("description") && body.get("description") != null) {
+            existing.setDescription(body.get("description"));
+            changed = true;
+        }
+        if (!changed) return ApiResponse.success("无需更新", existing);
+        apiConfigRepo.updateById(existing);
+        // 响应脱敏
+        existing.setConfigValue(maskSecret(existing.getConfigValue()));
+        return ApiResponse.success("更新成功", existing);
     }
 
     @DeleteMapping("/api-config/{id}")
     public ApiResponse<Void> deleteApiConfig(@PathVariable Long id) {
         apiConfigRepo.deleteById(id);
         return ApiResponse.success("删除成功", null);
+    }
+
+    private static String maskSecret(String v) {
+        if (v == null || v.isEmpty()) return "";
+        if (v.length() <= 8) return "****";
+        return v.substring(0, 4) + "****" + v.substring(v.length() - 4);
     }
 }

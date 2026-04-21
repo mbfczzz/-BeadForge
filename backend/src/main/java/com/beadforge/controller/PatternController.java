@@ -10,6 +10,7 @@ import com.beadforge.repository.PatternListingRepository;
 import com.beadforge.repository.PatternPurchaseRepository;
 import com.beadforge.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -90,8 +91,9 @@ public class PatternController {
         return ApiResponse.success("发布成功", listing);
     }
 
-    /** 需要登录 — 购买/下载图纸 */
+    /** 需要登录 — 购买/下载图纸（insert 购买记录 + update 下载量 必须在同一事务） */
     @PostMapping("/{id}/buy")
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Void> buy(@PathVariable Long id, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");

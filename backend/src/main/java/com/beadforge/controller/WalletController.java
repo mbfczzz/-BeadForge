@@ -73,7 +73,7 @@ public class WalletController {
 
     /** 充值（模拟，实际对接微信/支付宝） */
     @PostMapping("/charge")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> charge(@RequestBody ChargeRequest req, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
@@ -95,7 +95,7 @@ public class WalletController {
 
     /** 拼豆币购买图纸 */
     @PostMapping("/buy-pattern/{id}")
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> buyPattern(@PathVariable Long id, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
