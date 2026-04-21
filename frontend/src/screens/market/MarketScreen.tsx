@@ -147,6 +147,11 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
         contentContainerStyle={{ paddingBottom: wp(60) + BOTTOM_SAFE_H }}
         columnWrapperStyle={{ paddingHorizontal: PAD, justifyContent: 'space-between' }}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
         ListHeaderComponent={
           <View>
             <View style={$.catWrap}>
@@ -247,6 +252,11 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
         contentContainerStyle={{ paddingBottom: wp(60) + BOTTOM_SAFE_H }}
         columnWrapperStyle={{ paddingHorizontal: PAD, justifyContent: 'space-between' }}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+        windowSize={7}
         ListHeaderComponent={
           <View>
             <View style={$.catWrap}>

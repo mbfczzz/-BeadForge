@@ -143,12 +143,15 @@ public class AdminController {
 
     // ═══════ API 配置 ═══════
 
-    /** list 时 configValue 脱敏（只返回首4+尾4），避免密钥泄露 */
+    /** list 时 configValue 脱敏（只返回首4+尾4），避免密钥泄露；默认分页，防止表膨胀后一次拉全量 */
     @GetMapping("/api-config")
-    public ApiResponse<List<ApiConfig>> listApiConfig() {
-        List<ApiConfig> all = apiConfigRepo.selectList(null);
-        all.forEach(c -> c.setConfigValue(maskSecret(c.getConfigValue())));
-        return ApiResponse.success(all);
+    public ApiResponse<Page<ApiConfig>> listApiConfig(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        Page<ApiConfig> result = apiConfigRepo.selectPage(new Page<>(page, size),
+                new QueryWrapper<ApiConfig>().orderByAsc("id"));
+        result.getRecords().forEach(c -> c.setConfigValue(maskSecret(c.getConfigValue())));
+        return ApiResponse.success(result);
     }
 
     /** 单条获取完整值：仅在管理员显式要求时才返回；可在此加审计日志 */

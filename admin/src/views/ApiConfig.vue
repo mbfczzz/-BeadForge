@@ -65,9 +65,11 @@ const form = reactive({ configKey: '', configValue: '', description: '' })
 const fetchData = async () => {
   loading.value = true
   try {
-    const res: any = await client.get('/admin/api-config')
+    const res: any = await client.get('/admin/api-config', { params: { page: 1, size: 50 } })
+    // 后端返回 Page<ApiConfig>：兼容 records（分页后）或直接数组（向后兼容）
+    const list = Array.isArray(res.data) ? res.data : (res.data?.records || [])
     // 后端已脱敏 configValue；_revealed 用来保存点击"显示"后拉到的完整值
-    configs.value = (res.data || []).map((c: any) => ({ ...c, _revealed: '' }))
+    configs.value = list.map((c: any) => ({ ...c, _revealed: '' }))
   } catch (e: any) { ElMessage.error(e.message) }
   finally { loading.value = false }
 }
