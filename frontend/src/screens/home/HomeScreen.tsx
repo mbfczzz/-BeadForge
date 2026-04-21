@@ -52,6 +52,10 @@ export const HomeScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const bannerRef = useRef<ScrollView>(null);
   const fabAnim = useRef(new Animated.Value(0)).current;
+  // 预计算 translateY interpolation，避免每次 render 重建 AnimatedInterpolation 对象
+  const fabTranslateY = useRef(
+    fabAnim.interpolate({ inputRange: [0, 1], outputRange: [wp(20), 0] }),
+  ).current;
   const activeCat = CAT_KEYS.indexOf(category || '');
 
   useEffect(() => { fetchDesigns(true); }, []);
@@ -212,7 +216,7 @@ export const HomeScreen: React.FC = () => {
       </ScrollView>
 
       {/* FAB */}
-      <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabAnim.interpolate({ inputRange:[0,1], outputRange:[wp(20),0] }) }] }]}>
+      <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabTranslateY }] }]}>
         <HoverView style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} hoverScale={1.12} hoverLift={2}>
           <Feather name="chevron-up" size={fp(18)} color={colors.textSecondary} />
