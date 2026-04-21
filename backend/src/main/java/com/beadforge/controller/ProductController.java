@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.Product;
+import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +25,7 @@ public class ProductController {
 
         Page<Product> p = new Page<>(page, size);
         QueryWrapper<Product> qw = new QueryWrapper<>();
-        qw.eq("status", "ACTIVE");
+        qw.eq("status", ListingStatus.ACTIVE.name());
         if (category != null && !category.isEmpty() && !"全部".equals(category)) {
             qw.eq("category", category);
         }

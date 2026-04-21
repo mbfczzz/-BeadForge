@@ -39,7 +39,18 @@
       "Bash(awk '{print $5, \"bytes\"}')",
       "Bash(sed -i:*)",
       "Bash(size=1 2>&1)",
-      "Bash(netsh advfirewall *)"
+      "Bash(netsh advfirewall *)",
+      "Bash(mvn -q -DskipTests compile)",
+      "Bash(where mvn *)",
+      "Bash(where mvnw *)",
+      "Read(//c/Users/a3172/.m2/**)",
+      "Bash(where javac *)",
+      "Bash(git restore *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(npx --yes vue-tsc --noEmit)",
+      "Bash(npx vue-tsc *)",
+      "Bash(npm run *)"
     ]
   }
 }

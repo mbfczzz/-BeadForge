@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.DesignDTO;
 import com.beadforge.model.entity.*;
+import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.*;
 import com.beadforge.util.ConvertUtil;
 import com.beadforge.util.SqlUtil;
@@ -105,7 +106,7 @@ public class AdminController {
 
     @PostMapping("/products")
     public ApiResponse<Product> addProduct(@RequestBody Product product) {
-        product.setStatus("ACTIVE");
+        product.setStatus(ListingStatus.ACTIVE.name());
         if (product.getSales() == null) product.setSales(0);
         if (product.getRating() == null) product.setRating(java.math.BigDecimal.valueOf(5.0));
         productRepo.insert(product);

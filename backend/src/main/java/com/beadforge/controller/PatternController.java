@@ -6,6 +6,7 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.PatternListing;
 import com.beadforge.model.entity.PatternPurchase;
 import com.beadforge.model.entity.User;
+import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.PatternListingRepository;
 import com.beadforge.repository.PatternPurchaseRepository;
 import com.beadforge.repository.UserRepository;
@@ -37,7 +38,7 @@ public class PatternController {
 
         Page<PatternListing> p = new Page<>(page, size);
         QueryWrapper<PatternListing> qw = new QueryWrapper<>();
-        qw.eq("status", "ACTIVE");
+        qw.eq("status", ListingStatus.ACTIVE.name());
         if (category != null && !category.isEmpty() && !"全部".equals(category)) {
             qw.eq("category", category);
         }
@@ -83,7 +84,7 @@ public class PatternController {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
         listing.setUserId(userId);
-        listing.setStatus("ACTIVE");
+        listing.setStatus(ListingStatus.ACTIVE.name());
         listing.setDownloads(0);
         listing.setRating(BigDecimal.valueOf(5.0));
         listing.setIsFree(listing.getPrice() == null || listing.getPrice().compareTo(BigDecimal.ZERO) <= 0 ? 1 : 0);

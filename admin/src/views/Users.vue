@@ -1,12 +1,12 @@
 <template>
   <el-card>
     <template #header>
-      <div style="display: flex; justify-content: space-between; align-items: center">
+      <div class="card-header">
         <span>用户管理 ({{ total }})</span>
         <el-input v-model="search" placeholder="搜索用户名/昵称" prefix-icon="Search" style="width: 240px" clearable @input="debounceSearch" />
       </div>
     </template>
-    <el-table :data="users" v-loading="loading" stripe>
+    <el-table :data="list" v-loading="loading" stripe>
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="username" label="用户名" width="120" />
       <el-table-column prop="nickname" label="昵称" width="120" />
@@ -16,7 +16,7 @@
       <el-table-column label="操作" width="120" fixed="right">
         <template #default="{ row }">
           <el-button type="primary" link size="small" @click="viewUser(row)">查看</el-button>
-          <el-popconfirm title="确定删除此用户？" @confirm="deleteUser(row.id)">
+          <el-popconfirm title="确定删除此用户？" @confirm="remove(row.id)">
             <template #reference>
               <el-button type="danger" link size="small">删除</el-button>
             </template>
@@ -26,10 +26,10 @@
     </el-table>
     <el-pagination
       v-if="total > pageSize"
-      style="margin-top: 16px; justify-content: center"
+      class="pager"
       :current-page="page" :page-size="pageSize" :total="total"
       layout="prev, pager, next"
-      @current-change="(p: number) => { page = p; fetchData() }"
+      @current-change="onPageChange"
     />
 
     <el-dialog v-model="showDetail" title="用户详情" width="480px">
@@ -46,44 +46,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import client from '../api/client'
+import { ref } from 'vue'
+import { usePaginatedList } from '../composables/usePaginatedList'
+import type { User } from '../types/models'
 
-const users = ref<any[]>([])
-const loading = ref(false)
 const search = ref('')
-const page = ref(1)
-const pageSize = 20
-const total = ref(0)
 const showDetail = ref(false)
-const currentUser = ref<any>(null)
-let searchTimer: ReturnType<typeof setTimeout> | null = null
+const currentUser = ref<User | null>(null)
 
-const fetchData = async () => {
-  loading.value = true
-  try {
-    const res: any = await client.get('/admin/users', { params: { page: page.value, size: pageSize, keyword: search.value || undefined } })
-    users.value = res.data?.records || []
-    total.value = res.data?.total || 0
-  } catch (e: any) { ElMessage.error(e.message) }
-  finally { loading.value = false }
-}
+const { list, total, page, pageSize, loading, debounceSearch, remove, onPageChange } =
+  usePaginatedList<User>('/admin/users', {
+    pageSize: 20,
+    deleteUrl: (id) => `/admin/users/${id}`,
+    extraParams: () => ({ keyword: search.value }),
+  })
 
-const debounceSearch = () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { page.value = 1; fetchData() }, 400)
-}
-
-const viewUser = (user: any) => { currentUser.value = user; showDetail.value = true }
-
-const deleteUser = async (id: number) => {
-  try {
-    await client.delete(`/admin/users/${id}`)
-    ElMessage.success('删除成功')
-    fetchData()
-  } catch (e: any) { ElMessage.error(e.message) }
-}
-
-onMounted(fetchData)
+const viewUser = (user: User) => { currentUser.value = user; showDetail.value = true }
 </script>
+
+<style scoped>
+.card-header { display: flex; justify-content: space-between; align-items: center; }
+.pager { margin-top: 16px; justify-content: center; }
+</style>
