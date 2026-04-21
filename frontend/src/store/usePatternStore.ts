@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { patternApi, type PatternDTO } from '../api/pattern';
 
-/** 图纸数据 */
+/** 图纸数据（前端视图模型 — 字段名对后端做了小幅适配） */
 export interface MarketPattern {
   id: number;
   title: string;
@@ -8,98 +9,134 @@ export interface MarketPattern {
   authorId: number;
   price: number;
   free: boolean;
-  patIdx: number;
+  patIdx: number; // 前端显示用：从 ALL_PATTERNS 中选一套花纹；后端不存
   cat: string;
   downloads: number;
   rating: number;
   cols: number;
   rows: number;
   desc: string;
-  gridData?: string[][]; // 实际图纸数据
+  gridData?: string[][]; // 实际图纸数据（发布时本地缓存，后端 previewData 为 JSON 字符串）
   createdAt: string;
 }
 
 interface PatternState {
-  /** 市场上所有图纸（含用户发布的） */
+  /** 市场上所有图纸 */
   listings: MarketPattern[];
   /** 当前用户已购买的图纸 ID */
   purchased: Set<number>;
-  /** 当前用户发布的图纸 ID */
+  /** 当前用户发布的图纸 ID（本地追踪；真实"我的发布"应从后端 /patterns/mine 获取，暂未实现） */
   myListings: Set<number>;
 
-  /** 购买图纸 */
-  buy: (id: number) => void;
-  /** 发布图纸到市场 */
-  publish: (pattern: Omit<MarketPattern, 'id' | 'downloads' | 'rating' | 'createdAt'>) => number;
-  /** 下架 */
-  unlist: (id: number) => void;
+  /** 列表加载状态 */
+  loading: boolean;
+  error: string | null;
+  /** 上次拉取时间（ms），用于节流 */
+  lastFetchAt: number;
+
+  /** 拉取图纸市场列表（默认首页前 50 条） */
+  fetchListings: (force?: boolean) => Promise<void>;
+  /** 拉取我的已购图纸 id 集合（登录后调用） */
+  fetchPurchased: () => Promise<void>;
+
+  /** 购买图纸 — 调后端后再刷新本地 */
+  buy: (id: number) => Promise<void>;
+  /** 发布图纸到市场 — 调后端后再插入 listings */
+  publish: (pattern: Omit<MarketPattern, 'id' | 'downloads' | 'rating' | 'createdAt'>) => Promise<number>;
   /** 是否已购买 */
   hasBought: (id: number) => boolean;
   /** 是否是自己发布的 */
   isMine: (id: number) => boolean;
 }
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** 后端 DTO → 前端视图模型 */
+function toMarketPattern(dto: PatternDTO, patCount: number): MarketPattern {
+  return {
+    id: dto.id,
+    title: dto.title,
+    author: dto.author || '匿名',
+    authorId: dto.authorId,
+    price: Number(dto.price || 0),
+    free: dto.free,
+    patIdx: dto.id % Math.max(1, patCount), // 稳定映射到 ALL_PATTERNS；具体 patCount 由调用方提供，不够准确也只是视觉选色
+    cat: dto.category || '抽象',
+    downloads: dto.downloads || 0,
+    rating: Number(dto.rating || 5),
+    cols: dto.cols || 10,
+    rows: dto.rows || 10,
+    desc: dto.description || '',
+    createdAt: dto.createdAt ? dto.createdAt.slice(0, 10) : '',
+  };
+}
 
-/** 初始 mock 图纸 */
-const INIT_LISTINGS: MarketPattern[] = [
-  { id: 101, title: '像素爱心', author: '小豆子', authorId: 2, price: 0, free: true, patIdx: 0, cat: '抽象', downloads: 3280, rating: 4.9, cols: 10, rows: 9, desc: '经典红色爱心，新手入门首选', createdAt: '2026-04-01' },
-  { id: 102, title: '橘猫咪咪', author: '拼豆达人', authorId: 3, price: 2.9, free: false, patIdx: 1, cat: '动物', downloads: 2100, rating: 4.8, cols: 9, rows: 8, desc: '超萌橘猫正面照', createdAt: '2026-04-02' },
-  { id: 103, title: '超级蘑菇', author: '游戏迷', authorId: 4, price: 1.9, free: false, patIdx: 2, cat: '卡通', downloads: 1800, rating: 4.7, cols: 10, rows: 9, desc: '马里奥经典红蘑菇', createdAt: '2026-04-03' },
-  { id: 104, title: '粉色小花', author: '花花世界', authorId: 5, price: 0, free: true, patIdx: 3, cat: '花卉', downloads: 900, rating: 4.6, cols: 9, rows: 10, desc: '春日樱花主题', createdAt: '2026-04-03' },
-  { id: 105, title: '闪耀金星', author: '星空漫步', authorId: 6, price: 1.5, free: false, patIdx: 4, cat: '抽象', downloads: 750, rating: 4.5, cols: 9, rows: 9, desc: '五角星经典造型', createdAt: '2026-04-04' },
-  { id: 106, title: '双子樱桃', author: '水果控', authorId: 7, price: 0, free: true, patIdx: 5, cat: '美食', downloads: 1400, rating: 4.7, cols: 9, rows: 8, desc: '可爱的樱桃挂件', createdAt: '2026-04-05' },
-  { id: 107, title: '冰蓝钻石', author: '珠宝匠', authorId: 8, price: 3.9, free: false, patIdx: 6, cat: '抽象', downloads: 1100, rating: 4.8, cols: 9, rows: 7, desc: '钻石造型', createdAt: '2026-04-05' },
-  { id: 108, title: '七色彩虹', author: '彩虹桥', authorId: 9, price: 1.9, free: false, patIdx: 7, cat: '像素', downloads: 1600, rating: 4.9, cols: 9, rows: 7, desc: '经典彩虹，7种颜色', createdAt: '2026-04-06' },
-];
+// 这里用一个保守的默认值，避免循环依赖 ALL_PATTERNS；前端展示时实际按 id % 实际常量长度就行
+const PAT_COUNT_GUESS = 16;
 
-let nextId = 200;
+const FETCH_TTL_MS = 30 * 1000;
 
 export const usePatternStore = create<PatternState>((set, get) => ({
-  listings: INIT_LISTINGS,
+  listings: [],
   purchased: new Set<number>(),
   myListings: new Set<number>(),
+  loading: false,
+  error: null,
+  lastFetchAt: 0,
 
-  buy: (id) => {
+  fetchListings: async (force = false) => {
+    const now = Date.now();
+    if (!force && get().listings.length > 0 && now - get().lastFetchAt < FETCH_TTL_MS) return;
+    set({ loading: true, error: null });
+    try {
+      const res = await patternApi.list({ page: 1, size: 50, sortBy: 'latest' });
+      const items = (res.data?.records || []).map((d) => toMarketPattern(d, PAT_COUNT_GUESS));
+      set({ listings: items, loading: false, lastFetchAt: Date.now() });
+    } catch (e: any) {
+      set({ loading: false, error: e?.message || '加载失败' });
+    }
+  },
+
+  fetchPurchased: async () => {
+    try {
+      const res = await patternApi.purchased();
+      set({ purchased: new Set<number>(res.data || []) });
+    } catch {
+      // 未登录会 401；静默吞掉，保持空集合
+    }
+  },
+
+  buy: async (id) => {
+    await patternApi.buy(id);
+    // 乐观更新：加入 purchased，同时本地 downloads+1
     set((s) => {
-      const newPurchased = new Set(s.purchased);
-      newPurchased.add(id);
-      const newListings = s.listings.map((p) =>
-        p.id === id ? { ...p, downloads: p.downloads + 1 } : p
-      );
-      return { purchased: newPurchased, listings: newListings };
+      const np = new Set(s.purchased); np.add(id);
+      const nl = s.listings.map((p) => (p.id === id ? { ...p, downloads: p.downloads + 1 } : p));
+      return { purchased: np, listings: nl };
     });
   },
 
-  publish: (pattern) => {
-    const id = nextId++;
-    const newPattern: MarketPattern = {
+  publish: async (pattern) => {
+    const res = await patternApi.publish({
+      title: pattern.title,
+      description: pattern.desc,
+      category: pattern.cat,
+      price: pattern.price,
+      cols: pattern.cols,
+      rows: pattern.rows,
+      previewData: pattern.gridData ? JSON.stringify(pattern.gridData) : undefined,
+    });
+    const created = res.data;
+    const mp: MarketPattern = {
       ...pattern,
-      id,
+      id: created?.id ?? Date.now(),
       downloads: 0,
-      rating: 5.0,
+      rating: 5,
       createdAt: new Date().toISOString().slice(0, 10),
     };
     set((s) => {
-      const newMyListings = new Set(s.myListings);
-      newMyListings.add(id);
-      return {
-        listings: [newPattern, ...s.listings],
-        myListings: newMyListings,
-      };
+      const ml = new Set(s.myListings); ml.add(mp.id);
+      return { listings: [mp, ...s.listings], myListings: ml };
     });
-    return id;
-  },
-
-  unlist: (id) => {
-    set((s) => {
-      const newMyListings = new Set(s.myListings);
-      newMyListings.delete(id);
-      return {
-        listings: s.listings.filter((p) => p.id !== id),
-        myListings: newMyListings,
-      };
-    });
+    return mp.id;
   },
 
   hasBought: (id) => get().purchased.has(id) || get().myListings.has(id),

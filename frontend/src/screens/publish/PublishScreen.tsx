@@ -1,4 +1,4 @@
-import React, { useState, memo, useMemo, useRef, useCallback } from 'react';
+import React, { useState, memo, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform, Pressable, Alert,
   TextInput, RefreshControl, Animated, NativeSyntheticEvent, NativeScrollEvent,
@@ -13,56 +13,12 @@ import { Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } from '../..
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { hapticLight } from '../../hooks/useFeedback';
+import { feedApi, toFeedItem } from '../../api/feed';
 import type { RootStackParamList, FeedItemData } from '../../navigation/types';
 
 const PAD = wp(15);
 
-/* ──────────────── Mock 数据 ──────────────── */
-
-const ALL_FEEDS: FeedItemData[] = [
-  {
-    id: 1, user: { name: '小豆子', title: '拼豆达人 Lv.5' },
-    content: '第一次尝试做橘猫，熨烫的时候差点烫歪了 😂 不过最终效果还不错！分享给大家~',
-    patternIdx: 1, likeCount: 128, commentCount: 23, shareCount: 5, timeAgo: '2小时前',
-    tags: ['猫咪', '新手'],
-  },
-  {
-    id: 2, user: { name: '像素艺术家', title: '创作者' },
-    content: '用 AI 生成了一个星空主题的图案，然后手动调整了配色。AI + 手工 = 完美搭配！',
-    patternIdx: 4, likeCount: 256, commentCount: 41, shareCount: 18, timeAgo: '3小时前',
-    tags: ['AI创作', '星空'],
-  },
-  {
-    id: 3, user: { name: '花花世界', title: '拼豆达人 Lv.3' },
-    content: '春天来了，做了一朵小花送给妈妈当胸针 🌸 她超开心的！',
-    patternIdx: 3, likeCount: 342, commentCount: 56, shareCount: 12, timeAgo: '5小时前',
-    tags: ['花卉', '礼物'],
-  },
-  {
-    id: 4, user: { name: '游戏迷', title: '像素爱好者' },
-    content: '马里奥蘑菇完成！用了两种红色做渐变，比单色版好看多了。下一个目标：做一套完整角色~',
-    patternIdx: 2, likeCount: 189, commentCount: 34, shareCount: 8, timeAgo: '8小时前',
-    tags: ['游戏', '马里奥'],
-  },
-  {
-    id: 5, user: { name: '彩虹桥', title: '手作达人' },
-    content: '给闺蜜做了一对樱桃耳环，用 2.6mm 迷你珠，精致到哭！配件用的是市场上买的 S925 耳钩',
-    patternIdx: 5, likeCount: 467, commentCount: 89, shareCount: 31, timeAgo: '昨天',
-    tags: ['饰品', '耳环'],
-  },
-  {
-    id: 6, user: { name: '钻石控', title: '新人创作者' },
-    content: '宝石拼豆第一弹！蓝色钻石搞定✨ 接下来挑战红宝石',
-    patternIdx: 6, likeCount: 95, commentCount: 12, shareCount: 3, timeAgo: '昨天',
-    tags: ['宝石', '新手'],
-  },
-  {
-    id: 7, user: { name: '拼豆小屋', title: '拼豆达人 Lv.8' },
-    content: '彩虹挂画完成了！这个用了快 600 颗珠子，7 种颜色。推荐新手从这个练起，配色简单效果好。',
-    patternIdx: 7, likeCount: 521, commentCount: 78, shareCount: 45, timeAgo: '2天前',
-    tags: ['彩虹', '教程'],
-  },
-];
+/* ──────────────── 展示装饰数据（与动态流无关） ──────────────── */
 
 // 热门话题
 const HOT_TOPICS = [
@@ -82,8 +38,6 @@ const STORY_USERS = [
   { name: '游戏迷', hasNew: true, ring: ['#20C997', '#38D9A9'] },
   { name: '钻石控', hasNew: false, ring: ['#ccc', '#ddd'] },
 ];
-
-const FOLLOWING_NAMES = new Set(['小豆子', '彩虹桥', '拼豆小屋']);
 
 const TABS = ['推荐', '关注', '最新'];
 
@@ -106,28 +60,43 @@ export const PublishScreen: React.FC = () => {
   const scrollRef = useRef<ScrollView>(null);
   const fabAnim = useRef(new Animated.Value(0)).current;
 
-  const filteredFeeds = useMemo(() => {
-    let feeds = ALL_FEEDS;
-    if (tabIdx === 1) {
-      feeds = feeds.filter((f) => FOLLOWING_NAMES.has(f.user.name));
-    } else if (tabIdx === 2) {
-      feeds = [...feeds].sort((a, b) => a.id - b.id).reverse();
+  const [feeds, setFeeds] = useState<FeedItemData[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const fetchFeeds = useCallback(async () => {
+    setRefreshing(true);
+    setLoadError(null);
+    try {
+      const isFollowing = tabIdx === 1;
+      const res = isFollowing
+        ? await feedApi.following({ page: 1, size: 20 })
+        : await feedApi.list({ page: 1, size: 20, tab: tabIdx === 2 ? 'latest' : 'recommend' });
+      setFeeds((res.data?.records || []).map(toFeedItem));
+    } catch (e: any) {
+      setLoadError(e?.message || '加载失败');
+      // 关注 Tab 未登录会 401；保留空列表，下面空态会提示
+      if (tabIdx === 1) setFeeds([]);
+    } finally {
+      setRefreshing(false);
     }
+  }, [tabIdx]);
+
+  useEffect(() => { fetchFeeds(); }, [fetchFeeds]);
+
+  const filteredFeeds = useMemo(() => {
+    let list = feeds;
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
-      feeds = feeds.filter((f) =>
+      list = list.filter((f) =>
         f.content.toLowerCase().includes(q) ||
         f.user.name.toLowerCase().includes(q) ||
         f.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
-    return feeds;
-  }, [tabIdx, searchText]);
+    return list;
+  }, [feeds, searchText]);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
-  }, []);
+  const onRefresh = useCallback(() => { fetchFeeds(); }, [fetchFeeds]);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;

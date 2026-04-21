@@ -300,27 +300,31 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     ]);
   }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
 
-  const handlePublish = useCallback(() => {
+  const handlePublish = useCallback(async () => {
     if (!pubTitle.trim()) { Alert.alert('提示', '请输入图纸标题'); return; }
     const price = parseFloat(pubPrice) || 0;
-    publishPattern({
-      title: pubTitle.trim(),
-      author: '我',
-      authorId: 1,
-      price,
-      free: price <= 0,
-      patIdx: 0,
-      cat: pubCat,
-      cols,
-      rows,
-      desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
-      gridData: grid,
-    });
-    setShowPublish(false);
-    Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
-      { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
-      { text: '继续创作' },
-    ]);
+    try {
+      await publishPattern({
+        title: pubTitle.trim(),
+        author: '我',
+        authorId: 1,
+        price,
+        free: price <= 0,
+        patIdx: 0,
+        cat: pubCat,
+        cols,
+        rows,
+        desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
+        gridData: grid,
+      });
+      setShowPublish(false);
+      Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
+        { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
+        { text: '继续创作' },
+      ]);
+    } catch (e: any) {
+      Alert.alert('发布失败', e?.message || '请稍后重试（可能需要先登录）');
+    }
   }, [pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
 
   return (

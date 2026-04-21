@@ -1,7 +1,7 @@
-import React, { useState, useMemo, memo, useCallback } from 'react';
+import React, { useState, useMemo, memo, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Alert, Dimensions,
-  TextInput, TouchableOpacity, Modal, FlatList,
+  TextInput, TouchableOpacity, Modal, FlatList, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import { Avatar, BeadGrid, ALL_PATTERNS } from '../../components/common';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { usePatternStore, MarketPattern } from '../../store/usePatternStore';
+import { productApi, toProductView, type ProductView } from '../../api/product';
 import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
 import type { RootStackParamList } from '../../navigation/types';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
@@ -22,28 +23,12 @@ const CARD_W = Math.floor((W - PAD * 2 - wp(10)) / 2);
 
 /* ═══════════════════ 材料数据 ═══════════════════ */
 
-interface Product {
-  id: number; name: string; desc: string; price: number;
-  originalPrice?: number; sales: number; rating: number;
-  tag?: string; color: string; icon: string; cat: string; specs: string[];
-}
+// 视图模型复用 api/product.ts 里的 ProductView（desc/cat/specs:string[] 等旧字段名保持）
+type Product = ProductView;
 interface CartItem { product: Product; qty: number }
 
 const MAT_CATS = ['全部', '珠子', '拼豆板', '工具', '套装', '配件'];
 const MAT_SORTS = ['综合', '销量', '价格↑', '价格↓'];
-
-const PRODUCTS: Product[] = [
-  { id: 1, name: '5mm标准珠·48色', desc: '约24000颗入门必备', price: 29.9, originalPrice: 49.9, sales: 8234, rating: 4.8, tag: '爆款', color: '#EF4444', icon: 'box', cat: '珠子', specs: ['5mm', '48色', '约24000颗'] },
-  { id: 2, name: '迷你珠2.6mm·72色', desc: '精细图案专用', price: 45.0, sales: 3421, rating: 4.9, color: '#8B5CF6', icon: 'box', cat: '珠子', specs: ['2.6mm', '72色', '约36000颗'] },
-  { id: 3, name: '大号拼豆板29×29', desc: '透明白可拼接', price: 8.9, originalPrice: 12.0, sales: 12500, rating: 4.7, tag: '热销', color: '#3B82F6', icon: 'layout', cat: '拼豆板', specs: ['29×29格', '透明白'] },
-  { id: 4, name: '六角拼豆板', desc: '六边形创意造型', price: 6.5, sales: 5600, rating: 4.6, color: '#22C55E', icon: 'hexagon', cat: '拼豆板', specs: ['六角形', '透明'] },
-  { id: 5, name: '尖头镊子', desc: '不锈钢精准夹取', price: 5.9, sales: 9870, rating: 4.8, color: '#F97316', icon: 'tool', cat: '工具', specs: ['不锈钢', '尖头'] },
-  { id: 6, name: '熨烫专用烫纸50张', desc: '耐高温不粘珠', price: 3.5, originalPrice: 5.0, sales: 15600, rating: 4.5, tag: '必买', color: '#EC4899', icon: 'file', cat: '配件', specs: ['50张', '15×15cm'] },
-  { id: 7, name: '新手入门套装', desc: '珠子+板+镊子+烫纸', price: 39.9, originalPrice: 68.0, sales: 6700, rating: 4.9, tag: '推荐', color: '#0EA5E9', icon: 'package', cat: '套装', specs: ['24色', '全套'] },
-  { id: 8, name: '夜光珠12色', desc: '暗处持续发光', price: 19.9, sales: 2100, rating: 4.4, color: '#FBBF24', icon: 'sun', cat: '珠子', specs: ['12色', '夜光'] },
-  { id: 9, name: '收纳盒36格', desc: '透明盖分色收纳', price: 15.9, originalPrice: 22.0, sales: 5100, rating: 4.7, color: '#F87171', icon: 'archive', cat: '工具', specs: ['36格', '27×17cm'] },
-  { id: 10, name: '磁铁贴片100片', desc: '做冰箱贴神器', price: 7.5, sales: 4300, rating: 4.5, color: '#16A34A', icon: 'disc', cat: '配件', specs: ['100片', '自粘'] },
-];
 
 /* ═══════════════════ 图纸数据 ═══════════════════ */
 
@@ -106,16 +91,34 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadProducts = useCallback(async (sort: 'default' | 'sales' | 'price_asc' | 'price_desc') => {
+    setLoading(true);
+    try {
+      const res = await productApi.list({ page: 1, size: 50, sortBy: sort });
+      setProducts((res.data?.records || []).map(toProductView));
+    } catch {
+      // 拉取失败保持原列表；用户仍可看到购物车等本地状态
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 进入时拉一次；后端返回时按 sortIdx 排序，再由前端本地筛选完成剩下的事
+  useEffect(() => {
+    const sort: 'default' | 'sales' | 'price_asc' | 'price_desc' =
+      sortIdx === 1 ? 'sales' : sortIdx === 2 ? 'price_asc' : sortIdx === 3 ? 'price_desc' : 'default';
+    loadProducts(sort);
+  }, [sortIdx, loadProducts]);
 
   const filtered = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products];
     if (catIdx > 0) list = list.filter((p) => p.cat === MAT_CATS[catIdx]);
     if (search.trim()) { const kw = search.toLowerCase(); list = list.filter((p) => p.name.toLowerCase().includes(kw)); }
-    if (sortIdx === 1) list.sort((a, b) => b.sales - a.sales);
-    else if (sortIdx === 2) list.sort((a, b) => a.price - b.price);
-    else if (sortIdx === 3) list.sort((a, b) => b.price - a.price);
     return list;
-  }, [catIdx, sortIdx, search]);
+  }, [products, catIdx, search]);
 
   const cartCount = cart.reduce((s, c) => s + c.qty, 0);
   const cartTotal = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
@@ -152,6 +155,7 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         windowSize={7}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => loadProducts(sortIdx === 1 ? 'sales' : sortIdx === 2 ? 'price_asc' : sortIdx === 3 ? 'price_desc' : 'default')} tintColor={colors.textHint} />}
         ListHeaderComponent={
           <View>
             <View style={$.catWrap}>
@@ -164,7 +168,11 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
             </View>
           </View>
         }
-        ListEmptyComponent={<EmptyState icon="inbox" text="没有找到商品" colors={colors} />}
+        ListEmptyComponent={
+          loading
+            ? <ActivityIndicator color={colors.accent} style={{ marginTop: wp(40) }} />
+            : <EmptyState icon="inbox" text="没有找到商品" colors={colors} />
+        }
         renderItem={({ item }) => (
           <View style={{ width: CARD_W, marginBottom: wp(10) }}>
             <MatCard p={item} colors={colors} dark={dark} onPress={() => matNav.navigate('ProductDetail', { product: { ...item, description: item.desc, category: item.cat, specs: JSON.stringify(item.specs) } as any })} onAdd={() => addToCart(item)} />
@@ -195,12 +203,21 @@ const MaterialTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors,
 const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, dark }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const listings = usePatternStore((s) => s.listings);
+  const loading = usePatternStore((s) => s.loading);
+  const fetchListings = usePatternStore((s) => s.fetchListings);
+  const fetchPurchased = usePatternStore((s) => s.fetchPurchased);
   const buy = usePatternStore((s) => s.buy);
   const hasBought = usePatternStore((s) => s.hasBought);
   const [catIdx, setCatIdx] = useState(0);
   const [sortIdx, setSortIdx] = useState(0);
   const [search, setSearch] = useState('');
   const [detail, setDetail] = useState<MarketPattern | null>(null);
+
+  // 进入时拉取列表 + 已购 ID（已购未登录会静默失败）
+  useEffect(() => {
+    fetchListings();
+    fetchPurchased();
+  }, [fetchListings, fetchPurchased]);
 
   const filtered = useMemo(() => {
     let list = [...listings];
@@ -212,32 +229,33 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
     return list;
   }, [listings, catIdx, sortIdx, search]);
 
+  const doBuy = useCallback(async (p: MarketPattern) => {
+    try {
+      await buy(p.id);
+      Alert.alert(p.free ? '下载成功' : '购买成功', `「${p.title}」已保存到已购图纸`, [
+        { text: '去制作', onPress: () => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows }); } },
+        { text: '好的' },
+      ]);
+    } catch (e: any) {
+      Alert.alert('失败', e?.message || '操作失败，请稍后重试');
+    }
+  }, [buy, navigation]);
+
   const handleBuy = useCallback((p: MarketPattern) => {
     if (hasBought(p.id)) {
-      // 已拥有 → 直接用
       navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows });
       setDetail(null);
       return;
     }
     if (p.free) {
-      buy(p.id);
-      Alert.alert('下载成功', `「${p.title}」已保存`, [
-        { text: '去制作', onPress: () => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows }); } },
-        { text: '继续逛' },
-      ]);
+      doBuy(p);
     } else {
       Alert.alert('确认购买', `「${p.title}」 ¥${p.price}`, [
         { text: '取消', style: 'cancel' },
-        { text: '购买', onPress: () => {
-          buy(p.id);
-          Alert.alert('购买成功', `「${p.title}」已保存到已购图纸`, [
-            { text: '去制作', onPress: () => { setDetail(null); navigation.navigate('Editor', { mode: 'manual', cols: p.cols, rows: p.rows }); } },
-            { text: '好的' },
-          ]);
-        }},
+        { text: '购买', onPress: () => doBuy(p) },
       ]);
     }
-  }, [buy, hasBought, navigation]);
+  }, [hasBought, navigation, doBuy]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -257,6 +275,7 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
         maxToRenderPerBatch={8}
         updateCellsBatchingPeriod={50}
         windowSize={7}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => fetchListings(true)} tintColor={colors.textHint} />}
         ListHeaderComponent={
           <View>
             <View style={$.catWrap}>
@@ -269,7 +288,11 @@ const PatternTab: React.FC<{ colors: ThemeColors; dark: boolean }> = ({ colors, 
             </View>
           </View>
         }
-        ListEmptyComponent={<EmptyState icon="file" text="没有找到图纸" colors={colors} />}
+        ListEmptyComponent={
+          loading
+            ? <ActivityIndicator color={colors.accent} style={{ marginTop: wp(40) }} />
+            : <EmptyState icon="file" text="没有找到图纸" colors={colors} />
+        }
         renderItem={({ item }) => (
           <View style={{ width: CARD_W, marginBottom: wp(10) }}>
             <PatCard p={item} colors={colors} dark={dark} owned={hasBought(item.id)} onPress={() => setDetail(item)} />
