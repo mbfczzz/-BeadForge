@@ -36,15 +36,25 @@ export const patternApi = {
       },
     }),
 
-  /** 购买/下载图纸（免费自动记录，付费需要先充值） */
+  /**
+   * 购买/下载图纸 — 统一走钱包通道：
+   * - 免费图纸：直接登记 purchase（服务端识别 isFree=1 免扣费）
+   * - 付费图纸：扣拼豆币（余额不足会返回 400）
+   * 返回 { balance?, cost? }，免费场景可能为 null
+   */
   buy: (id: number) =>
-    client.post<any, ApiRes<void>>(`/patterns/${id}/buy`),
+    client.post<any, ApiRes<{ balance?: number; cost?: number } | null>>(`/wallet/buy-pattern/${id}`),
 
   /** 我的已购图纸 id 列表 */
   purchased: () =>
     client.get<any, ApiRes<number[]>>('/patterns/purchased'),
 
-  /** 发布图纸到市场 */
+  /**
+   * 发布图纸到市场。
+   * 后端返回的是 PatternListing entity（不是 PatternDTO），
+   * 字段略有差异（isFree: 0/1 而非 free: boolean；无 author）——
+   * 前端只消费 id，其余字段请不要直接使用。
+   */
   publish: (payload: {
     title: string;
     description: string;
@@ -55,5 +65,5 @@ export const patternApi = {
     previewData?: string;
     designId?: number;
   }) =>
-    client.post<any, ApiRes<PatternDTO>>('/patterns/publish', payload),
+    client.post<any, ApiRes<{ id: number }>>('/patterns/publish', payload),
 };
