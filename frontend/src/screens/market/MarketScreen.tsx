@@ -15,6 +15,7 @@ import { productApi, toProductView, type ProductView } from '../../api/product';
 import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
 import type { RootStackParamList } from '../../navigation/types';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 
 const PAD = wp(15);
 const W = Dimensions.get('window').width;
@@ -51,12 +52,13 @@ export const MarketScreen: React.FC = () => {
       {/* 顶部 — 和发现页统一风格 */}
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <View style={$.brandRow}>
-          <View style={[$.brandDot, { backgroundColor: '#F97316' }]}>
-            <Feather name="shopping-bag" size={fp(13)} color="#fff" />
+          <View style={[$.brandDot, { backgroundColor: colors.candy.mango }]}>
+            <Feather name="shopping-bag" size={fp(14)} color="#fff" />
           </View>
           <View>
             <Text style={[$.brandName, { color: colors.text }]}>
-              拼豆<Text style={{ color: '#F97316' }}>市场</Text>
+              拼豆<Text style={{ color: colors.candy.mango }}>市场</Text>
+              <Text style={{ fontSize: fp(12) }}> 🛍️</Text>
             </Text>
             <Text style={[$.brandSub, { color: colors.textHint }]}>材料·图纸·一站购齐</Text>
           </View>
@@ -563,18 +565,18 @@ const $ = StyleSheet.create({
   },
   brandRow: { flexDirection: 'row', alignItems: 'center' },
   brandDot: {
-    width: wp(30), height: wp(30), borderRadius: wp(9),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+    width: wp(34), height: wp(34), borderRadius: wp(17),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(10),
   },
-  brandName: { fontSize: fp(17), fontWeight: '900', letterSpacing: 0.5 },
+  brandName: { fontSize: fp(18), fontWeight: '900', letterSpacing: 0.5 },
   brandSub: { fontSize: fp(9), marginTop: wp(1) },
   segmentWrap: {
-    flexDirection: 'row', borderRadius: wp(8), padding: wp(2),
+    flexDirection: 'row', borderRadius: wp(9999), padding: wp(3),
   },
   segmentItem: {
-    paddingHorizontal: wp(10), paddingVertical: wp(5), borderRadius: wp(6),
+    paddingHorizontal: wp(14), paddingVertical: wp(6), borderRadius: wp(9999),
   },
-  segmentText: { fontSize: fp(12), fontWeight: '600' },
+  segmentText: { fontSize: fp(12), fontWeight: '700' },
 
   searchRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, paddingVertical: wp(8), borderBottomWidth: StyleSheet.hairlineWidth },
   searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', height: wp(34), borderRadius: wp(17), paddingHorizontal: wp(10) },
@@ -599,7 +601,7 @@ const $ = StyleSheet.create({
   toastT: { fontSize: fp(12), fontWeight: '500', marginLeft: wp(5) },
 
   // 卡片通用
-  card: { borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden' },
+  card: { borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden', ...shadow(3, 10, 0.08, '#FF8FB1', 2) },
   cardCover: { height: wp(70), justifyContent: 'center', alignItems: 'center' },
   cardIconC: { width: wp(36), height: wp(36), borderRadius: wp(18), justifyContent: 'center', alignItems: 'center' },
   cardTag: { position: 'absolute', top: wp(5), left: wp(5), paddingHorizontal: wp(5), paddingVertical: wp(1), borderRadius: wp(3) },

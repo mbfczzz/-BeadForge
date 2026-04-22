@@ -131,7 +131,9 @@ export const PublishScreen: React.FC = () => {
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       {/* ═══ 顶栏 ═══ */}
       <View style={[$.header, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <Text style={[$.headerTitle, { color: colors.text, letterSpacing: -0.3 }]}>动态</Text>
+        <Text style={[$.headerTitle, { color: colors.text, letterSpacing: -0.3 }]}>
+          动态<Text style={{ color: colors.candy.mint, fontSize: fp(14) }}> 💬</Text>
+        </Text>
         <View style={$.tabRow}>
           {TABS.map((t, i) => {
             const active = i === tabIdx;
@@ -341,8 +343,9 @@ const FeedCard: React.FC<{
       <View style={[
         $.feedCard,
         { backgroundColor: colors.surface },
-        !isFirst && { marginTop: wp(8) },
-        { borderRadius: BorderRadius.lg, marginHorizontal: PAD, borderWidth: 1, borderColor: colors.border },
+        !isFirst && { marginTop: wp(10) },
+        { borderRadius: BorderRadius.xl, marginHorizontal: PAD, borderWidth: 1, borderColor: colors.border },
+        shadow(3, 10, 0.08, '#FF8FB1', 2),
       ]}>
         {/* 用户头部 */}
         <View style={$.feedHeader}>

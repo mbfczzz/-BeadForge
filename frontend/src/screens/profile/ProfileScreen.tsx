@@ -30,22 +30,23 @@ type SubPage =
   | 'likes' | 'settings' | 'myFeeds' | 'purchased'
   | 'followers' | 'following' | 'wallet';
 
+// 糖果马卡龙配色：color 做图标 / bg 做柔底
 const QUICK = [
-  { key: 'myDesigns', label: '作品', icon: 'grid' as const, color: '#5B5FFF', bg: '#EEF0FF' },
-  { key: 'myDrafts', label: '草稿', icon: 'edit-3' as const, color: '#F97316', bg: '#FFF4EC' },
-  { key: 'myFavorites', label: '收藏', icon: 'bookmark' as const, color: '#FBBF24', bg: '#FFF9E6' },
-  { key: 'myLikes', label: '点赞', icon: 'heart' as const, color: '#EF4444', bg: '#FFECEC' },
+  { key: 'myDesigns',   label: '作品', icon: 'grid' as const,     color: '#FF8FB1', bg: '#FFE8F0' },
+  { key: 'myDrafts',    label: '草稿', icon: 'edit-3' as const,   color: '#FFB894', bg: '#FFF1E4' },
+  { key: 'myFavorites', label: '收藏', icon: 'bookmark' as const, color: '#FFC870', bg: '#FFF6E0' },
+  { key: 'myLikes',     label: '点赞', icon: 'heart' as const,    color: '#FF7A95', bg: '#FFE5EC' },
 ];
 
 const MENU_CONTENT = [
-  { key: 'wallet', label: '拼豆币钱包', icon: 'dollar-sign' as const, desc: '充值·余额·交易记录', iconColor: '#F59E0B', iconBg: '#FFF9E6' },
-  { key: 'myFeeds', label: '我的动态', icon: 'message-circle' as const, desc: '查看已发布的动态', iconColor: '#8B5CF6', iconBg: '#F3EEFF' },
-  { key: 'purchased', label: '已购图纸', icon: 'shopping-bag' as const, desc: '已购买的图纸资源', iconColor: '#0EA5E9', iconBg: '#E8F7FE' },
+  { key: 'wallet',    label: '拼豆币钱包', icon: 'dollar-sign' as const,    desc: '充值·余额·交易记录', iconColor: '#FFB740', iconBg: '#FFF3D1' },
+  { key: 'myFeeds',   label: '我的动态',   icon: 'message-circle' as const, desc: '查看已发布的动态',   iconColor: '#B67CFF', iconBg: '#F1E5FF' },
+  { key: 'purchased', label: '已购图纸',   icon: 'shopping-bag' as const,   desc: '已购买的图纸资源',   iconColor: '#6ED39F', iconBg: '#E1F5EA' },
 ];
 
 const MENU_OTHER = [
-  { key: 'settings', label: '设置', icon: 'settings' as const, iconColor: '#6B7280', iconBg: '#F3F4F6' },
-  { key: 'about', label: '关于 BeadForge', icon: 'info' as const, iconColor: '#6B7280', iconBg: '#F3F4F6' },
+  { key: 'settings', label: '设置',        icon: 'settings' as const, iconColor: '#7A6C7A', iconBg: '#F4EFF2' },
+  { key: 'about',    label: '关于 BeadForge', icon: 'info' as const,  iconColor: '#7A6C7A', iconBg: '#F4EFF2' },
 ];
 
 /** 数字格式化：1200 → 1.2k */
@@ -113,11 +114,11 @@ export const ProfileScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
         }
       >
-        {/* ═══ 顶部渐变 ═══ */}
+        {/* ═══ 顶部糖果渐变（粉 → 桃 → 紫薰衣草） ═══ */}
         <LinearGradient
           colors={dark
-            ? ['#2D2B55', '#1E1B3A', '#151326']
-            : [colors.accent, '#7C6FFF', '#C084FC']}
+            ? ['#3D1F32', '#2A1A28', '#1A1220']
+            : ['#FF8FB1', '#FFB894', '#D4B8FF']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={$.header}
         >
@@ -333,16 +334,17 @@ const $ = StyleSheet.create({
   /* ── 快捷入口 ── */
   quickCard: {
     flexDirection: 'row', justifyContent: 'space-around',
-    marginHorizontal: PAD, marginTop: -wp(8),
+    marginHorizontal: PAD, marginTop: -wp(12),
     paddingVertical: wp(18),
-    borderRadius: wp(16),
+    borderRadius: wp(24),
+    ...shadow(4, 14, 0.12, '#FF8FB1', 4),
   },
   quickItem: { alignItems: 'center', width: (screenW - PAD * 2) / 4 },
   quickIcon: {
-    width: wp(46), height: wp(46), borderRadius: wp(15),
+    width: wp(48), height: wp(48), borderRadius: wp(24),
     justifyContent: 'center', alignItems: 'center',
   },
-  quickLabel: { fontSize: fp(11), fontWeight: '500', marginTop: wp(7) },
+  quickLabel: { fontSize: fp(11), fontWeight: '600', marginTop: wp(7) },
 
   /* ── 分区 ── */
   sectionRow: {
@@ -356,7 +358,8 @@ const $ = StyleSheet.create({
   /* ── 菜单 ── */
   menuCard: {
     marginHorizontal: PAD,
-    borderRadius: wp(14), overflow: 'hidden',
+    borderRadius: wp(20), overflow: 'hidden',
+    ...shadow(2, 8, 0.06, '#FF8FB1', 1),
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
