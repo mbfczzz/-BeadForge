@@ -50,7 +50,15 @@
       "Bash(git commit *)",
       "Bash(npx --yes vue-tsc --noEmit)",
       "Bash(npx vue-tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git push *)",
+      "Bash(gh run *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(kill 1884)",
+      "Bash(git reset *)",
+      "Bash(npm ls *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(npm uninstall *)"
     ]
   }
 }
