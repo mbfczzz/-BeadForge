@@ -1,4 +1,6 @@
 export { Avatar } from './Avatar';
+export { BeadBuddy } from './BeadBuddy';
+export type { BuddyMood } from './BeadBuddy';
 export { Button } from './Button';
 export { Input } from './Input';
 export { StateView } from './StateView';
@@ -6,6 +8,7 @@ export { BeadGrid, ALL_PATTERNS } from './BeadGrid';
 export { PressableScale } from './PressableScale';
 export { HoverView } from './HoverView';
 export { Skeleton, CardSkeleton } from './Skeleton';
+export { Toast } from './Toast';
 export { DanmakuOverlay } from './Danmaku';
 export { DanmakuInput } from './DanmakuInput';
 export type { DanmakuItem, DanmakuConfig } from './Danmaku';
