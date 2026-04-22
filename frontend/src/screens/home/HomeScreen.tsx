@@ -30,11 +30,12 @@ const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','�
 const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel','festival','figure','building','game','chinese'];
 const CAT_FOLD_LIMIT = 10;
 
+// 糖果马卡龙 banner 配色
 const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#4b78ff', sort: 'hot', cat: '' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#d6b161', sort: 'popular', cat: 'animal' },
-  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#549da5', sort: 'popular', cat: 'pixel' },
-  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#bf60fe', sort: 'latest', cat: 'flower' },
+  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#FF8FB1', sort: 'hot', cat: '' },
+  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#FFB894', sort: 'popular', cat: 'animal' },
+  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#A8D8B9', sort: 'popular', cat: 'pixel' },
+  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#D4B8FF', sort: 'latest', cat: 'flower' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -95,12 +96,14 @@ export const HomeScreen: React.FC = () => {
       {/* 导航栏 */}
       <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
         <View style={$.brandRow}>
-          <View style={[$.brandDot, { backgroundColor: colors.accent }]}>
+          <View style={[$.brandDot, { backgroundColor: colors.accent }, shadow(3, 10, 0.25, colors.accent, 4)]}>
             <Text style={$.brandEmoji}>🧩</Text>
           </View>
           <View>
             <Text style={[$.brandName, { color: colors.text }]}>
-              B<Text style={{ color: colors.accent }}>ead</Text>Forge
+              B<Text style={{ color: colors.accent }}>ead</Text>
+              <Text style={{ color: colors.candy.mango }}>Forge</Text>
+              <Text style={{ fontSize: fp(12) }}> ✨</Text>
             </Text>
             <Text style={[$.brandSub, { color: colors.textHint }]}>拼出你的创意世界</Text>
           </View>
@@ -133,7 +136,7 @@ export const HomeScreen: React.FC = () => {
           onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + wp(10))))}
           contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) }}>
           {BANNERS.map((b) => (
-            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} onPress={() => { setFilter(b.sort, b.cat || null); }} style={[$.banner, { width: BW, backgroundColor: b.bg }]}>
+            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} onPress={() => { setFilter(b.sort, b.cat || null); }} style={[$.banner, { width: BW, backgroundColor: b.bg }, shadow(4, 14, 0.28, b.bg, 5)]}>
               <View style={$.bannerInner}>
                 <Text style={$.bannerT}>{b.title}</Text>
                 <Text style={$.bannerS}>{b.sub}</Text>
@@ -155,7 +158,7 @@ export const HomeScreen: React.FC = () => {
             return (
               <HoverView key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)}
                 hoverScale={1.05} hoverLift={1}
-                style={[$.cat, { backgroundColor: on ? colors.text : colors.surface, borderColor: on ? colors.text : colors.border }]}>
+                style={[$.cat, { backgroundColor: on ? colors.accent : colors.surface, borderColor: on ? colors.accent : colors.border }]}>
                 <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary }]}>{name}</Text>
               </HoverView>
             );
@@ -269,35 +272,35 @@ const $ = StyleSheet.create({
   },
   brandRow: { flexDirection: 'row', alignItems: 'center' },
   brandDot: {
-    width: wp(30), height: wp(30), borderRadius: wp(9),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(8),
+    width: wp(34), height: wp(34), borderRadius: wp(17),
+    justifyContent: 'center', alignItems: 'center', marginRight: wp(10),
   },
-  brandEmoji: { fontSize: fp(15) },
-  brandName: { fontSize: fp(17), fontWeight: '900', letterSpacing: 0.5 },
+  brandEmoji: { fontSize: fp(16) },
+  brandName: { fontSize: fp(18), fontWeight: '900', letterSpacing: 0.5 },
   brandSub: { fontSize: fp(9), marginTop: wp(1), letterSpacing: 0.3 },
   navBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
   },
 
-  // 搜索 - 1px边框，小圆角
+  // 搜索 - 胶囊 + 糖果阴影
   search: {
     flexDirection: 'row', alignItems: 'center',
-    height: wp(40), borderRadius: BorderRadius.md, paddingHorizontal: wp(12),
+    height: wp(44), borderRadius: BorderRadius.bubble, paddingHorizontal: wp(16),
     borderWidth: 1,
   },
   searchInput: { flex: 1, fontSize: FontSize.md, padding: 0 },
 
-  // Banner - 小圆角10px
+  // Banner - 大圆角气泡
   banner: {
-    height: wp(120), borderRadius: BorderRadius.lg, overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(20),
+    height: wp(130), borderRadius: BorderRadius.xxl, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(22),
   },
   bannerInner: { flex: 1, zIndex: 1 },
-  bannerT: { fontSize: fp(20), fontWeight: '700', color: '#fff' },
-  bannerS: { fontSize: fp(12), color: 'rgba(255,255,255,0.8)', marginTop: wp(5) },
+  bannerT: { fontSize: fp(21), fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
+  bannerS: { fontSize: fp(12), color: 'rgba(255,255,255,0.85)', marginTop: wp(5) },
   bannerArt: {
-    backgroundColor: 'rgba(255,255,255,0.15)', padding: wp(10), borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.22)', padding: wp(10), borderRadius: BorderRadius.lg,
   },
 
   // 指示器
@@ -305,14 +308,14 @@ const $ = StyleSheet.create({
   dot: { width: wp(5), height: wp(5), borderRadius: wp(3), transition: 'all 0.3s' } as any,
   dotOn: { width: wp(15) },
 
-  // 分类 - 1px 边框圆角药丸
+  // 分类 - 胶囊
   catWrap: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8),
   },
-  cat: { paddingHorizontal: wp(15), paddingVertical: wp(6), borderRadius: BorderRadius.full, borderWidth: 1 },
+  cat: { paddingHorizontal: wp(15), paddingVertical: wp(7), borderRadius: BorderRadius.full, borderWidth: 1 },
   catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' },
-  catT: { fontSize: FontSize.sm, fontWeight: '500' },
+  catT: { fontSize: FontSize.sm, fontWeight: '600' },
 
   // 标题
   secRow: {
@@ -326,10 +329,11 @@ const $ = StyleSheet.create({
   grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
   col: { flex: 1, gap: GAP },
 
-  // 卡片
+  // 卡片 - 糖果气泡：大圆角 + 粉阴影
   card: {
-    borderRadius: BorderRadius.lg, overflow: 'hidden',
+    borderRadius: BorderRadius.xl, overflow: 'hidden',
     borderWidth: 1,
+    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
   },
   cardCover: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   cardBody: { padding: wp(10) },
@@ -341,12 +345,12 @@ const $ = StyleSheet.create({
 
   endT: { textAlign: 'center', fontSize: FontSize.xs, paddingVertical: wp(20), letterSpacing: wp(1) },
 
-  // FAB - 圆形 + 边框
+  // FAB - 糖果圆气泡
   fab: { position: 'absolute', right: wp(15) },
   fabBtn: {
-    width: wp(40), height: wp(40), borderRadius: wp(20),
+    width: wp(44), height: wp(44), borderRadius: wp(22),
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1,
-    ...shadow(2, 6, 0.1, '#000', 3),
+    ...shadow(3, 12, 0.2, '#FF8FB1', 4),
   },
 });
