@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { MotiView } from 'moti';
+import React, { useEffect, useRef } from 'react';
+import { Animated, View, Text, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -17,9 +16,10 @@ const Tab = createBottomTabNavigator();
 
 /**
  * 糖果风底 Tab — 每个 tab 选中时：
- *  - 图标放大 bounce + 上浮
- *  - pill 背景做 morph（宽度动画）
- *  - 中间创作按钮选中时有额外弹跳
+ *  - 图标放大 bounce + 上浮（spring）
+ *  - pill 背景 scaleX + opacity morph
+ *  - 中间创作按钮选中时额外弹跳
+ * 全部用 RN 内置 Animated（Expo Go 任何版本都兼容）
  */
 
 // 糖果化配色（非冷调）
@@ -34,6 +34,96 @@ const TABS: { name: string; label: string; icon: string; color: string; center?:
 const SCREENS: Record<string, React.ComponentType<any>> = {
   Home: HomeScreen, Market: MarketScreen, Create: CreateScreen,
   Publish: PublishScreen, Profile: ProfileScreen,
+};
+
+const SPRING_OPTS = { useNativeDriver: true, damping: 14, mass: 0.7, stiffness: 220 };
+
+/** 普通 tab 的动画容器：on 变化时弹簧图标 + pill */
+const TabItem: React.FC<{
+  on: boolean;
+  color: string;
+  icon: string;
+  label: string;
+  tintColor: string;
+  onPress: () => void;
+}> = ({ on, color, icon, label, tintColor, onPress }) => {
+  const iconScale = useRef(new Animated.Value(on ? 1.15 : 1)).current;
+  const iconTY = useRef(new Animated.Value(on ? -2 : 0)).current;
+  const pillScaleX = useRef(new Animated.Value(on ? 1 : 0.5)).current;
+  const pillOpacity = useRef(new Animated.Value(on ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(iconScale, { ...SPRING_OPTS, toValue: on ? 1.15 : 1, stiffness: 260, damping: 10 }),
+      Animated.spring(iconTY, { ...SPRING_OPTS, toValue: on ? -2 : 0, stiffness: 260, damping: 10 }),
+      Animated.spring(pillScaleX, { ...SPRING_OPTS, toValue: on ? 1 : 0.5, stiffness: 200 }),
+      Animated.spring(pillOpacity, { ...SPRING_OPTS, toValue: on ? 1 : 0, stiffness: 200 }),
+    ]).start();
+  }, [on, iconScale, iconTY, pillScaleX, pillOpacity]);
+
+  return (
+    <Pressable onPress={onPress} style={$.tab}>
+      <View style={$.pillCenter} pointerEvents="none">
+        <Animated.View
+          style={[
+            $.activePill,
+            { backgroundColor: color + '26', opacity: pillOpacity, transform: [{ scaleX: pillScaleX }] },
+          ]}
+        />
+      </View>
+      <Animated.View style={{ transform: [{ scale: iconScale }, { translateY: iconTY }] }}>
+        <Feather name={icon as any} size={wp(21)} color={tintColor} />
+      </Animated.View>
+      <Text style={[$.label, { color: tintColor, fontWeight: on ? '700' : '500' }]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
+
+/** 中间创作按钮 */
+const CenterItem: React.FC<{
+  on: boolean;
+  color: string;
+  label: string;
+  tintColor: string;
+  dark: boolean;
+  surface: string;
+  onPress: () => void;
+}> = ({ on, color, label, tintColor, dark, surface, onPress }) => {
+  const outerScale = useRef(new Animated.Value(on ? 1.08 : 1)).current;
+  const innerScale = useRef(new Animated.Value(on ? 1 : 0.95)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(outerScale, { ...SPRING_OPTS, toValue: on ? 1.08 : 1, stiffness: 180, damping: 12 }),
+      Animated.spring(innerScale, { ...SPRING_OPTS, toValue: on ? 1 : 0.95, damping: 10 }),
+    ]).start();
+  }, [on, outerScale, innerScale]);
+
+  return (
+    <Pressable onPress={onPress} style={$.centerWrap}>
+      <Animated.View
+        style={[
+          $.centerOuter,
+          { backgroundColor: surface, borderColor: dark ? '#3A2A44' : '#FFEDE2', transform: [{ scale: outerScale }] },
+        ]}
+      >
+        <Animated.View
+          style={[
+            $.centerInner,
+            { backgroundColor: color, transform: [{ scale: innerScale }] },
+            candyShadow(color, 'md'),
+          ]}
+        >
+          <Feather name="plus" size={wp(22)} color="#fff" />
+        </Animated.View>
+      </Animated.View>
+      <Text style={[$.centerLabel, { color: tintColor, fontWeight: on ? '700' : '500' }]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 };
 
 function CustomTabBar({ state, navigation }: any) {
@@ -59,68 +149,28 @@ function CustomTabBar({ state, navigation }: any) {
 
         if (tab.center) {
           return (
-            <Pressable key={route.key} onPress={go} style={$.centerWrap}>
-              <MotiView
-                from={{ scale: 1 }}
-                animate={{ scale: on ? 1.08 : 1 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 180 }}
-                style={[
-                  $.centerOuter,
-                  { backgroundColor: colors.surface, borderColor: dark ? '#3A2A44' : '#FFEDE2' },
-                ]}
-              >
-                <MotiView
-                  animate={{ scale: on ? 1 : 0.95 }}
-                  transition={{ type: 'spring', damping: 10 }}
-                  style={[
-                    $.centerInner,
-                    { backgroundColor: tab.color },
-                    candyShadow(tab.color, 'md'),
-                  ]}
-                >
-                  <Feather name="plus" size={wp(22)} color="#fff" />
-                </MotiView>
-              </MotiView>
-              <Text style={[$.centerLabel, { color: on ? tab.color : colors.textHint, fontWeight: on ? '700' : '500' }]}>
-                {tab.label}
-              </Text>
-            </Pressable>
+            <CenterItem
+              key={route.key}
+              on={on}
+              color={tab.color}
+              label={tab.label}
+              tintColor={tintColor}
+              dark={dark}
+              surface={colors.surface}
+              onPress={go}
+            />
           );
         }
-
         return (
-          <Pressable key={route.key} onPress={go} style={$.tab}>
-            {/* pill 居中容器（absolute 撑满 tab） */}
-            <View style={$.pillCenter} pointerEvents="none">
-              <MotiView
-                from={{ opacity: 0, scaleX: 0.5 }}
-                animate={{
-                  opacity: on ? 1 : 0,
-                  scaleX: on ? 1 : 0.5,
-                }}
-                transition={{ type: 'spring', damping: 14, stiffness: 200 }}
-                style={[$.activePill, { backgroundColor: tab.color + '26' }]}
-              />
-            </View>
-            <MotiView
-              from={{ scale: 1, translateY: 0 }}
-              animate={{
-                scale: on ? 1.15 : 1,
-                translateY: on ? -2 : 0,
-              }}
-              transition={{ type: 'spring', damping: 10, stiffness: 260 }}
-            >
-              <Feather name={tab.icon as any} size={wp(21)} color={tintColor} />
-            </MotiView>
-            <Text
-              style={[
-                $.label,
-                { color: tintColor, fontWeight: on ? '700' : '500' },
-              ]}
-            >
-              {tab.label}
-            </Text>
-          </Pressable>
+          <TabItem
+            key={route.key}
+            on={on}
+            color={tab.color}
+            icon={tab.icon}
+            label={tab.label}
+            tintColor={tintColor}
+            onPress={go}
+          />
         );
       })}
     </View>

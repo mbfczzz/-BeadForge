@@ -1,6 +1,5 @@
-import React, { useCallback } from 'react';
-import { Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform } from 'react-native';
-import { MotiView } from 'moti';
+import React, { useCallback, useRef } from 'react';
+import { Animated, Pressable, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform } from 'react-native';
 import { useTheme, candyShadow } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
 
@@ -15,15 +14,18 @@ interface Props {
 
 /**
  * 糖果马卡龙风 Button。
- * - primary/danger 用糖果阴影（粉/红色光晕），按下有弹簧 bounce
- * - outline 卡片式，按下微弹
- * - text 纯文本链接
+ * 按下：scale → 0.94 + translateY +1（spring）
+ * 松开：回弹到 1 / 0（spring）
+ * 用 RN 内置 Animated，不依赖 reanimated/moti（Expo Go 全兼容）
  */
 export const Button: React.FC<Props> = ({
   title, onPress, loading = false, disabled = false, variant = 'primary', style,
 }) => {
   const { colors } = useTheme();
-  const [pressed, setPressed] = React.useState(false);
+
+  // 两个 Animated.Value 驱动 scale + translateY
+  const scale = useRef(new Animated.Value(1)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
 
   const isPrimary = variant === 'primary';
   const isDanger = variant === 'danger';
@@ -34,8 +36,13 @@ export const Button: React.FC<Props> = ({
   const textColor = isPrimary || isDanger ? '#FFF' : isOutline ? colors.text : colors.accent;
   const shadowColor = isPrimary ? colors.accent : isDanger ? colors.error : colors.accent;
 
-  const onPressIn = useCallback(() => setPressed(true), []);
-  const onPressOut = useCallback(() => setPressed(false), []);
+  const springTo = useCallback((s: number, y: number) => {
+    Animated.spring(scale, { toValue: s, useNativeDriver: true, damping: 14, mass: 0.6, stiffness: 260 }).start();
+    Animated.spring(translateY, { toValue: y, useNativeDriver: true, damping: 14, mass: 0.6, stiffness: 260 }).start();
+  }, [scale, translateY]);
+
+  const onPressIn = useCallback(() => springTo(0.94, 1), [springTo]);
+  const onPressOut = useCallback(() => springTo(1, 0), [springTo]);
 
   return (
     <Pressable
@@ -45,20 +52,10 @@ export const Button: React.FC<Props> = ({
       disabled={disabled || loading}
       style={isText ? undefined : S.pressableWrap}
     >
-      <MotiView
-        animate={{
-          scale: pressed ? 0.94 : 1,
-          translateY: pressed ? 1 : 0,
-        }}
-        transition={{
-          type: 'spring',
-          damping: 14,
-          mass: 0.6,
-          stiffness: 260,
-        }}
+      <Animated.View
         style={[
           S.base,
-          { backgroundColor: bg },
+          { backgroundColor: bg, transform: [{ scale }, { translateY }] },
           (isPrimary || isDanger) && candyShadow(shadowColor, 'md'),
           isOutline && { borderWidth: 1, borderColor: colors.border, ...candyShadow(colors.accent, 'xs') },
           isText && S.textOnly,
@@ -72,7 +69,7 @@ export const Button: React.FC<Props> = ({
         ) : (
           <Text style={[S.label, { color: textColor }]}>{title}</Text>
         )}
-      </MotiView>
+      </Animated.View>
     </Pressable>
   );
 };
@@ -81,7 +78,7 @@ const S = StyleSheet.create({
   pressableWrap: { alignSelf: 'stretch' },
   base: {
     height: wp(48),
-    borderRadius: wp(24), // 更肥的胶囊感
+    borderRadius: wp(24),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: wp(24),

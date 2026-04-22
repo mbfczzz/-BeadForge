@@ -1,6 +1,5 @@
-import React from 'react';
-import { Text, StyleSheet } from 'react-native';
-import { MotiView } from 'moti';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Text, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, candyShadow } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
@@ -19,12 +18,24 @@ const ICON: Record<NonNullable<Props['variant']>, keyof typeof Feather.glyphMap>
 
 /**
  * 糖果风 Toast。
- * 进场：spring 弹性滑入 + 放大（from → animate）。
- * 无出场动画（需要 AnimatePresence 才会生效，大多数调用方不用）。
- * 使用方式：条件渲染 `{message && <Toast message={...} />}`。
+ * 进场：从下方 +30 滑入 + opacity 0→1 + scale 0.85→1（并行 spring）
+ * 使用方式：条件渲染 `{message && <Toast message={...} />}`，每次挂载播放进场
  */
 export const Toast: React.FC<Props> = ({ message, variant = 'success' }) => {
   const { colors } = useTheme();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(30)).current;
+  const scale = useRef(new Animated.Value(0.85)).current;
+
+  useEffect(() => {
+    if (!message) return;
+    Animated.parallel([
+      Animated.spring(opacity, { toValue: 1, useNativeDriver: true, damping: 14, mass: 0.7, stiffness: 220 }),
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, damping: 14, mass: 0.7, stiffness: 220 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true, damping: 14, mass: 0.7, stiffness: 220 }),
+    ]).start();
+  }, [message, opacity, translateY, scale]);
+
   if (!message) return null;
 
   const tint = variant === 'success' ? colors.success
@@ -33,20 +44,17 @@ export const Toast: React.FC<Props> = ({ message, variant = 'success' }) => {
              : colors.accent;
 
   return (
-    <MotiView
+    <Animated.View
       pointerEvents="none"
-      from={{ opacity: 0, translateY: 30, scale: 0.85 }}
-      animate={{ opacity: 1, translateY: 0, scale: 1 }}
-      transition={{ type: 'spring', damping: 14, mass: 0.7, stiffness: 220 }}
-      style={$.wrap}
+      style={[$.wrap, { opacity, transform: [{ translateY }, { scale }] }]}
     >
-      <MotiView
+      <Animated.View
         style={[$.box, { backgroundColor: colors.surface, borderColor: tint + '40' }, candyShadow(tint, 'md')]}
       >
         <Feather name={ICON[variant]} size={fp(16)} color={tint} />
         <Text style={[$.text, { color: colors.text }]} numberOfLines={2}>{message}</Text>
-      </MotiView>
-    </MotiView>
+      </Animated.View>
+    </Animated.View>
   );
 };
 
