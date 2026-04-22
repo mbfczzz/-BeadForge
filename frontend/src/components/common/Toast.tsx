@@ -19,8 +19,9 @@ const ICON: Record<NonNullable<Props['variant']>, keyof typeof Feather.glyphMap>
 
 /**
  * 糖果风 Toast。
- * 进场：从下滑入 + 弹性放大；出场：淡出下滑。
- * 使用方式：条件渲染 `{message && <Toast message={...} />}`，卸载时自动播放出场。
+ * 进场：spring 弹性滑入 + 放大（from → animate）。
+ * 无出场动画（需要 AnimatePresence 才会生效，大多数调用方不用）。
+ * 使用方式：条件渲染 `{message && <Toast message={...} />}`。
  */
 export const Toast: React.FC<Props> = ({ message, variant = 'success' }) => {
   const { colors } = useTheme();

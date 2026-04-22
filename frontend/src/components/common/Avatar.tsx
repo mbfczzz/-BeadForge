@@ -37,6 +37,7 @@ const AvatarImpl: React.FC<Props> = ({ uri, name, size = 40, ring, ringWidth }) 
 
   if (!ringColor) return avatarNode;
 
+  // 结构：ring 色外圆 + padding(rw) 让出给头像；精确 ring 宽度 = rw
   return (
     <View
       style={{
@@ -44,22 +45,10 @@ const AvatarImpl: React.FC<Props> = ({ uri, name, size = 40, ring, ringWidth }) 
         height: totalSize,
         borderRadius: totalSize / 2,
         backgroundColor: ringColor,
-        alignItems: 'center',
-        justifyContent: 'center',
+        padding: rw,
       }}
     >
-      <View
-        style={{
-          width: size + rw / 2,
-          height: size + rw / 2,
-          borderRadius: (size + rw / 2) / 2,
-          backgroundColor: '#fff',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {avatarNode}
-      </View>
+      {avatarNode}
     </View>
   );
 };

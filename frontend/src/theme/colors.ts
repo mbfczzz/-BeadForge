@@ -142,7 +142,8 @@ export const Colors = LightTheme;
 
 /** 按 key 稳定取糖果色（用于 Avatar 背景、标签色彩分配等） */
 export function candyColorFor(seed: string | number, palette: typeof CandyPaletteLight = CandyPaletteLight): string {
-  const keys: (keyof typeof palette)[] = ['pink', 'peach', 'mint', 'cream', 'lavender', 'sky', 'sunshine', 'mango', 'grape'];
+  // 覆盖所有 10 个色板 key，让分配更均匀
+  const keys: (keyof typeof palette)[] = ['pink', 'peach', 'mint', 'cream', 'lavender', 'sky', 'bubblegum', 'sunshine', 'mango', 'grape'];
   const s = typeof seed === 'number' ? seed : Array.from(seed).reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return palette[keys[Math.abs(s) % keys.length]];
 }

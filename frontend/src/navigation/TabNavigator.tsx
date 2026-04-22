@@ -61,7 +61,8 @@ function CustomTabBar({ state, navigation }: any) {
           return (
             <Pressable key={route.key} onPress={go} style={$.centerWrap}>
               <MotiView
-                animate={{ scale: on ? 1.08 : 1, rotate: on ? '0deg' : '0deg' }}
+                from={{ scale: 1 }}
+                animate={{ scale: on ? 1.08 : 1 }}
                 transition={{ type: 'spring', damping: 12, stiffness: 180 }}
                 style={[
                   $.centerOuter,
@@ -89,17 +90,20 @@ function CustomTabBar({ state, navigation }: any) {
 
         return (
           <Pressable key={route.key} onPress={go} style={$.tab}>
-            {/* morph pill */}
+            {/* pill 居中容器（absolute 撑满 tab） */}
+            <View style={$.pillCenter} pointerEvents="none">
+              <MotiView
+                from={{ opacity: 0, scaleX: 0.5 }}
+                animate={{
+                  opacity: on ? 1 : 0,
+                  scaleX: on ? 1 : 0.5,
+                }}
+                transition={{ type: 'spring', damping: 14, stiffness: 200 }}
+                style={[$.activePill, { backgroundColor: tab.color + '26' }]}
+              />
+            </View>
             <MotiView
-              animate={{
-                opacity: on ? 1 : 0,
-                scale: on ? 1 : 0.6,
-                width: on ? wp(44) : wp(28),
-              }}
-              transition={{ type: 'spring', damping: 14, stiffness: 200 }}
-              style={[$.activePill, { backgroundColor: tab.color + '26' }]}
-            />
-            <MotiView
+              from={{ scale: 1, translateY: 0 }}
               animate={{
                 scale: on ? 1.15 : 1,
                 translateY: on ? -2 : 0,
@@ -141,9 +145,12 @@ const $ = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingVertical: wp(6),
   },
-  activePill: {
+  pillCenter: {
     position: 'absolute', top: wp(2),
-    height: wp(30), borderRadius: wp(15),
+    left: 0, right: 0, alignItems: 'center',
+  },
+  activePill: {
+    width: wp(44), height: wp(30), borderRadius: wp(15),
   },
   label: {
     fontSize: fp(10), marginTop: wp(3), letterSpacing: 0.3,

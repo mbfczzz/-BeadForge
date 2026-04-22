@@ -37,7 +37,6 @@ export const BeadBuddy: React.FC<Props> = ({
   mood = 'happy',
   style,
 }) => {
-  const half = size / 2;
   // 稍偏暖的颜色做阴影
   const shadowColor = darken(color, 0.25);
 

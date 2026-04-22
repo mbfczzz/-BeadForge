@@ -183,7 +183,8 @@ export const ProfileScreen: React.FC = () => {
           backgroundColor: colors.surface,
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
-          ...shadow(3, 12, dark ? 0 : 0.1),
+          // 暗模式下不要糖果粉阴影（会被背景吞掉），改用无阴影
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(4, 14, 0.12, '#FF8FB1', 4)),
         }]}>
           {QUICK.map((q, idx) => (
             <TouchableOpacity key={q.key} activeOpacity={0.6} onPress={() => nav(q.key)} style={$.quickItem}>
@@ -203,7 +204,7 @@ export const ProfileScreen: React.FC = () => {
           backgroundColor: colors.surface,
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
-          ...shadow(1, 4, dark ? 0 : 0.04),
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#FF8FB1', 1)),
         }]}>
           {MENU_CONTENT.map((m, idx) => (
             <TouchableOpacity
@@ -230,7 +231,7 @@ export const ProfileScreen: React.FC = () => {
           backgroundColor: colors.surface,
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
-          ...shadow(1, 4, dark ? 0 : 0.04),
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#FF8FB1', 1)),
         }]}>
           {MENU_OTHER.map((m, idx) => (
             <TouchableOpacity
@@ -337,7 +338,7 @@ const $ = StyleSheet.create({
     marginHorizontal: PAD, marginTop: -wp(12),
     paddingVertical: wp(18),
     borderRadius: wp(24),
-    ...shadow(4, 14, 0.12, '#FF8FB1', 4),
+    // 注：阴影不在这里加，在 JSX 里按 dark/light 分支加，避免被 inline style 覆盖
   },
   quickItem: { alignItems: 'center', width: (screenW - PAD * 2) / 4 },
   quickIcon: {
@@ -359,7 +360,7 @@ const $ = StyleSheet.create({
   menuCard: {
     marginHorizontal: PAD,
     borderRadius: wp(20), overflow: 'hidden',
-    ...shadow(2, 8, 0.06, '#FF8FB1', 1),
+    // 注：阴影在 JSX 按 dark 分支加
   },
   menuItem: {
     flexDirection: 'row', alignItems: 'center',
