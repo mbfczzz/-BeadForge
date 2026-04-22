@@ -1,6 +1,6 @@
 import { wp, fp } from '../utils/responsive';
 
-/** moely 风格间距 - 紧凑但不拥挤 */
+/** 间距 — 紧凑不拥挤 */
 export const Spacing = {
   xs: wp(5),
   sm: wp(10),
@@ -10,7 +10,7 @@ export const Spacing = {
   xxl: wp(50),
 };
 
-/** moely 字体尺寸 - 12/13/14/15/18/20 */
+/** 字号 */
 export const FontSize = {
   xs: fp(12),
   sm: fp(13),
@@ -21,11 +21,13 @@ export const FontSize = {
   title: fp(18),
 };
 
-/** moely 圆角 - 柔和圆角风格 */
+/** 圆角 — 糖果马卡龙风更肥厚一点 */
 export const BorderRadius = {
-  sm: wp(6),
-  md: wp(10),
-  lg: wp(14),
-  xl: wp(18),
-  full: wp(50),
+  sm: wp(8),       // 原 6 → 8，略肥
+  md: wp(12),      // 原 10 → 12
+  lg: wp(18),      // 原 14 → 18
+  xl: wp(24),      // 原 18 → 24
+  xxl: wp(32),     // 新：大气泡卡片
+  bubble: wp(28),  // 新：胶囊/按钮
+  full: wp(9999),  // 真正的 pill
 };
