@@ -158,10 +158,10 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
           {/* 统计 */}
           <View style={[$.statsRow, { borderTopColor: colors.border }]}>
             {([
-              { label: '作品', value: user.posts, icon: 'view-grid-outline' as const, color: '#5B5FFF' },
-              { label: '粉丝', value: user.followers, icon: 'account-group-outline' as const, color: '#FF6B6B' },
-              { label: '关注', value: user.following, icon: 'account-heart-outline' as const, color: '#F5A623' },
-              { label: '获赞', value: user.likes, icon: 'heart-outline' as const, color: '#EF4444' },
+              { label: '作品', value: user.posts, icon: 'view-grid-outline' as const, color: colors.candy.bubblegum },
+              { label: '粉丝', value: user.followers, icon: 'account-group-outline' as const, color: colors.candy.mango },
+              { label: '关注', value: user.following, icon: 'account-heart-outline' as const, color: colors.candy.sunshine },
+              { label: '获赞', value: user.likes, icon: 'heart-outline' as const, color: colors.candy.grape },
             ] as const).map((s) => (
               <Pressable key={s.label} style={$.statItem} onPress={() => {
                 if (s.label === '粉丝' || s.label === '关注') Alert.alert(`${s.label}列表`, '即将上线~');
@@ -247,7 +247,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                       <PressableScale scale={0.97}
                         onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: patCols, rows: patRows })}
                       >
-                        <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
+                        <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(3, 10, 0.08, '#FF8FB1', 2) }]}>
                           <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#f8f8fa' }]}>
                             <BeadGrid pixels={pat} beadSize={bs} gap={1} round glossy />
                           </View>
@@ -350,8 +350,8 @@ const $ = StyleSheet.create({
   /* 用户卡片 */
   profileCard: {
     marginTop: -wp(40), marginHorizontal: PAD,
-    borderRadius: BorderRadius.xl, paddingHorizontal: wp(18), paddingBottom: wp(18),
-    ...shadow(2, 10, 0.08, '#000', 3),
+    borderRadius: BorderRadius.xxl, paddingHorizontal: wp(18), paddingBottom: wp(18),
+    ...shadow(4, 14, 0.12, '#FF8FB1', 4),
   },
   avatarWrap: { alignItems: 'center', marginTop: -wp(36) },
   avatarRing: {
@@ -372,7 +372,7 @@ const $ = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap',
     gap: wp(6), marginTop: wp(10),
   },
-  profileTag: { paddingHorizontal: wp(8), paddingVertical: wp(3), borderRadius: wp(4) },
+  profileTag: { paddingHorizontal: wp(10), paddingVertical: wp(4), borderRadius: wp(9999) },
   profileTagText: { fontSize: fp(11) },
 
   /* 统计 */
@@ -393,11 +393,11 @@ const $ = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: wp(10), marginTop: wp(16) },
   followBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: wp(5),
-    paddingVertical: wp(10), borderRadius: BorderRadius.md, borderWidth: 1,
+    paddingVertical: wp(12), borderRadius: wp(9999), borderWidth: 1,
   },
-  followBtnText: { fontSize: FontSize.sm, fontWeight: '600' },
+  followBtnText: { fontSize: FontSize.sm, fontWeight: '700' },
   msgBtn: {
-    width: wp(42), height: wp(42), borderRadius: BorderRadius.md, borderWidth: 1,
+    width: wp(46), height: wp(46), borderRadius: wp(23), borderWidth: 1,
     justifyContent: 'center', alignItems: 'center',
   },
 
@@ -419,7 +419,7 @@ const $ = StyleSheet.create({
   worksContainer: { paddingHorizontal: PAD, paddingTop: wp(10) },
   worksGrid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -wp(5) },
   workCol: { width: '50%', paddingHorizontal: wp(5), marginBottom: wp(10) },
-  workCard: { borderRadius: BorderRadius.lg, overflow: 'hidden' },
+  workCard: { borderRadius: BorderRadius.xl, overflow: 'hidden' },
   workPreview: { padding: wp(10), alignItems: 'center', justifyContent: 'center', height: wp(120) },
   workInfo: { paddingHorizontal: wp(10), paddingBottom: wp(10) },
   workTitle: { fontSize: FontSize.sm, fontWeight: '600' },
@@ -439,7 +439,7 @@ const $ = StyleSheet.create({
   feedStats: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
   feedStatText: { fontSize: fp(10), marginRight: wp(6) },
   feedThumb: {
-    width: wp(56), height: wp(56), borderRadius: BorderRadius.md,
+    width: wp(56), height: wp(56), borderRadius: wp(18),
     justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
   },
 

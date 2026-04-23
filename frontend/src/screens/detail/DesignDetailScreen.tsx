@@ -349,7 +349,7 @@ const $ = StyleSheet.create({
     position: 'absolute', top: wp(52), right: PAD,
     borderRadius: BorderRadius.md, borderWidth: 1,
     paddingVertical: wp(4), zIndex: 50, minWidth: wp(130),
-    ...shadow(4, 12, 0.12, '#000', 6),
+    ...shadow(4, 12, 0.18, '#FF8FB1', 6),
   },
   moreItem: {
     flexDirection: 'row', alignItems: 'center', gap: wp(10),
@@ -360,11 +360,11 @@ const $ = StyleSheet.create({
   // 预览
   previewWrap: {
     marginHorizontal: PAD, marginTop: wp(15),
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     paddingVertical: wp(25),
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
-    ...shadow(2, 8, 0.06, '#000', 2),
+    ...shadow(3, 10, 0.1, '#FF8FB1', 2),
   },
 
   // 弹幕控制
@@ -392,14 +392,14 @@ const $ = StyleSheet.create({
   authorRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: PAD, marginTop: wp(15),
-    padding: wp(12), borderRadius: BorderRadius.lg,
+    padding: wp(14), borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
   authorName: { fontSize: FontSize.lg, fontWeight: '600' },
   authorSub: { fontSize: FontSize.xs, marginTop: wp(2) },
   followBtn: {
-    paddingHorizontal: wp(16), paddingVertical: wp(7),
-    borderRadius: BorderRadius.full,
+    paddingHorizontal: wp(18), paddingVertical: wp(8),
+    borderRadius: wp(9999),
   },
   followText: { color: '#fff', fontSize: FontSize.sm, fontWeight: '600' },
 
@@ -407,7 +407,7 @@ const $ = StyleSheet.create({
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: PAD, marginTop: wp(12),
-    padding: wp(14), borderRadius: BorderRadius.lg,
+    padding: wp(14), borderRadius: BorderRadius.xl,
     borderWidth: 1,
   },
   statItem: { flex: 1, alignItems: 'center', gap: wp(4) },
@@ -418,7 +418,7 @@ const $ = StyleSheet.create({
   // 作品信息
   secTitle: { fontSize: FontSize.xl, fontWeight: '700', marginBottom: wp(10) },
   infoCard: {
-    borderRadius: BorderRadius.lg, borderWidth: 1,
+    borderRadius: BorderRadius.xl, borderWidth: 1,
     paddingHorizontal: wp(14), overflow: 'hidden',
   },
   infoRow: {
@@ -431,22 +431,22 @@ const $ = StyleSheet.create({
 
   // 配色
   paletteCard: {
-    borderRadius: BorderRadius.lg, borderWidth: 1,
+    borderRadius: BorderRadius.xl, borderWidth: 1,
     padding: wp(14), gap: wp(10),
   },
   paletteItem: {
     flexDirection: 'row', alignItems: 'center',
   },
   colorDot: {
-    width: wp(20), height: wp(20), borderRadius: wp(4),
-    ...shadow(0, 1, 0.1, '#000', 1),
+    width: wp(22), height: wp(22), borderRadius: wp(11),
+    ...shadow(0, 2, 0.12, '#FF8FB1', 1),
   },
   colorHex: { fontSize: FontSize.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginLeft: wp(10), width: wp(80) },
   colorCount: { fontSize: FontSize.sm, flex: 1, textAlign: 'right' },
 
   // 提示
   tipCard: {
-    borderRadius: BorderRadius.lg, borderWidth: 1,
+    borderRadius: BorderRadius.xl, borderWidth: 1,
     padding: wp(14), gap: wp(12),
   },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -454,7 +454,7 @@ const $ = StyleSheet.create({
 
   // 跨模块入口
   crossCard: {
-    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
+    borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden',
   },
   crossRow: {
     flexDirection: 'row', alignItems: 'center', gap: wp(10),
@@ -478,9 +478,9 @@ const $ = StyleSheet.create({
 
   makeBtn: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: wp(20), paddingVertical: wp(10),
-    borderRadius: BorderRadius.full, gap: wp(6),
-    ...shadow(2, 6, 0.15, '#4b78ff', 3),
+    paddingHorizontal: wp(22), paddingVertical: wp(12),
+    borderRadius: wp(9999), gap: wp(6),
+    ...shadow(3, 10, 0.22, '#FF8FB1', 4),
   },
   makeBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 });

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useTheme, FontSize, BorderRadius } from '../../theme';
+import { useTheme, FontSize, BorderRadius, candyShadow } from '../../theme';
 import { HoverView } from '../../components/common';
 import { Toast } from '../../components/common/Toast';
 import { useToast, hapticLight, hapticSuccess } from '../../hooks/useFeedback';
@@ -151,7 +151,7 @@ export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = (
         <Text style={$.totalPrice}>¥{totalPrice}</Text>
 
         <TouchableOpacity activeOpacity={0.8} onPress={handleBuy} disabled={buying}
-          style={[$.buyBtn, { backgroundColor: colors.accent, opacity: buying ? 0.6 : 1 }]}>
+          style={[$.buyBtn, { backgroundColor: colors.accent, opacity: buying ? 0.6 : 1 }, candyShadow(colors.accent, 'md')]}>
           <Text style={$.buyBtnText}>{buying ? '支付中...' : '立即购买'}</Text>
         </TouchableOpacity>
       </View>
@@ -169,16 +169,16 @@ const $ = StyleSheet.create({
 
   coverArea: { height: wp(220), justifyContent: 'center', alignItems: 'center' },
   iconBig: { width: wp(90), height: wp(90), borderRadius: wp(45), justifyContent: 'center', alignItems: 'center' },
-  tag: { position: 'absolute', top: wp(12), left: wp(12), paddingHorizontal: wp(10), paddingVertical: wp(4), borderRadius: wp(6) },
+  tag: { position: 'absolute', top: wp(12), left: wp(12), paddingHorizontal: wp(12), paddingVertical: wp(5), borderRadius: wp(9999) },
   tagText: { color: '#fff', fontSize: fp(12), fontWeight: '700' },
 
   priceSection: { paddingHorizontal: PAD, paddingVertical: wp(16) },
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  priceSymbol: { color: '#EF4444', fontSize: fp(16), fontWeight: '700' },
-  priceVal: { color: '#EF4444', fontSize: fp(28), fontWeight: '800', marginLeft: wp(2) },
+  priceSymbol: { color: '#FF6B95', fontSize: fp(16), fontWeight: '700' },
+  priceVal: { color: '#FF6B95', fontSize: fp(28), fontWeight: '800', marginLeft: wp(2) },
   priceOld: { fontSize: fp(14), textDecorationLine: 'line-through', marginLeft: wp(8) },
-  savedTag: { backgroundColor: '#FEF2F2', paddingHorizontal: wp(8), paddingVertical: wp(2), borderRadius: wp(4), marginLeft: wp(8) },
-  savedText: { color: '#EF4444', fontSize: fp(11), fontWeight: '600' },
+  savedTag: { backgroundColor: '#FFE5EC', paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999), marginLeft: wp(8) },
+  savedText: { color: '#FF6B95', fontSize: fp(11), fontWeight: '700' },
 
   productName: { fontSize: fp(18), fontWeight: '700', marginTop: wp(10) },
   productDesc: { fontSize: fp(13), marginTop: wp(6), lineHeight: fp(19) },
@@ -190,7 +190,7 @@ const $ = StyleSheet.create({
   specSection: { paddingHorizontal: PAD, paddingVertical: wp(14), marginTop: wp(8) },
   secTitle: { fontSize: fp(15), fontWeight: '700', marginBottom: wp(10) },
   specGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  specChip: { paddingHorizontal: wp(12), paddingVertical: wp(6), borderRadius: wp(8), marginRight: wp(8), marginBottom: wp(8) },
+  specChip: { paddingHorizontal: wp(14), paddingVertical: wp(7), borderRadius: wp(9999), marginRight: wp(8), marginBottom: wp(8) },
   specText: { fontSize: fp(12) },
 
   infoSection: { paddingHorizontal: PAD, paddingVertical: wp(14), marginTop: wp(8) },
@@ -205,9 +205,9 @@ const $ = StyleSheet.create({
     borderTopWidth: 1,
   },
   qtyRow: { flexDirection: 'row', alignItems: 'center' },
-  qtyBtn: { width: wp(30), height: wp(30), borderRadius: wp(15), borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
+  qtyBtn: { width: wp(32), height: wp(32), borderRadius: wp(16), borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   qtyNum: { fontSize: fp(15), fontWeight: '700', marginHorizontal: wp(12) },
-  totalPrice: { color: '#EF4444', fontSize: fp(18), fontWeight: '800', marginRight: wp(12) },
-  buyBtn: { paddingHorizontal: wp(22), paddingVertical: wp(11), borderRadius: wp(12) },
-  buyBtnText: { color: '#fff', fontSize: fp(15), fontWeight: '700' },
+  totalPrice: { color: '#FF6B95', fontSize: fp(18), fontWeight: '800', marginRight: wp(12) },
+  buyBtn: { paddingHorizontal: wp(24), paddingVertical: wp(12), borderRadius: wp(9999) },
+  buyBtnText: { color: '#fff', fontSize: fp(15), fontWeight: '800', letterSpacing: 1 },
 });

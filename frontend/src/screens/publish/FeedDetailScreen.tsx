@@ -166,7 +166,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
       {/* 更多菜单 */}
       {showMore && (
         <Pressable style={$.menuOverlay} onPress={() => setShowMore(false)}>
-          <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(2, 12, 0.12, '#000', 6) }]}>
+          <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(4, 14, 0.18, '#FF8FB1', 6) }]}>
             {[
               { icon: 'link-variant' as const, label: '复制链接', action: () => {} },
               { icon: 'flag-outline' as const, label: '举报内容', action: () => Alert.alert('举报', '感谢反馈，我们会尽快处理', [{ text: '好的' }]) },
@@ -270,30 +270,30 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               </View>
             </View>
 
-            {/* 互动按钮 */}
+            {/* 互动按钮 — 糖果马卡龙配色 */}
             <View style={$.actionBar}>
-              <HoverView onPress={handleLike} style={[$.actionChip, { backgroundColor: liked ? '#FEE2E2' : dark ? '#2a2226' : '#faf5f5' }]} hoverScale={1.04} hoverLift={0}>
+              <HoverView onPress={handleLike} style={[$.actionChip, { backgroundColor: liked ? colors.accentLight : dark ? colors.candy.pink + '20' : colors.candy.pink + '30' }]} hoverScale={1.04} hoverLift={0}>
                 <Animated.View style={{ transform: [{ scale: likeAnim }] }}>
-                  <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(18)} color={liked ? '#EF4444' : '#E8A0A0'} />
+                  <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(18)} color={liked ? colors.accent : colors.candy.bubblegum} />
                 </Animated.View>
-                <Text style={[$.actionChipText, { color: liked ? '#EF4444' : colors.textHint }]}>
+                <Text style={[$.actionChipText, { color: liked ? colors.accent : colors.textHint }]}>
                   {liked ? '已赞' : '点赞'}
                 </Text>
               </HoverView>
-              <HoverView onPress={() => inputRef.current?.focus()} style={[$.actionChip, { backgroundColor: dark ? '#1e2530' : '#f0f4ff' }]} hoverScale={1.04} hoverLift={0}>
-                <MCI name="comment-text-outline" size={fp(18)} color={dark ? '#7B9FD4' : '#8BA4D0'} />
+              <HoverView onPress={() => inputRef.current?.focus()} style={[$.actionChip, { backgroundColor: dark ? colors.candy.sky + '20' : colors.candy.sky + '40' }]} hoverScale={1.04} hoverLift={0}>
+                <MCI name="comment-text-outline" size={fp(18)} color={colors.candy.sky} />
                 <Text style={[$.actionChipText, { color: colors.textHint }]}>评论</Text>
               </HoverView>
-              <HoverView onPress={handleShare} style={[$.actionChip, { backgroundColor: dark ? '#1e2e28' : '#f0faf5' }]} hoverScale={1.04} hoverLift={0}>
-                <MCI name="share-outline" size={fp(18)} color={dark ? '#6DC4A0' : '#6BB89D'} />
+              <HoverView onPress={handleShare} style={[$.actionChip, { backgroundColor: dark ? colors.candy.mint + '20' : colors.candy.mint + '50' }]} hoverScale={1.04} hoverLift={0}>
+                <MCI name="share-outline" size={fp(18)} color={colors.candy.mint} />
                 <Text style={[$.actionChipText, { color: colors.textHint }]}>分享</Text>
               </HoverView>
               <HoverView
                 onPress={() => { setBookmarked(!bookmarked); }}
-                style={[$.actionChip, { backgroundColor: bookmarked ? colors.accentLight : dark ? '#22222e' : '#f5f3ff' }]}
+                style={[$.actionChip, { backgroundColor: bookmarked ? colors.candy.lavender + '60' : dark ? colors.candy.lavender + '20' : colors.candy.lavender + '40' }]}
                 hoverScale={1.04} hoverLift={0}
               >
-                <MCI name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={fp(18)} color={bookmarked ? colors.accent : dark ? '#9B8FCF' : '#A99BD4'} />
+                <MCI name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={fp(18)} color={colors.candy.grape} />
               </HoverView>
             </View>
           </View>
@@ -421,8 +421,8 @@ const CommentItem: React.FC<{
       <View style={$.commentFooter}>
         <Text style={[$.commentTime, { color: colors.textHint }]}>{comment.timeAgo}</Text>
         <Pressable style={$.commentAction} onPress={onLike}>
-          <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(14)} color={liked ? '#EF4444' : colors.textHint} />
-          <Text style={[$.commentActionText, { color: liked ? '#EF4444' : colors.textHint }]}>
+          <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(14)} color={liked ? colors.accent : colors.textHint} />
+          <Text style={[$.commentActionText, { color: liked ? colors.accent : colors.textHint }]}>
             {liked ? comment.likeCount + 1 : comment.likeCount}
           </Text>
         </Pressable>
@@ -490,10 +490,10 @@ const $ = StyleSheet.create({
   /* 正文 */
   fullContent: { fontSize: fp(15), lineHeight: fp(24), marginTop: wp(14) },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(6), marginTop: wp(10) },
-  tag: { paddingHorizontal: wp(8), paddingVertical: wp(3), borderRadius: wp(4) },
+  tag: { paddingHorizontal: wp(10), paddingVertical: wp(4), borderRadius: wp(9999) },
   tagText: { fontSize: fp(11), fontWeight: '500' },
   preview: {
-    marginTop: wp(14), borderRadius: BorderRadius.lg,
+    marginTop: wp(14), borderRadius: BorderRadius.xl,
     padding: wp(16), alignItems: 'center', borderWidth: 1,
   },
 
@@ -503,12 +503,12 @@ const $ = StyleSheet.create({
   },
   crossBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: wp(6), paddingVertical: wp(11), borderRadius: BorderRadius.md,
+    gap: wp(6), paddingVertical: wp(12), borderRadius: wp(9999),
   },
   crossBtnText: { fontSize: FontSize.sm, fontWeight: '600', color: '#fff' },
   crossBtnOutline: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: wp(6), paddingVertical: wp(11), borderRadius: BorderRadius.md, borderWidth: 1,
+    gap: wp(6), paddingVertical: wp(12), borderRadius: wp(9999), borderWidth: 1,
   },
   crossBtnOutlineText: { fontSize: FontSize.sm, fontWeight: '500' },
 
@@ -529,7 +529,7 @@ const $ = StyleSheet.create({
   },
   actionChip: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: wp(5), paddingVertical: wp(9), borderRadius: BorderRadius.md,
+    gap: wp(5), paddingVertical: wp(10), borderRadius: wp(9999),
   },
   actionChipText: { fontSize: fp(12), fontWeight: '500' },
 
@@ -559,7 +559,7 @@ const $ = StyleSheet.create({
     paddingVertical: wp(10), borderBottomWidth: StyleSheet.hairlineWidth,
   },
   relatedPreview: {
-    width: wp(56), height: wp(56), borderRadius: BorderRadius.md,
+    width: wp(56), height: wp(56), borderRadius: wp(18),
     justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
   },
   relatedInfo: { flex: 1 },
@@ -581,8 +581,8 @@ const $ = StyleSheet.create({
   replyHintText: { fontSize: fp(11), fontWeight: '500' },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: wp(8) },
   commentInput: {
-    flex: 1, fontSize: FontSize.sm, borderRadius: BorderRadius.lg,
-    paddingHorizontal: wp(12), paddingVertical: wp(8), maxHeight: wp(80),
+    flex: 1, fontSize: FontSize.sm, borderRadius: wp(9999),
+    paddingHorizontal: wp(16), paddingVertical: wp(10), maxHeight: wp(80),
   },
   sendBtn: {
     width: wp(34), height: wp(34), borderRadius: wp(17),
