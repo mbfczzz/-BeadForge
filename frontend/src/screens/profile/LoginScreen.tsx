@@ -10,6 +10,7 @@ import { useTheme, FontSize, candyShadow } from '../../theme';
 import { wp, fp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 import { BeadBuddy } from '../../components/common/BeadBuddy';
+import { InkSeal } from '../../components/common/InkSeal';
 
 interface Props { onSwitchToRegister: () => void }
 
@@ -47,9 +48,12 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* 顶部吉祥物 */}
+          {/* 顶部吉祥物 + 印章 */}
           <View style={$.buddyWrap}>
             <BeadBuddy size={wp(110)} color={colors.candy.pink} mood="happy" />
+            <View style={{ position: 'absolute', right: '28%', top: '10%' }}>
+              <InkSeal text="福" size={wp(34)} rotate={-8} />
+            </View>
           </View>
 
           {/* 欢迎标题 */}

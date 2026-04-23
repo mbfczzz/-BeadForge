@@ -1,6 +1,7 @@
 export { Avatar } from './Avatar';
 export { BeadBuddy } from './BeadBuddy';
 export type { BuddyMood } from './BeadBuddy';
+export { InkSeal } from './InkSeal';
 export { Button } from './Button';
 export { Input } from './Input';
 export { StateView } from './StateView';

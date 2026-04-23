@@ -11,6 +11,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius, candyShadow } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
+import { InkSeal } from '../../components/common/InkSeal';
 
 const PAD = wp(15);
 const W = Dimensions.get('window').width;
@@ -95,8 +96,11 @@ export const CreateScreen: React.FC = () => {
           })}
         </View>
 
-        {/* 创作方式 — 糖果大按钮 */}
-        <Text style={[$.secTitle, { color: colors.text }]}>开始创作</Text>
+        {/* 创作方式 */}
+        <View style={$.secTitleRow}>
+          <Text style={[$.secTitle, { color: colors.text, marginTop: 0, marginBottom: 0 }]}>开始创作</Text>
+          <InkSeal text="作" size={wp(22)} style={{ marginLeft: wp(8) }} />
+        </View>
         {methods.map((m) => (
           <TouchableOpacity
             key={m.key}
@@ -167,6 +171,7 @@ const $ = StyleSheet.create({
   headerEmoji: { fontSize: fp(24) },
 
   secTitle: { fontSize: fp(15), fontWeight: '800', paddingHorizontal: PAD, marginTop: wp(18), marginBottom: wp(10), letterSpacing: 0.3 },
+  secTitleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: PAD, marginTop: wp(18), marginBottom: wp(10) },
 
   // 尺寸
   sizeGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: PAD, justifyContent: 'space-between' },

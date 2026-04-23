@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Avatar } from '../../components/common';
+import { Avatar, InkSeal } from '../../components/common';
 import { useTheme } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H, screenW } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
@@ -128,7 +128,10 @@ export const ProfileScreen: React.FC = () => {
 
           {/* 顶栏 */}
           <View style={$.headerTopRow}>
-            <Text style={$.headerTitle}>我的</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: wp(10) }}>
+              <Text style={$.headerTitle}>我的</Text>
+              <InkSeal text="友" size={wp(26)} color="#2A1E1A" rotate={-5} />
+            </View>
             <View style={$.headerActions}>
               <TouchableOpacity activeOpacity={0.7} onPress={() => setSubPage('settings')} style={$.headerIconBtn}>
                 <Feather name="settings" size={fp(17)} color="rgba(255,255,255,0.85)" />

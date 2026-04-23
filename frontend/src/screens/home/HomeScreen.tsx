@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { FontSize, BorderRadius, useTheme } from '../../theme';
-import { StateView, PressableScale, CardSkeleton, HoverView } from '../../components/common';
+import { StateView, PressableScale, CardSkeleton, HoverView, InkSeal } from '../../components/common';
 import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
 import { useDesignStore } from '../../store/useDesignStore';
 import { DesignItem } from '../../api/design';
@@ -103,10 +103,10 @@ export const HomeScreen: React.FC = () => {
             <Text style={[$.brandName, { color: colors.text }]}>
               B<Text style={{ color: colors.accent }}>ead</Text>
               <Text style={{ color: colors.candy.mango }}>Forge</Text>
-              <Text style={{ fontSize: fp(12) }}> ✨</Text>
             </Text>
             <Text style={[$.brandSub, { color: colors.textHint }]}>拼出你的创意世界</Text>
           </View>
+          <InkSeal text="創" size={wp(22)} style={{ marginLeft: wp(8) }} />
         </View>
         <View style={{ flex: 1 }} />
         <HoverView onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
