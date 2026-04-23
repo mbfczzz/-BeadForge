@@ -712,7 +712,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: wp(40), paddingVertical: wp(30),
     borderRadius: BorderRadius.xl,
     alignItems: 'center', gap: wp(14),
-    ...shadow(4, 16, 0.15, '#000', 6),
+    ...shadow(4, 16, 0.18, '#FF8FB1', 6),
   },
   genText: { fontSize: FontSize.lg, fontWeight: '600' },
   genDots: { flexDirection: 'row', gap: wp(6) },
@@ -739,7 +739,7 @@ const $ = StyleSheet.create({
   canvasWrap: {
     margin: PAD, borderRadius: BorderRadius.lg,
     padding: wp(12), alignItems: 'center', justifyContent: 'center',
-    ...shadow(2, 8, 0.06, '#000', 2),
+    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
   },
 
   // 当前颜色栏
@@ -792,8 +792,8 @@ const $ = StyleSheet.create({
   saveBtn: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: wp(20), paddingVertical: wp(10),
-    borderRadius: BorderRadius.full, gap: wp(6),
-    ...shadow(2, 6, 0.15, '#4b78ff', 3),
+    borderRadius: wp(9999), gap: wp(6),
+    ...shadow(3, 10, 0.22, '#FF8FB1', 4),
   },
   saveBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 
@@ -802,12 +802,12 @@ const $ = StyleSheet.create({
   pubSheet: { borderTopLeftRadius: wp(16), borderTopRightRadius: wp(16), padding: wp(20) },
   pubTitle: { fontSize: fp(17), fontWeight: '700', marginBottom: wp(14) },
   pubLabel: { fontSize: fp(12), fontWeight: '600', marginTop: wp(10), marginBottom: wp(6) },
-  pubInput: { height: wp(40), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
+  pubInput: { height: wp(44), borderRadius: wp(9999), paddingHorizontal: wp(16), fontSize: fp(14) },
   pubInputMulti: { height: wp(70), paddingTop: wp(10), textAlignVertical: 'top' },
   pubCatRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  pubCatChip: { paddingHorizontal: wp(12), paddingVertical: wp(5), borderRadius: wp(12), marginRight: wp(6), marginBottom: wp(6) },
+  pubCatChip: { paddingHorizontal: wp(14), paddingVertical: wp(6), borderRadius: wp(9999), marginRight: wp(6), marginBottom: wp(6) },
   pubPriceRow: { flexDirection: 'row', alignItems: 'center' },
-  pubPriceOpt: { paddingHorizontal: wp(14), paddingVertical: wp(8), borderRadius: wp(10), marginRight: wp(8) },
+  pubPriceOpt: { paddingHorizontal: wp(16), paddingVertical: wp(9), borderRadius: wp(9999), marginRight: wp(8) },
   pubPriceInput: { flex: 1, height: wp(38), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
   pubPriceUnit: { fontSize: fp(13), marginLeft: wp(6) },
   pubInfo: { flexDirection: 'row', alignItems: 'center', marginTop: wp(12) },

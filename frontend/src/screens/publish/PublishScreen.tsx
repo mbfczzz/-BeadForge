@@ -28,15 +28,15 @@ const HOT_TOPICS = [
   { tag: '迷你珠饰品', count: '3.8k' },
 ];
 
-// 活跃用户 Stories — 渐变色环
+// 活跃用户 Stories — 糖果渐变色环
 const STORY_USERS = [
-  { name: '小豆子', hasNew: true, ring: ['#FF6B6B', '#FF8E53'] },
-  { name: '像素艺术家', hasNew: true, ring: ['#5B5FFF', '#C084FC'] },
-  { name: '彩虹桥', hasNew: true, ring: ['#F5A623', '#FF6B6B'] },
-  { name: '拼豆小屋', hasNew: false, ring: ['#ccc', '#ddd'] },
-  { name: '花花世界', hasNew: false, ring: ['#ccc', '#ddd'] },
-  { name: '游戏迷', hasNew: true, ring: ['#20C997', '#38D9A9'] },
-  { name: '钻石控', hasNew: false, ring: ['#ccc', '#ddd'] },
+  { name: '小豆子',     hasNew: true,  ring: ['#FF8FB1', '#FFB894'] },  // 粉→橘
+  { name: '像素艺术家', hasNew: true,  ring: ['#D4B8FF', '#B8E0FF'] },  // 薰衣草→天空蓝
+  { name: '彩虹桥',     hasNew: true,  ring: ['#FFC870', '#FFB4C6'] },  // 奶黄→糖果粉
+  { name: '拼豆小屋',   hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },  // 淡灰紫
+  { name: '花花世界',   hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },
+  { name: '游戏迷',     hasNew: true,  ring: ['#B8E7D4', '#A8DCC7'] },  // 薄荷
+  { name: '钻石控',     hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },
 ];
 
 const TABS = ['推荐', '关注', '最新'];
@@ -456,7 +456,7 @@ const $ = StyleSheet.create({
   tab: { paddingHorizontal: wp(10), paddingVertical: wp(6), alignItems: 'center' },
   tabText: { fontSize: FontSize.md },
   tabIndicator: {
-    width: wp(16), height: wp(3), borderRadius: wp(2),
+    width: wp(20), height: wp(3.5), borderRadius: wp(9999),
     marginTop: wp(3),
   },
   iconBtn: {
@@ -471,8 +471,8 @@ const $ = StyleSheet.create({
   },
   searchInputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: wp(8),
-    paddingHorizontal: wp(12), borderRadius: BorderRadius.md, borderWidth: 1,
-    height: wp(36),
+    paddingHorizontal: wp(14), borderRadius: wp(9999), borderWidth: 1,
+    height: wp(40),
   },
   searchInput: {
     flex: 1, fontSize: FontSize.sm, padding: 0,
@@ -483,7 +483,7 @@ const $ = StyleSheet.create({
   storyRow: { paddingHorizontal: PAD, paddingVertical: wp(12), gap: wp(12) },
   storyItem: { alignItems: 'center', width: wp(60) },
   storyRingOuter: {
-    padding: wp(2.5), borderRadius: wp(28), borderWidth: 2.5,
+    padding: wp(3), borderRadius: wp(9999), borderWidth: 3,
   },
   storyAddCircle: {
     width: wp(46), height: wp(46), borderRadius: wp(23),
