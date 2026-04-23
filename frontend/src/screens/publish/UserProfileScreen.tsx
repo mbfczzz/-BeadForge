@@ -4,10 +4,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme, BorderRadius, FontSize } from '../../theme';
-import { Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } from '../../components/common';
+import { AppHeader, Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } from '../../components/common';
+import { getFeedMockMedia } from '../../utils/feedMedia';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
@@ -16,7 +18,7 @@ import {
   getCommunityUserData,
   getCommunityUserFeeds,
   getCommunityUserWorks,
-} from '../../mock/app';
+} from '../../mock/community';
 
 const PAD = wp(15);
 
@@ -40,20 +42,20 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[$.topBar, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={() => navigation.goBack()} style={$.navBtn} hoverScale={1.08} hoverLift={0}>
-          <MCI name="arrow-left" size={fp(22)} color={colors.text} />
-        </HoverView>
-        <Text style={[$.topBarTitle, { color: colors.text }]} numberOfLines={1}>{user.name}</Text>
-        <HoverView
-          onPress={() => Alert.alert('更多', '当前演示环境不接入举报与拉黑能力。')}
-          style={$.navBtn}
-          hoverScale={1.08}
-          hoverLift={0}
-        >
-          <MCI name="dots-vertical" size={fp(22)} color={colors.text} />
-        </HoverView>
-      </View>
+      <AppHeader
+        title={user.name}
+        onBack={() => navigation.goBack()}
+        right={
+          <HoverView
+            onPress={() => Alert.alert('更多', '当前演示环境不接入举报与拉黑能力。')}
+            style={[$.navBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+            hoverScale={1.08}
+            hoverLift={0}
+          >
+            <MCI name="dots-vertical" size={fp(22)} color={colors.text} />
+          </HoverView>
+        }
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(30) + BOTTOM_SAFE_H }}>
         <View style={[$.headerBg, { backgroundColor: colors.accent }]}>
@@ -202,29 +204,37 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
         )}
 
         {tabIndex === 1 && (
-          <View style={$.feedList}>
+          <View style={$.feedGridWrap}>
             {feeds.length === 0 ? (
               <EmptyTab icon="text-box-outline" text="还没有动态" hint="作者发布的动态会出现在这里" colors={colors} />
             ) : (
-              feeds.map((feed) => (
-                <PressableScale key={feed.id} scale={0.985} style={[$.feedCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('FeedDetail', { feed })}>
-                  <View style={$.feedCardHeader}>
-                    <Avatar name={feed.user.name} size={wp(36)} />
-                    <View style={{ flex: 1, marginLeft: wp(10) }}>
-                      <Text style={[$.feedCardName, { color: colors.text }]}>{feed.user.name}</Text>
-                      <Text style={[$.feedCardMeta, { color: colors.textHint }]}>{feed.timeAgo}</Text>
-                    </View>
-                  </View>
-                  <Text style={[$.feedCardContent, { color: colors.textSecondary }]}>{feed.content}</Text>
-                  <View style={$.feedTagWrap}>
-                    {feed.tags.map((tag) => (
-                      <View key={`${feed.id}-${tag}`} style={[$.profileTag, { backgroundColor: colors.inputBg }]}>
-                        <Text style={[$.profileTagText, { color: colors.textHint }]}>#{tag}</Text>
+              <View style={$.feedGrid}>
+                {feeds.map((feed) => {
+                  const media = getFeedMockMedia(feed);
+                  return (
+                    <PressableScale
+                      key={feed.id}
+                      scale={0.985}
+                      style={{ width: gridSize }}
+                      onPress={() => navigation.navigate('FeedDetail', { feed })}
+                    >
+                      <View style={[$.mediaGridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={[$.mediaGridThumb, { borderColor: `${media.accent}20` }]}>
+                          <SvgXml xml={media.svg} width={gridSize} height={gridSize / media.aspectRatio} />
+                          <View style={$.mediaGridBadgeWrap}>
+                            <View style={$.mediaGridBadge}>
+                              <Text style={$.mediaGridBadgeText}>{feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>
+                            </View>
+                          </View>
+                        </View>
+                        <View style={$.mediaGridInfo}>
+                          <Text style={[$.feedCardContent, { color: colors.textSecondary }]} numberOfLines={2}>{feed.content}</Text>
+                        </View>
                       </View>
-                    ))}
-                  </View>
-                </PressableScale>
-              ))
+                    </PressableScale>
+                  );
+                })}
+              </View>
             )}
           </View>
         )}
@@ -373,17 +383,35 @@ const $ = StyleSheet.create({
   workTitle: { fontSize: FontSize.md, fontWeight: '600' },
   workStats: { flexDirection: 'row', alignItems: 'center', gap: wp(5), marginTop: wp(8) },
   workStatText: { fontSize: fp(11) },
-  feedList: { paddingHorizontal: PAD, paddingTop: wp(14), gap: wp(10) },
-  feedCard: {
+  feedGridWrap: { paddingHorizontal: PAD, paddingTop: wp(14) },
+  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: wp(10) },
+  mediaGridCard: {
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    padding: wp(14),
+    overflow: 'hidden',
   },
-  feedCardHeader: { flexDirection: 'row', alignItems: 'center' },
-  feedCardName: { fontSize: fp(13), fontWeight: '700' },
-  feedCardMeta: { fontSize: fp(11), marginTop: wp(2) },
-  feedCardContent: { marginTop: wp(10), fontSize: fp(13), lineHeight: fp(18) },
-  feedTagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8), marginTop: wp(10) },
+  mediaGridThumb: {
+    minHeight: wp(140),
+    overflow: 'hidden',
+  },
+  mediaGridBadgeWrap: {
+    position: 'absolute',
+    top: wp(8),
+    left: wp(8),
+  },
+  mediaGridBadge: {
+    borderRadius: wp(999),
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(5),
+    backgroundColor: 'rgba(15,23,42,0.72)',
+  },
+  mediaGridBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fp(10),
+    fontWeight: '700',
+  },
+  mediaGridInfo: { padding: wp(10) },
+  feedCardContent: { fontSize: fp(12), lineHeight: fp(17) },
   emptyWrap: { alignItems: 'center', justifyContent: 'center', paddingVertical: wp(48), paddingHorizontal: PAD },
   emptyIcon: {
     width: wp(48),

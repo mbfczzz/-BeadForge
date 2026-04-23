@@ -13,10 +13,15 @@ export const TEST_LOGIN_CREDENTIALS = {
 export const TEST_LOGIN_USER: UserInfo = {
   id: 1001,
   username: TEST_LOGIN_CREDENTIALS.username,
-  nickname: '测试用户',
-  avatar: null,
-  email: null,
+  nickname: 'soul.',
+  avatar: 'preset:github',
+  email: '1006293043@qq.com',
   phone: '13800138000',
+  bio: '',
+  gender: '男',
+  birthday: '1999/08/30',
+  education: '本科',
+  occupation: '在校学生',
 };
 
 export const TEST_LOGIN_STATS: UserStats = {
@@ -35,9 +40,14 @@ export function buildMockUser(params: RegisterParams): UserInfo {
     id: Date.now(),
     username: params.username.trim(),
     nickname: params.nickname?.trim() || '新用户',
-    avatar: null,
+    avatar: 'preset:ocean',
     email: params.email?.trim() || null,
     phone: null,
+    bio: '',
+    gender: '保密',
+    birthday: '',
+    education: '',
+    occupation: '',
   };
 }
 

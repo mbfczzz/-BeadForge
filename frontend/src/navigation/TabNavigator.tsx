@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -8,57 +8,106 @@ import { CreateScreen } from '../screens/create/CreateScreen';
 import { PublishScreen } from '../screens/publish/PublishScreen';
 import { MarketScreen } from '../screens/market/MarketScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
-import { useTheme } from '../theme';
-import { wp, fp } from '../utils/responsive';
 import { hapticSelection } from '../hooks/useFeedback';
+import { useNavigationUIStore } from '../store/useNavigationUIStore';
+import { useTheme } from '../theme';
 
 const Tab = createBottomTabNavigator();
 
-const TABS: { name: string; label: string; icon: string; color: string; center?: boolean }[] = [
-  { name: 'Home', label: '发现', icon: 'compass', color: '#4b78ff' },
-  { name: 'Publish', label: '动态', icon: 'zap', color: '#22C55E' },
-  { name: 'Create', label: '创作', icon: 'plus', color: '#8B5CF6', center: true },
-  { name: 'Market', label: '市场', icon: 'shopping-bag', color: '#F97316' },
-  { name: 'Profile', label: '我的', icon: 'user', color: '#EC4899' },
+const TABS: {
+  name: string;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  center?: boolean;
+}[] = [
+  { name: 'Home', label: '发现', icon: 'compass' },
+  { name: 'Publish', label: '动态', icon: 'activity' },
+  { name: 'Create', label: '创作', icon: 'plus', center: true },
+  { name: 'Market', label: '商城', icon: 'shopping-bag' },
+  { name: 'Profile', label: '我的', icon: 'user' },
 ];
 
 const SCREENS: Record<string, React.ComponentType<any>> = {
-  Home: HomeScreen, Market: MarketScreen, Create: CreateScreen,
-  Publish: PublishScreen, Profile: ProfileScreen,
+  Home: HomeScreen,
+  Publish: PublishScreen,
+  Create: CreateScreen,
+  Market: MarketScreen,
+  Profile: ProfileScreen,
 };
 
 function CustomTabBar({ state, navigation }: any) {
-  const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { dark, colors } = useTheme();
+  const tabBarHidden = useNavigationUIStore((store) => store.tabBarHidden);
+
+  if (tabBarHidden) {
+    return null;
+  }
 
   return (
-    <View style={[$.bar, { paddingBottom: Math.max(insets.bottom, wp(4)), backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
-      {state.routes.map((route: any, idx: number) => {
-        const tab = TABS[idx];
-        const on = state.index === idx;
-        const go = () => { if (!on) { hapticSelection(); navigation.navigate(route.name); } };
-        const tintColor = on ? tab.color : colors.textHint;
+    <View
+      className="flex-row items-end px-6"
+      style={{
+        paddingTop: 10,
+        paddingBottom: Math.max(insets.bottom, 10),
+        backgroundColor: dark ? colors.navBg : 'rgba(255,255,255,0.98)',
+        borderTopWidth: 1,
+        borderTopColor: colors.navBorder,
+        shadowColor: dark ? '#000000' : '#0f172a',
+        shadowOpacity: dark ? 0.22 : 0.06,
+        shadowRadius: 22,
+        shadowOffset: { width: 0, height: -8 },
+        elevation: 20,
+      }}
+    >
+      {state.routes.map((route: any, index: number) => {
+        const tab = TABS[index];
+        const focused = state.index === index;
+
+        const onPress = () => {
+          hapticSelection();
+          navigation.navigate(route.name);
+        };
 
         if (tab.center) {
           return (
-            <TouchableOpacity key={route.key} activeOpacity={0.75} onPress={go} style={$.centerWrap}>
-              <View style={[$.centerOuter, { borderColor: dark ? '#333' : '#e8e8e8' }]}>
-                <View style={[$.centerInner, { backgroundColor: tab.color }]}>
-                  <Feather name="plus" size={wp(20)} color="#fff" />
-                </View>
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              className="flex-1 items-center"
+              style={{ transform: [{ translateY: -18 }] }}
+            >
+              <View
+                className="h-14 w-14 items-center justify-center rounded-full bg-blue-600"
+                style={{
+                  borderWidth: 4,
+                  borderColor: dark ? colors.navBg : '#FFFFFF',
+                  shadowColor: '#2563EB',
+                  shadowOpacity: 0.34,
+                  shadowRadius: 16,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 12,
+                }}
+              >
+                <Feather name="plus" size={26} color="#FFFFFF" />
               </View>
-              <Text style={[$.centerLabel, { color: on ? tab.color : colors.textHint }]}>{tab.label}</Text>
-            </TouchableOpacity>
+            </Pressable>
           );
         }
 
         return (
-          <TouchableOpacity key={route.key} activeOpacity={0.6} onPress={go} style={$.tab}>
-            {/* 选中背景 pill */}
-            {on && <View style={[$.activePill, { backgroundColor: tab.color + '12' }]} />}
-            <Feather name={tab.icon as any} size={wp(on ? 21 : 20)} color={tintColor} />
-            <Text style={[$.label, { color: tintColor }, on && { fontWeight: '700' }]}>{tab.label}</Text>
-          </TouchableOpacity>
+          <Pressable key={route.key} onPress={onPress} className="flex-1 items-center justify-center pb-1 pt-2">
+            <Feather name={tab.icon} size={20} color={focused ? '#2563EB' : colors.textHint} />
+            <Text
+              className="mt-1 text-[10px]"
+              style={{
+                color: focused ? '#2563EB' : colors.textHint,
+                fontWeight: focused ? '700' : '500',
+              }}
+            >
+              {tab.label}
+            </Text>
+          </Pressable>
         );
       })}
     </View>
@@ -67,45 +116,8 @@ function CustomTabBar({ state, navigation }: any) {
 
 export const TabNavigator: React.FC = () => (
   <Tab.Navigator tabBar={(props) => <CustomTabBar {...props} />} screenOptions={{ headerShown: false }}>
-    {TABS.map((t) => <Tab.Screen key={t.name} name={t.name} component={SCREENS[t.name]} />)}
+    {TABS.map((tab) => (
+      <Tab.Screen key={tab.name} name={tab.name} component={SCREENS[tab.name]} />
+    ))}
   </Tab.Navigator>
 );
-
-const $ = StyleSheet.create({
-  bar: {
-    flexDirection: 'row', alignItems: 'flex-end',
-    paddingTop: wp(6),
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-
-  // 普通 tab
-  tab: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingVertical: wp(6),
-  },
-  activePill: {
-    position: 'absolute', top: wp(2),
-    width: wp(40), height: wp(28), borderRadius: wp(14),
-  },
-  label: {
-    fontSize: fp(10), marginTop: wp(2), fontWeight: '400',
-  },
-
-  // 中间创作按钮
-  centerWrap: {
-    flex: 1, alignItems: 'center',
-    marginTop: -wp(16),
-  },
-  centerOuter: {
-    width: wp(50), height: wp(50), borderRadius: wp(25),
-    borderWidth: wp(3), justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  centerInner: {
-    width: wp(40), height: wp(40), borderRadius: wp(20),
-    justifyContent: 'center', alignItems: 'center',
-  },
-  centerLabel: {
-    fontSize: fp(10), fontWeight: '500', marginTop: wp(2),
-  },
-});

@@ -271,8 +271,9 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [showPublish, setShowPublish] = useState(false);
   const [pubTitle, setPubTitle] = useState('');
   const [pubDesc, setPubDesc] = useState('');
-  const [pubPrice, setPubPrice] = useState('');
+  const [pubPoints, setPubPoints] = useState('');
   const [pubCat, setPubCat] = useState('抽象');
+  const [pubAccessMode, setPubAccessMode] = useState<'free' | 'points' | 'member'>('free');
   const publishPattern = usePatternStore((s) => s.publish);
 
   const handleSave = useCallback(() => {
@@ -290,10 +291,11 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           },
         });
       }},
-      { text: '发布到图纸市场', onPress: () => {
+      { text: '发布资源到发现页', onPress: () => {
         setPubTitle(mode === 'ai' ? aiPrompt || '' : '');
         setPubDesc('');
-        setPubPrice('');
+        setPubPoints('');
+        setPubAccessMode('free');
         setShowPublish(true);
       }},
       { text: '取消', style: 'cancel' },
@@ -301,27 +303,31 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
 
   const handlePublish = useCallback(() => {
-    if (!pubTitle.trim()) { Alert.alert('提示', '请输入图纸标题'); return; }
-    const price = parseFloat(pubPrice) || 0;
+    if (!pubTitle.trim()) { Alert.alert('提示', '请输入资源标题'); return; }
+    const pointsCost = pubAccessMode === 'points' ? Math.max(0, parseInt(pubPoints, 10) || 0) : 0;
+    if (pubAccessMode === 'points' && pointsCost <= 0) {
+      Alert.alert('提示', '请输入有效的积分数量');
+      return;
+    }
     publishPattern({
       title: pubTitle.trim(),
       author: '我',
       authorId: 1,
-      price,
-      free: price <= 0,
       patIdx: 0,
       cat: pubCat,
       cols,
       rows,
-      desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
+      desc: pubDesc.trim() || `${cols}×${rows} 拼豆资源`,
       gridData: grid,
+      accessMode: pubAccessMode,
+      pointsCost,
     });
     setShowPublish(false);
-    Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
-      { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
+    Alert.alert('发布成功', `「${pubTitle.trim()}」已发布到发现页`, [
+      { text: '去发现查看', onPress: () => navigation.navigate('Main' as any, { screen: 'Home' } as any) },
       { text: '继续创作' },
     ]);
-  }, [pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
+  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, navigation]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -485,20 +491,20 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         </HoverView>
       </View>
 
-      {/* ── 发布到市场弹窗 ── */}
+      {/* ── 发布资源弹窗 ── */}
       <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
         <TouchableOpacity style={$.pubOverlay} activeOpacity={1} onPress={() => setShowPublish(false)}>
           <View style={[$.pubSheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
-            <Text style={[$.pubTitle, { color: colors.text }]}>发布到图纸市场</Text>
+            <Text style={[$.pubTitle, { color: colors.text }]}>发布资源到发现页</Text>
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>标题</Text>
             <TextInput style={[$.pubInput, { backgroundColor: colors.inputBg, color: colors.text }]}
-              placeholder="给你的图纸起个名字" placeholderTextColor={colors.textHint}
+              placeholder="给你的资源起个名字" placeholderTextColor={colors.textHint}
               value={pubTitle} onChangeText={setPubTitle} maxLength={20} />
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>描述</Text>
             <TextInput style={[$.pubInput, $.pubInputMulti, { backgroundColor: colors.inputBg, color: colors.text }]}
-              placeholder="简单描述你的图纸（选填）" placeholderTextColor={colors.textHint}
+              placeholder="简单描述你的资源（选填）" placeholderTextColor={colors.textHint}
               value={pubDesc} onChangeText={setPubDesc} multiline maxLength={100} />
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>分类</Text>
@@ -511,21 +517,41 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
               ))}
             </View>
 
-            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>定价</Text>
-            <View style={$.pubPriceRow}>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setPubPrice('')}
-                style={[$.pubPriceOpt, { backgroundColor: !pubPrice ? colors.accent : colors.inputBg }]}>
-                <Text style={{ fontSize: fp(12), fontWeight: '600', color: !pubPrice ? '#fff' : colors.textSecondary }}>免费</Text>
-              </TouchableOpacity>
-              <TextInput style={[$.pubPriceInput, { backgroundColor: colors.inputBg, color: colors.text }]}
-                placeholder="输入价格" placeholderTextColor={colors.textHint}
-                value={pubPrice} onChangeText={setPubPrice} keyboardType="numeric" />
-              <Text style={[$.pubPriceUnit, { color: colors.textHint }]}>元</Text>
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>获取方式</Text>
+            <View style={$.pubAccessRow}>
+              {[
+                { key: 'free', label: '免费' },
+                { key: 'points', label: '积分获取' },
+                { key: 'member', label: '会员可得' },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  activeOpacity={0.7}
+                  onPress={() => setPubAccessMode(item.key as 'free' | 'points' | 'member')}
+                  style={[$.pubPriceOpt, { backgroundColor: pubAccessMode === item.key ? colors.accent : colors.inputBg }]}
+                >
+                  <Text style={{ fontSize: fp(12), fontWeight: '600', color: pubAccessMode === item.key ? '#fff' : colors.textSecondary }}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
+
+            {pubAccessMode === 'points' && (
+              <>
+                <Text style={[$.pubLabel, { color: colors.textSecondary }]}>积分数量</Text>
+                <View style={$.pubPriceRow}>
+                  <TextInput style={[$.pubPriceInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+                    placeholder="输入积分" placeholderTextColor={colors.textHint}
+                    value={pubPoints} onChangeText={setPubPoints} keyboardType="numeric" />
+                  <Text style={[$.pubPriceUnit, { color: colors.textHint }]}>积分</Text>
+                </View>
+              </>
+            )}
 
             <View style={$.pubInfo}>
               <Feather name="info" size={fp(11)} color={colors.textHint} />
-              <Text style={[$.pubInfoT, { color: colors.textHint }]}>图纸尺寸 {cols}×{rows}，含 {stats.beadCount} 颗珠子，{stats.colorCount} 种颜色</Text>
+              <Text style={[$.pubInfoT, { color: colors.textHint }]}>资源尺寸 {cols}×{rows}，含 {stats.beadCount} 颗珠子，{stats.colorCount} 种颜色</Text>
             </View>
 
             <View style={$.pubBtns}>
@@ -790,6 +816,7 @@ const $ = StyleSheet.create({
   pubInput: { height: wp(40), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
   pubInputMulti: { height: wp(70), paddingTop: wp(10), textAlignVertical: 'top' },
   pubCatRow: { flexDirection: 'row', flexWrap: 'wrap' },
+  pubAccessRow: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8) },
   pubCatChip: { paddingHorizontal: wp(12), paddingVertical: wp(5), borderRadius: wp(12), marginRight: wp(6), marginBottom: wp(6) },
   pubPriceRow: { flexDirection: 'row', alignItems: 'center' },
   pubPriceOpt: { paddingHorizontal: wp(14), paddingVertical: wp(8), borderRadius: wp(10), marginRight: wp(8) },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -6,12 +6,12 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { Button, Input, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -19,37 +19,6 @@ import { useAuthStore } from '../../store/useAuthStore';
 interface Props {
   onSwitchToLogin: () => void;
 }
-
-interface InputRowProps {
-  icon: keyof typeof Feather.glyphMap;
-  placeholder: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  colors: any;
-  secure?: boolean;
-}
-
-const InputRow: React.FC<InputRowProps> = ({
-  icon,
-  placeholder,
-  value,
-  onChangeText,
-  colors,
-  secure,
-}) => (
-  <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-    <Feather name={icon} size={fp(16)} color={colors.textHint} />
-    <TextInput
-      style={[$.input, { color: colors.text }]}
-      placeholder={placeholder}
-      placeholderTextColor={colors.textHint}
-      value={value}
-      onChangeText={onChangeText}
-      secureTextEntry={secure}
-      autoCapitalize="none"
-    />
-  </View>
-);
 
 export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
   const { colors } = useTheme();
@@ -59,8 +28,11 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const canSubmit = useMemo(() => {
+    return username.trim().length >= 3 && password.length >= 6 && password === confirmPwd;
+  }, [confirmPwd, password, username]);
 
   const handleRegister = async () => {
     if (!username.trim() || username.trim().length < 3) {
@@ -96,70 +68,57 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={[$.content, { backgroundColor: colors.bg }]}
+          contentContainerStyle={$.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[$.title, { color: colors.text }]}>创建本地账号</Text>
-          <Text style={[$.subtitle, { color: colors.textHint }]}>
-            注册后会直接进入当前 mock 测试环境。
-          </Text>
+          <View style={$.hero}>
+            <Text style={[$.title, { color: colors.text }]}>创建本地账号</Text>
+            <Text style={[$.subtitle, { color: colors.textHint }]}>注册后会直接进入当前 mock 测试环境，并沿用新的表单与卡片视觉风格。</Text>
+          </View>
 
-          <InputRow
-            icon="user"
-            placeholder="用户名"
-            value={username}
-            onChangeText={setUsername}
-            colors={colors}
-          />
-          <InputRow
-            icon="edit-3"
-            placeholder="昵称（选填）"
-            value={nickname}
-            onChangeText={setNickname}
-            colors={colors}
-          />
-
-          <View style={[$.inputBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-            <Feather name="lock" size={fp(16)} color={colors.textHint} />
-            <TextInput
-              style={[$.input, { color: colors.text }]}
-              placeholder="密码（至少 6 位）"
-              placeholderTextColor={colors.textHint}
+          <SurfaceCard title="填写账号信息" description="建议先输入用户名和密码，昵称可以稍后在资料页补充。">
+            <Input
+              label="用户名"
+              placeholder="至少 3 个字符"
+              value={username}
+              onChangeText={setUsername}
+              prefix={<Feather name="user" size={fp(16)} color={colors.textHint} />}
+            />
+            <Input
+              label="昵称"
+              placeholder="选填"
+              value={nickname}
+              onChangeText={setNickname}
+              prefix={<Feather name="edit-3" size={fp(16)} color={colors.textHint} />}
+            />
+            <Input
+              label="密码"
+              placeholder="至少 6 位"
               value={password}
               onChangeText={setPassword}
-              secureTextEntry={!showPwd}
-              autoCapitalize="none"
+              secureTextEntry
+              prefix={<Feather name="lock" size={fp(16)} color={colors.textHint} />}
             />
-            <TouchableOpacity onPress={() => setShowPwd((value) => !value)} activeOpacity={0.6}>
-              <Feather name={showPwd ? 'eye-off' : 'eye'} size={fp(16)} color={colors.textHint} />
-            </TouchableOpacity>
-          </View>
+            <Input
+              label="确认密码"
+              placeholder="再次输入密码"
+              value={confirmPwd}
+              onChangeText={setConfirmPwd}
+              secureTextEntry
+              prefix={<Feather name="shield" size={fp(16)} color={colors.textHint} />}
+              error={confirmPwd.length > 0 && password !== confirmPwd ? '两次输入的密码不一致' : undefined}
+            />
 
-          <InputRow
-            icon="shield"
-            placeholder="确认密码"
-            value={confirmPwd}
-            onChangeText={setConfirmPwd}
-            colors={colors}
-            secure={!showPwd}
-          />
+            <Button title={loading ? '注册中...' : '注册'} onPress={handleRegister} loading={loading} disabled={!canSubmit} />
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleRegister}
-            disabled={loading}
-            style={[$.submit, { backgroundColor: colors.accent, opacity: loading ? 0.65 : 1 }]}
-          >
-            <Text style={$.submitText}>{loading ? '注册中...' : '注册'}</Text>
-          </TouchableOpacity>
-
-          <View style={$.footerRow}>
-            <Text style={[$.footerText, { color: colors.textHint }]}>已经有账号？</Text>
-            <TouchableOpacity onPress={onSwitchToLogin} activeOpacity={0.6}>
-              <Text style={[$.footerLink, { color: colors.accent }]}>返回登录</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={$.footerRow}>
+              <Text style={[$.footerText, { color: colors.textHint }]}>已经有账号？</Text>
+              <TouchableOpacity onPress={onSwitchToLogin} activeOpacity={0.7}>
+                <Text style={[$.footerLink, { color: colors.accent }]}>返回登录</Text>
+              </TouchableOpacity>
+            </View>
+          </SurfaceCard>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -174,48 +133,24 @@ const $ = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: wp(24),
+    paddingVertical: wp(24),
+  },
+  hero: {
+    marginBottom: wp(20),
   },
   title: {
-    fontSize: fp(24),
+    fontSize: fp(28),
     fontWeight: '800',
-    marginBottom: wp(4),
   },
   subtitle: {
     fontSize: fp(13),
-    marginBottom: wp(24),
-    lineHeight: fp(19),
-  },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: wp(48),
-    borderRadius: wp(12),
-    borderWidth: 1,
-    paddingHorizontal: wp(14),
-    marginBottom: wp(12),
-  },
-  input: {
-    flex: 1,
-    fontSize: fp(15),
-    marginLeft: wp(10),
-    padding: 0,
-  },
-  submit: {
-    height: wp(48),
-    borderRadius: wp(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: wp(6),
-  },
-  submitText: {
-    color: '#fff',
-    fontSize: fp(16),
-    fontWeight: '700',
+    lineHeight: fp(20),
+    marginTop: wp(8),
   },
   footerRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: wp(20),
+    marginTop: wp(6),
   },
   footerText: {
     fontSize: fp(13),

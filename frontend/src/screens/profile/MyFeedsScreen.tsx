@@ -1,11 +1,13 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
+import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
+import { AppHeader, Avatar, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { buildMockMyFeeds } from '../../mock/profile';
 import { useAuthStore } from '../../store/useAuthStore';
+import { getFeedMockMedia } from '../../utils/feedMedia';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -22,61 +24,69 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <TouchableOpacity style={$.navButton} onPress={onBack} activeOpacity={0.75}>
-          <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[$.navTitle, { color: colors.text }]}>我的动态</Text>
-        <View style={{ width: wp(34) }} />
-      </View>
+      <AppHeader title="我的动态" onBack={onBack} />
 
       <FlatList
         data={feeds}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: PAD, paddingBottom: wp(40) }}
-        renderItem={({ item }) => (
-          <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={$.topRow}>
-              <View style={[$.thumb, { backgroundColor: colors.inputBg }]}>
-                <BeadGrid
-                  pixels={ALL_PATTERNS[item.patternIndex % ALL_PATTERNS.length]}
-                  beadSize={wp(5)}
-                  gap={0.5}
-                  round
-                />
-              </View>
-              <View style={$.topText}>
-                <Text style={[$.name, { color: colors.text }]}>{user?.nickname || user?.username || '测试用户'}</Text>
-                <Text style={[$.time, { color: colors.textHint }]}>{item.timeAgo}</Text>
-              </View>
-            </View>
+        renderItem={({ item }) => {
+          const media = getFeedMockMedia(item);
+          const mediaHeight = wp(310) / media.aspectRatio;
 
-            <Text style={[$.content, { color: colors.text }]}>{item.content}</Text>
-
-            <View style={$.tagsRow}>
-              {item.tags.map((tag) => (
-                <View key={`${item.id}-${tag}`} style={[$.tag, { backgroundColor: colors.accentLight }]}>
-                  <Text style={[$.tagText, { color: colors.accent }]}>{tag}</Text>
+          return (
+            <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={$.topRow}>
+                <Avatar name={user?.nickname || user?.username || '测试用户'} size={wp(40)} />
+                <View style={$.topText}>
+                  <Text style={[$.name, { color: colors.text }]}>{user?.nickname || user?.username || '测试用户'}</Text>
+                  <Text style={[$.time, { color: colors.textHint }]}>{item.timeAgo}</Text>
                 </View>
-              ))}
-            </View>
+              </View>
 
-            <View style={[$.actionsRow, { borderTopColor: colors.divider }]}>
-              <View style={$.action}>
-                <Feather name="heart" size={fp(13)} color={colors.textHint} />
-                <Text style={[$.actionText, { color: colors.textHint }]}>{item.likeCount}</Text>
+              <Text style={[$.content, { color: colors.text }]}>{item.content}</Text>
+              {item.caption ? <Text style={[$.caption, { color: colors.textHint }]}>{item.caption}</Text> : null}
+
+              <View style={[$.mediaCard, { height: mediaHeight, borderColor: `${media.accent}20` }]}>
+                <SvgXml xml={media.svg} width={wp(310)} height={mediaHeight} />
+                <View style={$.mediaBadgeRow}>
+                  <View style={[$.mediaBadge, { backgroundColor: 'rgba(15,23,42,0.72)' }]}>
+                    <Text style={$.mediaBadgeText}>{item.media.type === 'video' ? 'VIDEO' : item.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>
+                  </View>
+                  {item.media.type === 'video' && item.media.durationSec ? (
+                    <View style={[$.mediaBadge, { backgroundColor: 'rgba(15,23,42,0.72)' }]}>
+                      <MCI name="play" size={fp(10)} color="#FFFFFF" />
+                      <Text style={$.mediaBadgeText}>{`0:${`${item.media.durationSec}`.padStart(2, '0')}`}</Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
-              <View style={$.action}>
-                <Feather name="message-circle" size={fp(13)} color={colors.textHint} />
-                <Text style={[$.actionText, { color: colors.textHint }]}>{item.commentCount}</Text>
+
+              <View style={$.tagsRow}>
+                {item.tags.map((tag) => (
+                  <View key={`${item.id}-${tag}`} style={[$.tag, { backgroundColor: colors.accentLight }]}>
+                    <Text style={[$.tagText, { color: colors.accent }]}>{tag}</Text>
+                  </View>
+                ))}
               </View>
-              <View style={$.action}>
-                <Feather name="share-2" size={fp(13)} color={colors.textHint} />
-                <Text style={[$.actionText, { color: colors.textHint }]}>{item.shareCount}</Text>
+
+              <View style={[$.actionsRow, { borderTopColor: colors.divider }]}>
+                <View style={$.action}>
+                  <Feather name="heart" size={fp(13)} color={colors.textHint} />
+                  <Text style={[$.actionText, { color: colors.textHint }]}>{item.likeCount}</Text>
+                </View>
+                <View style={$.action}>
+                  <Feather name="message-circle" size={fp(13)} color={colors.textHint} />
+                  <Text style={[$.actionText, { color: colors.textHint }]}>{item.commentCount}</Text>
+                </View>
+                <View style={$.action}>
+                  <Feather name="share-2" size={fp(13)} color={colors.textHint} />
+                  <Text style={[$.actionText, { color: colors.textHint }]}>{item.shareCount}</Text>
+                </View>
               </View>
             </View>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={<StateView empty emptyText="暂无动态" />}
       />
     </SafeAreaView>
@@ -87,41 +97,41 @@ const $ = StyleSheet.create({
   root: {
     flex: 1,
   },
-  nav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: PAD,
-    height: wp(52),
-    borderBottomWidth: 1,
-  },
-  navButton: {
-    width: wp(34),
-    height: wp(34),
-    borderRadius: wp(17),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: fp(16),
-    fontWeight: '700',
-  },
   card: {
     borderRadius: wp(18),
     borderWidth: 1,
     padding: wp(14),
     marginBottom: wp(12),
   },
-  topRow: {
+  mediaCard: {
+    marginTop: wp(14),
+    borderRadius: wp(18),
+    borderWidth: 1,
+    overflow: 'hidden',
+    backgroundColor: '#F7FAFF',
+  },
+  mediaBadgeRow: {
+    position: 'absolute',
+    top: wp(10),
+    left: wp(10),
+    flexDirection: 'row',
+    gap: wp(8),
+  },
+  mediaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: wp(4),
+    borderRadius: wp(999),
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(6),
   },
-  thumb: {
-    width: wp(56),
-    height: wp(56),
-    borderRadius: wp(14),
-    justifyContent: 'center',
+  mediaBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fp(10),
+    fontWeight: '700',
+  },
+  topRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   topText: {
@@ -140,6 +150,11 @@ const $ = StyleSheet.create({
     fontSize: fp(14),
     lineHeight: fp(22),
     marginTop: wp(14),
+  },
+  caption: {
+    fontSize: fp(12),
+    lineHeight: fp(18),
+    marginTop: wp(8),
   },
   tagsRow: {
     flexDirection: 'row',

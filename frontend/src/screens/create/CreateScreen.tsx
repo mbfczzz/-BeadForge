@@ -5,11 +5,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList, EditorMode } from '../../navigation/types';
+import type { EditorMode } from '../../api/create';
+import type { RootStackParamList } from '../../navigation/types';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, BorderRadius } from '../../theme';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
-import { CREATE_METHODS, CREATE_SIZES, CREATE_TIPS } from '../../mock/app';
+import { CREATE_METHODS, CREATE_SIZES, CREATE_TIPS } from '../../mock/create';
 
 const PAD = wp(15);
 const W = Dimensions.get('window').width;
@@ -58,7 +59,7 @@ export const CreateScreen: React.FC = () => {
                   borderColor: active ? colors.accent : colors.border,
                 }]}
               >
-                <Feather name={size.icon} size={fp(16)} color={active ? '#fff' : colors.textHint} />
+                <Feather name={size.icon as any} size={fp(16)} color={active ? '#fff' : colors.textHint} />
                 <Text style={[$.sizeLabel, { color: active ? '#fff' : colors.text }]}>{size.label}</Text>
                 <Text style={[$.sizeDesc, { color: active ? 'rgba(255,255,255,0.75)' : colors.textHint }]}>
                   {size.cols}x{size.rows} · {size.desc}
@@ -162,12 +163,12 @@ const $ = StyleSheet.create({
     alignItems: 'center',
     marginRight: wp(12),
   },
-  methodTitle: { fontSize: fp(14), fontWeight: '600' },
-  methodDesc: { fontSize: fp(11), marginTop: wp(1) },
+  methodTitle: { fontSize: fp(14), fontWeight: '800' },
+  methodDesc: { fontSize: fp(11), marginTop: wp(4), lineHeight: fp(16) },
   methodArrow: {
     width: wp(28),
     height: wp(28),
-    borderRadius: wp(14),
+    borderRadius: wp(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -175,19 +176,19 @@ const $ = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: PAD,
-    marginBottom: wp(8),
-    padding: wp(12),
+    marginBottom: wp(10),
+    padding: wp(14),
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
   tipIcon: {
-    width: wp(36),
-    height: wp(36),
-    borderRadius: wp(10),
+    width: wp(38),
+    height: wp(38),
+    borderRadius: wp(12),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(10),
+    marginRight: wp(12),
   },
-  tipTitle: { fontSize: fp(13), fontWeight: '600' },
-  tipDesc: { fontSize: fp(11), marginTop: wp(1) },
+  tipTitle: { fontSize: fp(13), fontWeight: '700' },
+  tipDesc: { fontSize: fp(11), marginTop: wp(4), lineHeight: fp(16) },
 });

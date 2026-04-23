@@ -1,190 +1,649 @@
-import React, { useMemo, useState } from 'react';
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
-import { HoverView } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
-import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { fp, wp, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
+import { useCartStore } from '../../store/useCartStore';
+import { useAddressStore } from '../../store/useAddressStore';
 
 const PAD = wp(16);
+const HERO_SIZE = wp(300);
 
 export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = ({ route, navigation }) => {
   const { colors, dark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { product } = route.params;
+  const addItem = useCartStore((state) => state.addItem);
+  const defaultAddress = useAddressStore((state) => state.addresses.find((item) => item.isDefault) || state.addresses[0]);
+
   const [qty, setQty] = useState(1);
+  const [liked, setLiked] = useState(false);
+  const [selectorVisible, setSelectorVisible] = useState(false);
+  const [selectedPreview, setSelectedPreview] = useState(0);
+  const [selectedSpec, setSelectedSpec] = useState(0);
+  const [toastVisible, setToastVisible] = useState(false);
+  const heroScrollRef = useRef<ScrollView | null>(null);
 
   const specs = useMemo(() => {
+    if (!product.specs) return ['默认规格'];
     try {
-      return product.specs ? JSON.parse(product.specs) as string[] : [];
+      const parsed = JSON.parse(product.specs) as string[];
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : ['默认规格'];
     } catch {
-      return [];
+      return ['默认规格'];
     }
   }, [product.specs]);
 
-  const totalPrice = (product.price * qty).toFixed(1);
-  const saved = product.originalPrice ? ((product.originalPrice - product.price) * qty).toFixed(1) : null;
+  const previewItems = useMemo(
+    () => [
+      { key: 'main', tint: `${product.color}14` },
+      { key: 'detail', tint: `${product.color}10` },
+      { key: 'match', tint: dark ? '#13233A' : '#F5F9FF' },
+      { key: 'scene', tint: dark ? '#13233A' : '#F7FAFC' },
+    ],
+    [dark, product.color],
+  );
 
-  const handleBuy = () => {
-    Alert.alert('确认购买', `${product.name} x ${qty}\n合计 ¥ ${totalPrice}`, [
-      { text: '取消', style: 'cancel' },
-      { text: '购买', onPress: () => Alert.alert('下单成功', '当前演示环境不接入真实支付。') },
-    ]);
+  const totalPrice = useMemo(() => (product.price * qty).toFixed(1), [product.price, qty]);
+  const salesText = useMemo(
+    () => (product.sales > 10000 ? `${(product.sales / 10000).toFixed(1)}万` : `${product.sales}`),
+    [product.sales],
+  );
+
+  const openSelector = () => setSelectorVisible(true);
+  const closeSelector = () => setSelectorVisible(false);
+
+  useEffect(() => {
+    if (!toastVisible) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setToastVisible(false);
+    }, 1600);
+
+    return () => clearTimeout(timer);
+  }, [toastVisible]);
+
+  const handleHeroScrollEnd = (offsetX: number) => {
+    const nextIndex = Math.round(offsetX / HERO_SIZE);
+    setSelectedPreview(nextIndex);
+  };
+
+  const handleAddToCart = () => {
+    addItem(product, { qty, variant: specs[selectedSpec] });
+    closeSelector();
+    setToastVisible(true);
+  };
+
+  const handleBuyNow = () => {
+    closeSelector();
+    navigation.navigate('Payment', {
+      source: 'product',
+      product,
+      qty,
+      variant: specs[selectedSpec],
+    });
   };
 
   return (
-    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={() => navigation.goBack()} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.08} hoverLift={0}>
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
+      <View style={[styles.nav, { top: insets.top + wp(8) }]}>
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={() => navigation.goBack()}
+          style={[
+            styles.navBtn,
+            {
+              backgroundColor: dark ? 'rgba(15,29,49,0.92)' : 'rgba(255,255,255,0.96)',
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </HoverView>
-        <Text style={[$.navTitle, { color: colors.text }]} numberOfLines={1}>商品详情</Text>
-        <View style={{ width: wp(34) }} />
+        </TouchableOpacity>
+
+        <View style={styles.navRight}>
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => setLiked((value) => !value)}
+            style={[
+              styles.navBtn,
+              {
+                backgroundColor: dark ? 'rgba(15,29,49,0.92)' : 'rgba(255,255,255,0.96)',
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Feather name="heart" size={fp(17)} color={liked ? colors.error : colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => Alert.alert('分享', '当前演示环境未接入系统分享。')}
+            style={[
+              styles.navBtn,
+              {
+                backgroundColor: dark ? 'rgba(15,29,49,0.92)' : 'rgba(255,255,255,0.96)',
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Feather name="share-2" size={fp(17)} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(112) }}>
-        <View style={[$.coverArea, { backgroundColor: dark ? 'rgba(255,255,255,0.04)' : `${product.color}10` }]}>
-          <View style={[$.iconBig, { backgroundColor: `${product.color}20` }]}>
-            <Feather name={product.icon as any} size={fp(48)} color={product.color} />
-          </View>
-          {product.tag ? (
-            <View style={[$.tag, { backgroundColor: product.color }]}>
-              <Text style={$.tagText}>{product.tag}</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={[$.priceSection, { backgroundColor: colors.surface }]}>
-          <View style={$.priceRow}>
-            <Text style={$.priceSymbol}>¥</Text>
-            <Text style={$.priceVal}>{product.price.toFixed(1)}</Text>
-            {product.originalPrice ? <Text style={[$.priceOld, { color: colors.textHint }]}>¥ {product.originalPrice.toFixed(1)}</Text> : null}
-            {saved ? (
-              <View style={$.savedTag}>
-                <Text style={$.savedText}>省 ¥ {saved}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={[$.productName, { color: colors.text }]}>{product.name}</Text>
-          <Text style={[$.productDesc, { color: colors.textSecondary }]}>{product.description}</Text>
-          <View style={$.metaRow}>
-            <View style={$.metaItem}>
-              <Feather name="star" size={fp(12)} color="#FBBF24" />
-              <Text style={[$.metaText, { color: colors.text }]}>{product.rating}</Text>
-            </View>
-            <Text style={[$.metaSep, { color: colors.divider }]}>|</Text>
-            <Text style={[$.metaText, { color: colors.textHint }]}>{product.sales > 1000 ? `${(product.sales / 1000).toFixed(1)}k` : product.sales} 人购买</Text>
-            <Text style={[$.metaSep, { color: colors.divider }]}>|</Text>
-            <Text style={[$.metaText, { color: colors.textHint }]}>{product.category}</Text>
-          </View>
-        </View>
-
-        {specs.length > 0 && (
-          <View style={[$.specSection, { backgroundColor: colors.surface }]}>
-            <Text style={[$.sectionTitle, { color: colors.text }]}>规格参数</Text>
-            <View style={$.specGrid}>
-              {specs.map((spec) => (
-                <View key={spec} style={[$.specChip, { backgroundColor: colors.inputBg }]}>
-                  <Text style={[$.specText, { color: colors.textSecondary }]}>{spec}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(118) + BOTTOM_SAFE_H }}>
+        <View style={[styles.hero, { backgroundColor: dark ? '#0B182B' : '#EEF5FF', paddingTop: insets.top + wp(56) }]}>
+          <View style={styles.heroViewport}>
+            <ScrollView
+              ref={heroScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+              snapToInterval={HERO_SIZE}
+              decelerationRate="fast"
+              onMomentumScrollEnd={(event) => handleHeroScrollEnd(event.nativeEvent.contentOffset.x)}
+            >
+              {previewItems.map((item) => (
+                <View key={item.key} style={[styles.heroVisual, { backgroundColor: item.tint }]}>
+                  <View style={[styles.heroCore, { backgroundColor: `${product.color}22` }]}>
+                    <Feather name={product.icon as any} size={fp(64)} color={product.color} />
+                  </View>
                 </View>
               ))}
+            </ScrollView>
+
+            <View style={styles.heroDots}>
+              {previewItems.map((item, index) => {
+                const active = index === selectedPreview;
+                return (
+                  <View
+                    key={`${item.key}-dot`}
+                    style={[
+                      styles.heroDot,
+                      {
+                        width: active ? wp(18) : wp(6),
+                        backgroundColor: active ? product.color : `${product.color}33`,
+                      },
+                    ]}
+                  />
+                );
+              })}
             </View>
           </View>
-        )}
 
-        <View style={[$.infoSection, { backgroundColor: colors.surface }]}>
-          <Text style={[$.sectionTitle, { color: colors.text }]}>购买说明</Text>
-          {[
-            { icon: 'truck', text: '演示环境不接入真实物流，订单不会实际发货。' },
-            { icon: 'refresh-cw', text: '购物车和购买状态只保存在本地会话中。' },
-            { icon: 'shield', text: '当前页面仅用于前端交互展示与排版验证。' },
-          ].map((item) => (
-            <View key={item.text} style={$.infoRow}>
-              <Feather name={item.icon as any} size={fp(14)} color={colors.textHint} />
-              <Text style={[$.infoText, { color: colors.textSecondary }]}>{item.text}</Text>
+          <View style={styles.heroInfo}>
+            <View style={styles.priceRow}>
+              <View style={styles.priceMain}>
+                <Text style={styles.priceSymbol}>¥</Text>
+                <Text style={styles.priceValue}>{product.price.toFixed(1)}</Text>
+                {product.originalPrice ? (
+                  <Text style={[styles.oldPrice, { color: colors.textHint }]}>¥ {product.originalPrice.toFixed(1)}</Text>
+                ) : null}
+              </View>
+              <Text style={[styles.salesInline, { color: colors.textHint }]}>销量 {salesText}</Text>
             </View>
-          ))}
+
+            <Text style={[styles.title, { color: colors.text }]}>{product.name}</Text>
+            <Text style={[styles.desc, { color: colors.textSecondary }]}>{product.description}</Text>
+
+            <View style={styles.benefitWrap}>
+              <View style={styles.orangeChip}>
+                <Text style={styles.orangeChipText}>满 2 件 9.8 折</Text>
+              </View>
+            </View>
+
+            <View style={styles.categorySection}>
+              <View style={styles.categoryHead}>
+                <Text style={[styles.categoryTitle, { color: colors.text }]}>品类选择</Text>
+                <Text style={[styles.categoryHint, { color: colors.textSecondary }]}>
+                  已选 {specs[selectedSpec]}
+                </Text>
+              </View>
+
+              <View style={styles.categoryRow}>
+                {specs.map((spec, index) => {
+                  const active = index === selectedSpec;
+                  return (
+                    <TouchableOpacity
+                      key={`${spec}-${index}`}
+                      activeOpacity={0.82}
+                      onPress={() => setSelectedSpec(index)}
+                      style={[
+                        styles.categoryChip,
+                        {
+                          backgroundColor: active ? '#FFF7F1' : dark ? '#13233A' : '#FFFFFF',
+                          borderColor: active ? '#FF8A3D' : colors.border,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.categoryChipText,
+                          { color: active ? '#FF7A1A' : colors.textSecondary },
+                        ]}
+                      >
+                        {spec}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
 
-      <View style={[$.bottomBar, { backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
-        <View style={$.qtyRow}>
-          <TouchableOpacity onPress={() => qty > 1 && setQty(qty - 1)} activeOpacity={0.75} style={[$.qtyBtn, { borderColor: colors.border }]}>
-            <Feather name="minus" size={fp(14)} color={qty <= 1 ? colors.textHint : colors.text} />
+      <View style={[styles.bottomBar, { backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
+        <View style={styles.tools}>
+          <TouchableOpacity activeOpacity={0.78} onPress={() => setLiked((value) => !value)} style={styles.tool}>
+            <Feather name="heart" size={fp(18)} color={liked ? colors.error : colors.text} />
+            <Text style={[styles.toolText, { color: liked ? colors.error : colors.textHint }]}>收藏</Text>
           </TouchableOpacity>
-          <Text style={[$.qtyNum, { color: colors.text }]}>{qty}</Text>
-          <TouchableOpacity onPress={() => setQty(qty + 1)} activeOpacity={0.75} style={[$.qtyBtn, { borderColor: colors.border }]}>
-            <Feather name="plus" size={fp(14)} color={colors.text} />
+          <TouchableOpacity activeOpacity={0.78} onPress={() => Alert.alert('客服', '当前演示环境未接入在线客服。')} style={styles.tool}>
+            <Feather name="message-circle" size={fp(18)} color={colors.text} />
+            <Text style={[styles.toolText, { color: colors.textHint }]}>客服</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.78} onPress={() => navigation.navigate('Cart')} style={styles.tool}>
+            <Feather name="shopping-cart" size={fp(18)} color={colors.text} />
+            <Text style={[styles.toolText, { color: colors.textHint }]}>购物车</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={{ flex: 1 }} />
-
-        <Text style={$.totalPrice}>¥ {totalPrice}</Text>
-
-        <TouchableOpacity activeOpacity={0.85} onPress={handleBuy} style={[$.buyBtn, { backgroundColor: colors.accent }]}>
-          <Text style={$.buyBtnText}>立即购买</Text>
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <TouchableOpacity activeOpacity={0.86} onPress={openSelector} style={styles.cartAction}>
+            <Text style={styles.actionText}>加入购物车</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.86} onPress={openSelector} style={styles.buyAction}>
+            <Text style={styles.actionText}>立即购买</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {toastVisible ? (
+        <View pointerEvents="none" style={[styles.toastWrap, { bottom: wp(96) + BOTTOM_SAFE_H }]}>
+          <View style={[styles.toast, { backgroundColor: dark ? 'rgba(15,29,49,0.96)' : 'rgba(19,36,61,0.9)' }]}>
+            <Feather name="check-circle" size={fp(15)} color="#FFFFFF" />
+            <Text style={styles.toastText}>已加入购物车</Text>
+          </View>
+        </View>
+      ) : null}
+
+      <Modal visible={selectorVisible} transparent animationType="slide" onRequestClose={closeSelector}>
+        <View style={styles.modalRoot}>
+          <TouchableOpacity style={styles.mask} activeOpacity={1} onPress={closeSelector} />
+
+          <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, wp(16)) }]}>
+            <View style={styles.sheetHead}>
+              <Text style={[styles.sheetHint, { color: '#F97316' }]}>选择规格后可加入购物车，也可以直接去支付。</Text>
+              <TouchableOpacity activeOpacity={0.78} onPress={closeSelector}>
+                <Feather name="x" size={fp(22)} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.86}
+              onPress={() => navigation.navigate('AddressManage')}
+              style={[styles.addressRow, { borderBottomColor: colors.divider }]}
+            >
+              <Feather name="map-pin" size={fp(16)} color={colors.textSecondary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.addressTitle, { color: colors.text }]}>
+                  {defaultAddress ? `默认地址 · ${defaultAddress.region} ${defaultAddress.detail}` : '默认地址 · 请先设置收货地址'}
+                </Text>
+                <Text style={[styles.addressSub, { color: colors.textSecondary }]}>
+                  {defaultAddress
+                    ? `${defaultAddress.receiver} ${defaultAddress.phone} · 包邮 · 预计明天发货`
+                    : '包邮 · 预计明天发货 · 支持 7 天退换'}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={fp(16)} color={colors.textHint} />
+            </TouchableOpacity>
+
+            <View style={styles.productRow}>
+              <View style={[styles.productThumb, { backgroundColor: previewItems[selectedPreview].tint, borderColor: `${product.color}22` }]}>
+                <Feather name={product.icon as any} size={fp(30)} color={product.color} />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sheetPrice}>¥ {totalPrice}</Text>
+                <View style={styles.promoRow}>
+                  <View style={styles.orangeChip}>
+                    <Text style={styles.orangeChipText}>满 2 件 9.8 折</Text>
+                  </View>
+                </View>
+                <View style={styles.qtySheetRow}>
+                  <View style={styles.qtySheetBox}>
+                    <TouchableOpacity activeOpacity={0.78} onPress={() => qty > 1 && setQty(qty - 1)} style={styles.qtySheetBtn}>
+                      <Feather name="minus" size={fp(12)} color="#334155" />
+                    </TouchableOpacity>
+                    <Text style={styles.qtySheetNum}>{qty}</Text>
+                    <TouchableOpacity activeOpacity={0.78} onPress={() => setQty(qty + 1)} style={styles.qtySheetBtn}>
+                      <Feather name="plus" size={fp(12)} color="#334155" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.stockText, { color: colors.textSecondary }]}>有货</Text>
+                </View>
+              </View>
+            </View>
+
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>规格</Text>
+            <View style={styles.specRow}>
+              {specs.map((spec, index) => (
+                <TouchableOpacity
+                  key={`${spec}-${index}`}
+                  activeOpacity={0.82}
+                  onPress={() => setSelectedSpec(index)}
+                  style={[
+                    styles.specOption,
+                    {
+                      backgroundColor: index === selectedSpec ? '#FFF7F1' : dark ? '#13233A' : '#F7F9FC',
+                      borderColor: index === selectedSpec ? '#FF8A3D' : colors.border,
+                    },
+                  ]}
+                >
+                  {index === selectedSpec ? (
+                    <View style={styles.specActiveBadge}>
+                      <Feather name="check" size={fp(10)} color="#FFFFFF" />
+                    </View>
+                  ) : null}
+                  <Text style={[styles.specOptionText, { color: index === selectedSpec ? '#FF7A1A' : colors.text }]}>{spec}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.sheetActionRow}>
+              <TouchableOpacity activeOpacity={0.86} onPress={handleAddToCart} style={styles.sheetCartAction}>
+                <Text style={styles.sheetActionText}>加入购物车</Text>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.86} onPress={handleBuyNow} style={styles.sheetBuyAction}>
+                <Text style={styles.sheetActionText}>立即购买</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-const $ = StyleSheet.create({
+const styles = StyleSheet.create({
   root: { flex: 1 },
   nav: {
+    position: 'absolute',
+    left: PAD,
+    right: PAD,
+    zIndex: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  navRight: { flexDirection: 'row', gap: wp(10) },
+  navBtn: {
+    width: wp(38),
+    height: wp(38),
+    borderRadius: wp(19),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadow(6, 14, 0.08, '#0F172A', 4),
+  },
+  hero: {
+    paddingHorizontal: PAD,
+    paddingBottom: wp(18),
+  },
+  heroViewport: {
+    width: HERO_SIZE,
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  heroVisual: {
+    width: HERO_SIZE,
+    height: HERO_SIZE,
+    borderRadius: wp(30),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroCore: {
+    width: wp(128),
+    height: wp(128),
+    borderRadius: wp(64),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroDots: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: wp(50),
-    paddingHorizontal: PAD,
-    borderBottomWidth: 1,
+    justifyContent: 'center',
+    gap: wp(6),
+    marginTop: wp(14),
+  },
+  heroDot: {
+    height: wp(6),
+    borderRadius: wp(999),
+  },
+  heroInfo: {
+    marginTop: wp(18),
+  },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  priceMain: { flexDirection: 'row', alignItems: 'baseline' },
+  priceSymbol: { color: '#FF4D4F', fontSize: fp(16), fontWeight: '800' },
+  priceValue: { color: '#FF4D4F', fontSize: fp(24), fontWeight: '800', marginLeft: wp(2) },
+  oldPrice: { fontSize: fp(13), textDecorationLine: 'line-through', marginLeft: wp(8) },
+  salesInline: { fontSize: fp(11), fontWeight: '500' },
+  title: { fontSize: fp(16), fontWeight: '800', marginTop: wp(10) },
+  desc: { fontSize: fp(13), marginTop: wp(8), lineHeight: fp(20) },
+  benefitWrap: { marginTop: wp(12), alignItems: 'flex-start' },
+  categorySection: {
+    marginTop: wp(20),
+  },
+  categoryHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: wp(10),
   },
-  navTitle: { flex: 1, fontSize: fp(16), fontWeight: '700', textAlign: 'center' },
-  navBtn: { width: wp(34), height: wp(34), borderRadius: wp(17), justifyContent: 'center', alignItems: 'center' },
-  coverArea: { height: wp(220), justifyContent: 'center', alignItems: 'center' },
-  iconBig: { width: wp(90), height: wp(90), borderRadius: wp(45), justifyContent: 'center', alignItems: 'center' },
-  tag: { position: 'absolute', top: wp(12), left: wp(12), paddingHorizontal: wp(10), paddingVertical: wp(4), borderRadius: wp(6) },
-  tagText: { color: '#fff', fontSize: fp(12), fontWeight: '700' },
-  priceSection: { paddingHorizontal: PAD, paddingVertical: wp(16) },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  priceSymbol: { color: '#EF4444', fontSize: fp(16), fontWeight: '700' },
-  priceVal: { color: '#EF4444', fontSize: fp(28), fontWeight: '800', marginLeft: wp(2) },
-  priceOld: { fontSize: fp(14), textDecorationLine: 'line-through', marginLeft: wp(8) },
-  savedTag: { backgroundColor: '#FEF2F2', paddingHorizontal: wp(8), paddingVertical: wp(2), borderRadius: wp(4), marginLeft: wp(8) },
-  savedText: { color: '#EF4444', fontSize: fp(11), fontWeight: '600' },
-  productName: { fontSize: fp(18), fontWeight: '700', marginTop: wp(10) },
-  productDesc: { fontSize: fp(13), marginTop: wp(6), lineHeight: fp(19) },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: wp(10) },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
-  metaText: { fontSize: fp(12) },
-  metaSep: { marginHorizontal: wp(8), fontSize: fp(12) },
-  specSection: { paddingHorizontal: PAD, paddingVertical: wp(14), marginTop: wp(8) },
-  sectionTitle: { fontSize: fp(15), fontWeight: '700', marginBottom: wp(10) },
-  specGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8) },
-  specChip: { paddingHorizontal: wp(12), paddingVertical: wp(6), borderRadius: wp(8) },
-  specText: { fontSize: fp(12) },
-  infoSection: { paddingHorizontal: PAD, paddingVertical: wp(14), marginTop: wp(8) },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: wp(10), marginTop: wp(8) },
-  infoText: { flex: 1, fontSize: fp(13), lineHeight: fp(18) },
+  categoryTitle: {
+    fontSize: fp(14),
+    fontWeight: '800',
+  },
+  categoryHint: {
+    fontSize: fp(11),
+    fontWeight: '500',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(10),
+    marginTop: wp(12),
+  },
+  categoryChip: {
+    minHeight: wp(38),
+    paddingHorizontal: wp(14),
+    borderRadius: wp(12),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryChipText: {
+    fontSize: fp(12),
+    fontWeight: '700',
+  },
+  orangeChip: {
+    backgroundColor: '#FFF5EC',
+    paddingHorizontal: wp(9),
+    paddingVertical: wp(5),
+    borderRadius: wp(10),
+  },
+  orangeChipText: { color: '#FF7A1A', fontSize: fp(11), fontWeight: '700' },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
+    bottom: 0,
+    borderTopWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: PAD,
+    paddingLeft: PAD,
+    paddingRight: PAD,
     paddingTop: wp(10),
     paddingBottom: Math.max(BOTTOM_SAFE_H, wp(10)),
-    borderTopWidth: 1,
+    gap: wp(12),
   },
-  qtyRow: { flexDirection: 'row', alignItems: 'center' },
-  qtyBtn: { width: wp(30), height: wp(30), borderRadius: wp(15), borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
-  qtyNum: { fontSize: fp(15), fontWeight: '700', marginHorizontal: wp(12) },
-  totalPrice: { color: '#EF4444', fontSize: fp(18), fontWeight: '800', marginRight: wp(12) },
-  buyBtn: { paddingHorizontal: wp(22), paddingVertical: wp(11), borderRadius: wp(12) },
-  buyBtnText: { color: '#fff', fontSize: fp(15), fontWeight: '700' },
+  tools: { flexDirection: 'row', alignItems: 'center', gap: wp(14) },
+  tool: { alignItems: 'center', justifyContent: 'center', minWidth: wp(34) },
+  toolText: { fontSize: fp(10), marginTop: wp(4) },
+  actions: { flex: 1, flexDirection: 'row', gap: wp(10) },
+  cartAction: {
+    flex: 1,
+    height: wp(42),
+    borderRadius: wp(21),
+    backgroundColor: '#FFB648',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buyAction: {
+    flex: 1,
+    height: wp(42),
+    borderRadius: wp(21),
+    backgroundColor: '#FF5E73',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: { color: '#fff', fontSize: fp(14), fontWeight: '800' },
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
+  mask: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15,23,42,0.3)' },
+  sheet: {
+    borderTopLeftRadius: wp(24),
+    borderTopRightRadius: wp(24),
+    paddingTop: wp(14),
+  },
+  sheetHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: PAD,
+    paddingBottom: wp(12),
+  },
+  sheetHint: {
+    flex: 1,
+    fontSize: fp(12),
+    fontWeight: '700',
+    lineHeight: fp(18),
+    paddingRight: wp(10),
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(10),
+    paddingHorizontal: PAD,
+    paddingBottom: wp(14),
+    borderBottomWidth: 1,
+  },
+  addressTitle: { fontSize: fp(14), fontWeight: '700' },
+  addressSub: { fontSize: fp(12), marginTop: wp(4) },
+  productRow: { flexDirection: 'row', paddingHorizontal: PAD, paddingTop: wp(16) },
+  productThumb: {
+    width: wp(82),
+    height: wp(82),
+    borderRadius: wp(16),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: wp(12),
+  },
+  sheetPrice: { color: '#FF5A1F', fontSize: fp(28), fontWeight: '800' },
+  promoRow: { flexDirection: 'row', gap: wp(8), marginTop: wp(6) },
+  qtySheetRow: { flexDirection: 'row', alignItems: 'center', marginTop: wp(10) },
+  qtySheetBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: wp(10),
+    overflow: 'hidden',
+  },
+  qtySheetBtn: { width: wp(34), height: wp(30), alignItems: 'center', justifyContent: 'center' },
+  qtySheetNum: { width: wp(36), textAlign: 'center', fontSize: fp(14), fontWeight: '700', color: '#334155' },
+  stockText: { marginLeft: wp(12), fontSize: fp(12), fontWeight: '600' },
+  sheetTitle: {
+    fontSize: fp(14),
+    fontWeight: '800',
+    marginTop: wp(16),
+    marginBottom: wp(12),
+    paddingHorizontal: PAD,
+  },
+  specRow: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(10), paddingHorizontal: PAD },
+  specOption: {
+    minHeight: wp(44),
+    paddingHorizontal: wp(14),
+    borderRadius: wp(12),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  specOptionText: { fontSize: fp(13), fontWeight: '700' },
+  specActiveBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: wp(20),
+    height: wp(20),
+    borderBottomLeftRadius: wp(10),
+    backgroundColor: '#FF8A3D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetActionRow: {
+    flexDirection: 'row',
+    marginTop: wp(18),
+    marginHorizontal: PAD,
+    borderRadius: wp(16),
+    overflow: 'hidden',
+  },
+  sheetCartAction: {
+    flex: 1,
+    backgroundColor: '#FFB648',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: wp(12),
+  },
+  sheetBuyAction: {
+    flex: 1,
+    backgroundColor: '#FF6A00',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: wp(12),
+  },
+  sheetActionText: {
+    color: '#FFFFFF',
+    fontSize: fp(15),
+    fontWeight: '800',
+  },
+  toastWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  toast: {
+    minHeight: wp(40),
+    borderRadius: wp(20),
+    paddingHorizontal: wp(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(8),
+    ...shadow(8, 18, 0.18, '#0F172A', 6),
+  },
+  toastText: {
+    color: '#FFFFFF',
+    fontSize: fp(12),
+    fontWeight: '700',
+  },
 });

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { DesignItem } from '../api/design';
-import { getMockMyDesignPage, getMockPublicDesignPage } from '../mock/app';
+import { getMockMyDesignPage, getMockPublicDesignPage } from '../mock/design';
 import { useAuthStore } from './useAuthStore';
 
 interface DesignState {

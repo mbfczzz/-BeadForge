@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
+import { AppHeader, ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { useDesignStore } from '../../store/useDesignStore';
 import { fp, wp } from '../../utils/responsive';
@@ -29,13 +28,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <TouchableOpacity style={$.navButton} onPress={onBack} activeOpacity={0.75}>
-          <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[$.navTitle, { color: colors.text }]}>我的作品</Text>
-        <View style={{ width: wp(34) }} />
-      </View>
+      <AppHeader title="我的作品" onBack={onBack} />
 
       <FlatList
         data={myDesigns}

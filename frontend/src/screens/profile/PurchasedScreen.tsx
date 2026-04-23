@@ -2,9 +2,10 @@ import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
+import { ALL_PATTERNS, BeadGrid, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
 import { usePatternStore } from '../../store/usePatternStore';
+import { useResourceAccessStore } from '../../store/useResourceAccessStore';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -16,11 +17,21 @@ interface Props {
 export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
   const listings = usePatternStore((state) => state.listings);
-  const purchased = usePatternStore((state) => state.purchased);
   const myListings = usePatternStore((state) => state.myListings);
+  const ownedFileIds = useResourceAccessStore((state) => state.ownedFileIds);
+  const membershipActive = useResourceAccessStore((state) => state.membershipActive);
 
-  const owned = listings.filter((item) => purchased.has(item.id) || myListings.has(item.id));
+  const owned = listings.filter((item) => myListings.has(item.id) || ownedFileIds.has(item.id) || (membershipActive && item.accessMode === 'member'));
   const displayItems = owned.length > 0 ? owned : listings.slice(0, 4);
+
+  const accessLabel = (item: typeof displayItems[number]) => {
+    if (myListings.has(item.id)) return '我发布的';
+    if (ownedFileIds.has(item.id)) return item.accessMode === 'points' ? `${item.pointsCost} 积分获取` : item.accessMode === 'member' ? '会员获取' : '免费获取';
+    if (membershipActive && item.accessMode === 'member') return '会员可用';
+    if (item.accessMode === 'points') return `${item.pointsCost} 积分`;
+    if (item.accessMode === 'member') return '会员';
+    return '免费';
+  };
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -28,13 +39,13 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
         <TouchableOpacity style={$.navButton} onPress={onBack} activeOpacity={0.75}>
           <Feather name="arrow-left" size={fp(18)} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[$.navTitle, { color: colors.text }]}>已购图纸</Text>
+        <Text style={[$.navTitle, { color: colors.text }]}>我的文件</Text>
         <View style={{ width: wp(34) }} />
       </View>
 
       {owned.length === 0 ? (
         <View style={[$.notice, { backgroundColor: colors.accentLight }]}>
-          <Text style={[$.noticeText, { color: colors.accent }]}>当前展示的是本地演示图纸。</Text>
+          <Text style={[$.noticeText, { color: colors.accent }]}>当前展示的是可体验的本地资源。</Text>
         </View>
       ) : null}
 
@@ -45,10 +56,10 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
         columnWrapperStyle={$.column}
         contentContainerStyle={{ padding: PAD, paddingBottom: wp(40) }}
         renderItem={({ item }) => (
-          <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <SurfaceCard style={$.card} bodyStyle={$.cardBody}>
             <View style={[$.cover, { backgroundColor: colors.inputBg }]}>
               <BeadGrid
-                pixels={ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length]}
+                pixels={item.gridData || ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length]}
                 beadSize={wp(5)}
                 gap={0.5}
                 round
@@ -58,13 +69,13 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
             <Text style={[$.desc, { color: colors.textHint }]} numberOfLines={2}>{item.desc}</Text>
             <View style={$.metaRow}>
               <Text style={[$.metaText, { color: colors.textHint }]}>{item.cols} x {item.rows}</Text>
-              <Text style={[$.priceText, { color: item.free ? '#22c55e' : colors.text }]}>
-                {item.free ? '免费' : `¥ ${item.price}`}
+              <Text style={[$.priceText, { color: item.accessMode === 'free' ? colors.success : item.accessMode === 'member' ? colors.accent : colors.text }]}>
+                {accessLabel(item)}
               </Text>
             </View>
-          </View>
+          </SurfaceCard>
         )}
-        ListEmptyComponent={<StateView empty emptyText="暂无已购图纸" />}
+        ListEmptyComponent={<StateView empty emptyText="暂无文件资源" />}
       />
     </SafeAreaView>
   );
@@ -112,15 +123,15 @@ const $ = StyleSheet.create({
   card: {
     width: '48%' as const,
     borderRadius: wp(18),
-    borderWidth: 1,
-    padding: wp(12),
+  },
+  cardBody: {
+    gap: wp(10),
   },
   cover: {
     height: wp(116),
     borderRadius: wp(14),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: wp(12),
   },
   title: {
     fontSize: fp(13),
@@ -129,11 +140,9 @@ const $ = StyleSheet.create({
   desc: {
     fontSize: fp(11),
     lineHeight: fp(17),
-    marginTop: wp(6),
     minHeight: fp(34),
   },
   metaRow: {
-    marginTop: wp(10),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -1,70 +1,146 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
-  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Avatar } from '../../components/common';
-import { useTheme } from '../../theme';
-import { BOTTOM_SAFE_H, fp, wp } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
+import type { FeedbackTicketItem } from '../../api/feedback';
+import type {
+  ProfileAddressItem,
+  ProfileNoticeAction,
+  ProfileNoticeItem,
+  ProfileOrderFilterTab,
+} from '../../api/profile';
+import { MOCK_PROFILE_ADDRESSES, MOCK_PROFILE_FAVORITES, MOCK_PROFILE_NOTICES } from '../../mock/profile';
+import { INITIAL_FEEDBACK_TICKETS } from '../../mock/feedback';
+import { useTabBarVisibility } from '../../hooks/useTabBarVisibility';
 import { useAuthStore } from '../../store/useAuthStore';
-import {
-  getProfilePoints,
-  MOCK_PROFILE_FAVORITES,
-  MOCK_PROFILE_GIVEN_LIKES,
-} from '../../mock/profile';
-import { LoginScreen } from './LoginScreen';
-import { RegisterScreen } from './RegisterScreen';
+import { useAddressStore } from '../../store/useAddressStore';
+import { useNavigationUIStore } from '../../store/useNavigationUIStore';
+import { useResourceAccessStore } from '../../store/useResourceAccessStore';
+import { useTheme } from '../../theme';
+import { AddressScreen } from './AddressScreen';
 import { EditProfileScreen } from './EditProfileScreen';
-import { MyDesignsScreen } from './MyDesignsScreen';
+import { FeedbackDetailScreen } from './FeedbackDetailScreen';
 import { FavoritesScreen } from './FavoritesScreen';
-import { LikesScreen } from './LikesScreen';
-import { SettingsScreen } from './SettingsScreen';
-import { MyFeedsScreen } from './MyFeedsScreen';
-import { PurchasedScreen } from './PurchasedScreen';
+import { FeedbackScreen } from './FeedbackScreen';
 import { FollowListScreen } from './FollowListScreen';
-import { WalletScreen } from './WalletScreen';
-import { OrdersScreen } from './OrdersScreen';
 import { LikedHistoryScreen } from './LikedHistoryScreen';
-
-const PAD = wp(16);
+import { LikesScreen } from './LikesScreen';
+import { LoginScreen } from './LoginScreen';
+import { MyDesignsScreen } from './MyDesignsScreen';
+import { MyFeedsScreen } from './MyFeedsScreen';
+import { NotificationsScreen } from './NotificationsScreen';
+import { OrderDetailScreen } from './OrderDetailScreen';
+import { OrdersScreen } from './OrdersScreen';
+import { PurchasedScreen } from './PurchasedScreen';
+import { RegisterScreen } from './RegisterScreen';
+import { SettingsScreen } from './SettingsScreen';
+import { WalletScreen } from './WalletScreen';
 
 type SubPage =
-  | 'none'
-  | 'editProfile'
-  | 'myDesigns'
-  | 'favorites'
-  | 'likes'
-  | 'likedHistory'
-  | 'settings'
-  | 'myFeeds'
-  | 'purchased'
-  | 'followers'
-  | 'following'
-  | 'wallet'
-  | 'orders';
+  | { key: 'none' }
+  | { key: 'editProfile' }
+  | { key: 'myDesigns' }
+  | { key: 'favorites' }
+  | { key: 'addresses' }
+  | { key: 'likes' }
+  | { key: 'likedHistory' }
+  | { key: 'settings' }
+  | { key: 'feedback' }
+  | { key: 'feedbackDetail'; ticketId: string }
+  | { key: 'myFeeds' }
+  | { key: 'purchased' }
+  | { key: 'followers' }
+  | { key: 'following' }
+  | { key: 'wallet' }
+  | { key: 'notifications' }
+  | { key: 'orders'; tab?: ProfileOrderFilterTab; returnTo?: 'root' | 'notifications' }
+  | { key: 'orderDetail'; orderId: string; tab?: ProfileOrderFilterTab; returnTo?: 'orders' | 'notifications' };
+
+type RootPageKey = Exclude<SubPage['key'], 'none' | 'orders' | 'orderDetail'>;
+
+type MenuAction =
+  | { type: 'page'; key: RootPageKey }
+  | { type: 'orders'; tab?: ProfileOrderFilterTab }
+  | { type: 'alert'; title: string; message: string };
+
+function formatCompact(value: number) {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}k`;
+  }
+  return `${value}`;
+}
+
+function ShadowCard({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <View
+      className={`rounded-[26px] border border-slate-100 bg-white ${className}`}
+      style={{
+        shadowColor: '#0f172a',
+        shadowOpacity: 0.02,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 3 },
+        elevation: 1,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
 
 export const ProfileScreen: React.FC = () => {
-  const { colors, dark } = useTheme();
-  const { user, token, stats, fetchStats } = useAuthStore();
+  const { colors } = useTheme();
+  const { user, token, fetchStats } = useAuthStore();
+  const setTabBarHidden = useNavigationUIStore((state) => state.setTabBarHidden);
+  const pointsBalance = useResourceAccessStore((state) => state.pointsBalance);
+  const signIn = useResourceAccessStore((state) => state.signIn);
 
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [subPage, setSubPage] = useState<SubPage>('none');
+  const [subPage, setSubPage] = useState<SubPage>({ key: 'none' });
   const [refreshing, setRefreshing] = useState(false);
-  const [signedToday, setSignedToday] = useState(false);
+  const [notices, setNotices] = useState<ProfileNoticeItem[]>(MOCK_PROFILE_NOTICES);
+  const addresses = useAddressStore((state) => state.addresses);
+  const createAddress = useAddressStore((state) => state.createAddress);
+  const updateAddress = useAddressStore((state) => state.updateAddress);
+  const deleteAddress = useAddressStore((state) => state.deleteAddress);
+  const setDefaultAddress = useAddressStore((state) => state.setDefaultAddress);
+  const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicketItem[]>(INITIAL_FEEDBACK_TICKETS);
+  const prevTokenRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (token) {
       void fetchStats();
     }
   }, [fetchStats, token]);
+
+  useEffect(() => {
+    if (prevTokenRef.current === token) {
+      return;
+    }
+
+    setSubPage({ key: 'none' });
+    setTabBarHidden(false);
+
+    if (!token) {
+      setAuthMode('login');
+    }
+
+    prevTokenRef.current = token;
+  }, [token, setTabBarHidden]);
+
+  useTabBarVisibility(subPage.key !== 'none');
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -75,426 +151,465 @@ export const ProfileScreen: React.FC = () => {
     }
   }, [fetchStats]);
 
+  const handleBackToRoot = useCallback(() => {
+    setTabBarHidden(false);
+    setSubPage({ key: 'none' });
+  }, [setTabBarHidden]);
+
+  const openPage = useCallback((page: RootPageKey) => {
+    setSubPage({ key: page } as SubPage);
+  }, []);
+
+  const openFeedbackDetail = useCallback((ticketId: string) => {
+    setSubPage({ key: 'feedbackDetail', ticketId });
+  }, []);
+
+  const openOrders = useCallback((tab?: ProfileOrderFilterTab, returnTo: 'root' | 'notifications' = 'root') => {
+    setSubPage({ key: 'orders', tab, returnTo });
+  }, []);
+
+  const openOrderDetail = useCallback((
+    orderId: string,
+    tab?: ProfileOrderFilterTab,
+    returnTo: 'orders' | 'notifications' = 'orders',
+  ) => {
+    setSubPage({ key: 'orderDetail', orderId, tab, returnTo });
+  }, []);
+
+  const markNoticeRead = useCallback((id: number) => {
+    setNotices((current) =>
+      current.map((item) => (item.id === id ? { ...item, unread: false } : item)),
+    );
+  }, []);
+
+  const markAllNoticesRead = useCallback(() => {
+    setNotices((current) => current.map((item) => ({ ...item, unread: false })));
+  }, []);
+
+  const openNoticeAction = useCallback(
+    (action?: ProfileNoticeAction) => {
+      if (!action) {
+        return;
+      }
+
+      if (action.type === 'orders') {
+        openOrders(action.tab, 'notifications');
+        return;
+      }
+
+      if (action.type === 'orderDetail') {
+        openOrderDetail(action.orderId, action.tab, 'notifications');
+        return;
+      }
+
+      if (action.type === 'likes') {
+        openPage('likes');
+        return;
+      }
+
+      if (action.type === 'wallet') {
+        openPage('wallet');
+        return;
+      }
+
+      if (action.type === 'settings') {
+        openPage('settings');
+      }
+    },
+    [openOrderDetail, openOrders, openPage],
+  );
+
+  const handleMenuAction = useCallback(
+    (action: MenuAction) => {
+      if (action.type === 'alert') {
+        Alert.alert(action.title, action.message);
+        return;
+      }
+
+      if (action.type === 'orders') {
+        openOrders(action.tab, 'root');
+        return;
+      }
+
+      openPage(action.key);
+    },
+    [openOrders, openPage],
+  );
+
+  const submitFeedbackTicket = useCallback((
+    ticket: Omit<FeedbackTicketItem, 'id' | 'createdAt' | 'status' | 'replies'>,
+  ) => {
+    const createdAt = new Date().toLocaleString('zh-CN', { hour12: false });
+    const ticketId = `TK${Date.now().toString().slice(-8)}`;
+
+    const nextTicket: FeedbackTicketItem = {
+      ...ticket,
+      id: ticketId,
+      createdAt,
+      status: '处理中',
+      replies: [
+        {
+          id: `${ticketId}-1`,
+          from: '用户',
+          content: ticket.content,
+          createdAt,
+        },
+        {
+          id: `${ticketId}-2`,
+          from: '客服',
+          content: '工单已收到，我们会尽快处理并回复你。',
+          createdAt,
+        },
+      ],
+    };
+
+    setFeedbackTickets((current) => [nextTicket, ...current]);
+    return ticketId;
+  }, []);
+
+  const displayName = user?.nickname || user?.username || 'BeadMori';
+  const initial = displayName.slice(0, 1).toUpperCase();
+  const unreadNoticeCount = notices.filter((item) => item.unread).length;
+
+  const heroStats = [
+    { label: '粉丝', value: '3.2k', action: { type: 'page', key: 'followers' } as const },
+    { label: '关注', value: '186', action: { type: 'page', key: 'following' } as const },
+    { label: '获赞', value: '12.8k', action: { type: 'page', key: 'likes' } as const },
+    {
+      label: '收藏',
+      value: formatCompact(MOCK_PROFILE_FAVORITES.length * 1150),
+      action: { type: 'page', key: 'favorites' } as const,
+    },
+  ];
+
+  const orderItems: Array<{
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    count?: number;
+    action: MenuAction;
+  }> = [
+    { label: '待支付', icon: 'credit-card', count: 1, action: { type: 'orders', tab: '待支付' } },
+    { label: '待发货', icon: 'package', count: 1, action: { type: 'orders', tab: '待发货' } },
+    { label: '待收货', icon: 'truck', count: 1, action: { type: 'orders', tab: '待收货' } },
+    { label: '退款', icon: 'dollar-sign', action: { type: 'orders', tab: '退款/售后' } },
+    { label: '售后', icon: 'rotate-ccw', action: { type: 'orders', tab: '退款/售后' } },
+  ];
+
+  const toolItems: Array<{
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    action: MenuAction;
+  }> = [
+    {
+      label: '导出记录',
+      icon: 'download',
+      action: { type: 'alert', title: '导出记录', message: '导出记录功能开发中。' },
+    },
+    { label: '色号套装', icon: 'droplet', action: { type: 'page', key: 'purchased' } },
+    { label: '我的点赞', icon: 'heart', action: { type: 'page', key: 'likes' } },
+    { label: '我的收藏', icon: 'star', action: { type: 'page', key: 'favorites' } },
+    { label: '浏览记录', icon: 'clock', action: { type: 'page', key: 'likedHistory' } },
+    { label: '我的发布', icon: 'edit-3', action: { type: 'page', key: 'myFeeds' } },
+    {
+      label: '创作激励',
+      icon: 'gift',
+      action: { type: 'alert', title: '创作激励', message: '创作激励入口稍后开放。' },
+    },
+    { label: '我的豆仓', icon: 'box', action: { type: 'page', key: 'wallet' } },
+  ];
+
+  const bottomItems: Array<{
+    label: string;
+    icon: keyof typeof Feather.glyphMap;
+    action: MenuAction;
+  }> = [
+    {
+      label: '收货地址管理',
+      icon: 'map-pin',
+      action: { type: 'page', key: 'addresses' },
+    },
+    {
+      label: '使用教程',
+      icon: 'book-open',
+      action: { type: 'alert', title: '使用教程', message: '教程中心正在整理内容。' },
+    },
+    {
+      label: '意见反馈',
+      icon: 'message-square',
+      action: { type: 'page', key: 'feedback' },
+    },
+  ];
+
   if (!token) {
-    return authMode === 'register'
-      ? <RegisterScreen onSwitchToLogin={() => setAuthMode('login')} />
-      : <LoginScreen onSwitchToRegister={() => setAuthMode('register')} />;
+    return authMode === 'register' ? (
+      <RegisterScreen onSwitchToLogin={() => setAuthMode('login')} />
+    ) : (
+      <LoginScreen onSwitchToRegister={() => setAuthMode('register')} />
+    );
   }
 
-  if (subPage === 'editProfile') return <EditProfileScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'myDesigns') return <MyDesignsScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'favorites') return <FavoritesScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'likes') return <LikesScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'likedHistory') return <LikedHistoryScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'settings') return <SettingsScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'myFeeds') return <MyFeedsScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'purchased') return <PurchasedScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'wallet') return <WalletScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'orders') return <OrdersScreen onBack={() => setSubPage('none')} />;
-  if (subPage === 'followers') return <FollowListScreen type="followers" onBack={() => setSubPage('none')} />;
-  if (subPage === 'following') return <FollowListScreen type="following" onBack={() => setSubPage('none')} />;
-
-  const displayName = user?.nickname || user?.username || '测试用户';
-  const account = user?.username || 'demo';
-  const points = getProfilePoints(stats);
-  const draftCount = Math.max(1, Math.round(stats.designCount / 3));
-
-  const statItems = [
-    { key: 'myDesigns' as const, label: '作品', value: stats.designCount },
-    { key: 'likes' as const, label: '获赞', value: stats.likeCount },
-    { key: 'followers' as const, label: '粉丝', value: stats.followerCount },
-    { key: 'following' as const, label: '关注', value: stats.followingCount },
-  ];
-
-  const quickItems = [
-    { key: 'myDesigns' as const, label: '作品', value: stats.designCount, icon: 'grid' as const },
-    { key: 'myDesigns' as const, label: '草稿', value: draftCount, icon: 'file-text' as const },
-    { key: 'favorites' as const, label: '收藏', value: MOCK_PROFILE_FAVORITES.length, icon: 'bookmark' as const },
-    { key: 'likedHistory' as const, label: '点赞', value: MOCK_PROFILE_GIVEN_LIKES.length, icon: 'heart' as const },
-  ];
-
-  const menuItems = [
-    { key: 'orders' as const, label: '我的订单', desc: '查看材料订单和当前状态', icon: 'shopping-bag' as const },
-    { key: 'purchased' as const, label: '已购图纸', desc: '查看已经购买的图纸资源', icon: 'file-text' as const },
-    { key: 'myFeeds' as const, label: '我的动态', desc: '查看我发布的社区内容', icon: 'message-circle' as const },
-    { key: 'wallet' as const, label: '积分钱包', desc: '查看积分余额和记录', icon: 'credit-card' as const },
-  ];
-
-  const toolItems = [
-    { key: 'settings' as const, label: '设置', icon: 'settings' as const },
-    { key: 'about' as const, label: '关于 BeadForge', icon: 'info' as const },
-  ];
-
-  const openMenu = (key: string) => {
-    if (key === 'about') {
-      Alert.alert('BeadForge', '当前界面使用本地 mock 数据演示。');
-      return;
-    }
-
-    setSubPage(key as SubPage);
-  };
-
-  const handleSignIn = () => {
-    if (signedToday) {
-      Alert.alert('今日已签到', '明天再来。');
-      return;
-    }
-
-    setSignedToday(true);
-    Alert.alert('签到成功', '今日签到已记录。');
-  };
+  if (subPage.key === 'editProfile') {
+    return <EditProfileScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'myDesigns') {
+    return <MyDesignsScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'favorites') {
+    return <FavoritesScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'addresses') {
+    return (
+      <AddressScreen
+        onBack={handleBackToRoot}
+        addresses={addresses}
+        onCreate={createAddress}
+        onUpdate={updateAddress}
+        onDelete={deleteAddress}
+        onSetDefault={setDefaultAddress}
+      />
+    );
+  }
+  if (subPage.key === 'likes') {
+    return <LikesScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'likedHistory') {
+    return <LikedHistoryScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'settings') {
+    return <SettingsScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'feedback') {
+    return (
+      <FeedbackScreen
+        onBack={handleBackToRoot}
+        tickets={feedbackTickets}
+        onSubmitTicket={submitFeedbackTicket}
+        onOpenTicket={openFeedbackDetail}
+      />
+    );
+  }
+  if (subPage.key === 'feedbackDetail') {
+    return (
+      <FeedbackDetailScreen
+        ticket={feedbackTickets.find((item) => item.id === subPage.ticketId)}
+        onBack={() => setSubPage({ key: 'feedback' })}
+      />
+    );
+  }
+  if (subPage.key === 'myFeeds') {
+    return <MyFeedsScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'purchased') {
+    return <PurchasedScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'wallet') {
+    return <WalletScreen onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'followers') {
+    return <FollowListScreen type="followers" onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'following') {
+    return <FollowListScreen type="following" onBack={handleBackToRoot} />;
+  }
+  if (subPage.key === 'notifications') {
+    return (
+      <NotificationsScreen
+        notices={notices}
+        onBack={handleBackToRoot}
+        onReadNotice={markNoticeRead}
+        onReadAll={markAllNoticesRead}
+        onOpenAction={openNoticeAction}
+      />
+    );
+  }
+  if (subPage.key === 'orders') {
+    return (
+      <OrdersScreen
+        onBack={() => {
+          if (subPage.returnTo === 'notifications') {
+            setSubPage({ key: 'notifications' });
+            return;
+          }
+          handleBackToRoot();
+        }}
+        initialTab={subPage.tab}
+        onOpenOrder={(orderId, tab) => openOrderDetail(orderId, tab, 'orders')}
+      />
+    );
+  }
+  if (subPage.key === 'orderDetail') {
+    return (
+      <OrderDetailScreen
+        orderId={subPage.orderId}
+        onBack={() => {
+          if (subPage.returnTo === 'notifications') {
+            setSubPage({ key: 'notifications' });
+            return;
+          }
+          openOrders(subPage.tab, 'root');
+        }}
+      />
+    );
+  }
 
   return (
-    <SafeAreaView style={[$.root, { backgroundColor: dark ? colors.bg : '#fff' }]} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F5F7FB' }} edges={['top']}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: wp(32) + BOTTOM_SAFE_H }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 86 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
+        }
       >
-        <View style={$.header}>
-          <Text style={[$.title, { color: colors.text }]}>我的</Text>
-          <View style={$.headerActions}>
-            <TouchableOpacity
-              style={[$.headerButton, { backgroundColor: colors.inputBg }]}
-              activeOpacity={0.75}
-              onPress={() => Alert.alert('系统通知', '当前为本地演示环境，暂无新通知。')}
+        <View className="mb-7 flex-row items-center justify-between">
+          <Text className="text-[22px] font-extrabold tracking-tight text-slate-900">我的</Text>
+          <View className="flex-row items-center gap-3">
+            <Pressable
+              onPress={() => openPage('notifications')}
+              className="relative h-10 w-10 items-center justify-center"
             >
-              <Feather name="bell" size={fp(16)} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[$.headerButton, { backgroundColor: colors.inputBg }]}
-              activeOpacity={0.75}
-              onPress={() => setSubPage('settings')}
-            >
-              <Feather name="settings" size={fp(16)} color={colors.text} />
-            </TouchableOpacity>
+              <Feather name="bell" size={22} color="#475569" />
+              {unreadNoticeCount > 0 ? (
+                <View className="absolute right-[4px] top-[4px] min-w-[16px] rounded-full bg-red-500 px-1.5 py-[1px]">
+                  <Text className="text-center text-[9px] font-bold text-white">
+                    {unreadNoticeCount}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable onPress={() => openPage('settings')} className="h-10 w-10 items-center justify-center">
+              <Feather name="settings" size={22} color="#475569" />
+            </Pressable>
           </View>
         </View>
 
-        <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={$.profileRow}>
-            <TouchableOpacity
-              style={$.profileMain}
-              activeOpacity={0.8}
-              onPress={() => setSubPage('editProfile')}
+        <View className="mb-6 flex-row items-center justify-between px-1">
+          <View className="flex-1 flex-row items-center">
+            <Pressable
+              onPress={() => openPage('editProfile')}
+              className="mr-4 h-16 w-16 items-center justify-center rounded-full bg-blue-600"
+              style={{
+                shadowColor: '#2563EB',
+                shadowOpacity: 0.16,
+                shadowRadius: 12,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 5,
+              }}
             >
-              <Avatar uri={user?.avatar} name={displayName} size={wp(58)} />
-              <View style={$.profileText}>
-                <Text style={[$.name, { color: colors.text }]} numberOfLines={1}>{displayName}</Text>
-                <Text style={[$.account, { color: colors.textHint }]} numberOfLines={1}>
-                  账号：{account}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              <Text className="text-[34px] font-bold text-white">{initial}</Text>
+            </Pressable>
 
-            <View style={[$.pointsCard, { backgroundColor: colors.inputBg }]}>
-              <Text style={[$.pointsLabel, { color: colors.textHint }]}>积分</Text>
-              <Text style={[$.pointsValue, { color: colors.text }]}>{points}</Text>
+            <View className="flex-1">
+              <Text className="text-[20px] font-extrabold text-slate-950">{displayName}</Text>
+              <Pressable onPress={() => openPage('editProfile')} className="mt-1 flex-row items-center">
+                <Text className="text-[12px] text-blue-500">点击编辑个性签名</Text>
+                <Feather name="edit-2" size={12} color="#3B82F6" style={{ marginLeft: 4 }} />
+              </Pressable>
             </View>
           </View>
 
-          <View style={$.actionsRow}>
-            <View style={$.statsRow}>
-              {statItems.map((item) => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={$.statItem}
-                  activeOpacity={0.75}
-                  onPress={() => openMenu(item.key)}
-                >
-                  <Text style={[$.statValue, { color: colors.text }]}>{item.value}</Text>
-                  <Text style={[$.statLabel, { color: colors.textHint }]}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[
-                $.signButton,
-                {
-                  backgroundColor: signedToday ? colors.inputBg : colors.accentLight,
-                  borderColor: signedToday ? colors.border : colors.accentLight,
-                },
-              ]}
-              activeOpacity={0.75}
-              onPress={handleSignIn}
-            >
-              <Text style={[$.signButtonText, { color: signedToday ? colors.textHint : colors.accent }]}>
-                {signedToday ? '已签到' : '签到'}
+          <View className="items-end">
+            <Pressable onPress={() => openPage('wallet')} className="mb-3 flex-row items-center">
+              <Feather name="award" size={14} color="#F59E0B" />
+              <Text className="ml-1 text-[13px] font-bold text-amber-500">
+                {pointsBalance.toLocaleString()}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
+            <Pressable
+              onPress={signIn}
+              className="flex-row items-center rounded-full bg-blue-600 px-4 py-2.5"
+              style={{
+                shadowColor: '#2563EB',
+                shadowOpacity: 0.14,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
+                elevation: 3,
+              }}
+            >
+              <Feather name="calendar" size={13} color="#FFFFFF" />
+              <Text className="ml-1.5 text-[12px] font-bold text-white">签到</Text>
+            </Pressable>
           </View>
         </View>
 
-        <View style={$.section}>
-          <Text style={[$.sectionTitle, { color: colors.text }]}>快捷入口</Text>
-          <View style={$.quickGrid}>
-            {quickItems.map((item) => (
-              <TouchableOpacity
-                key={`${item.key}-${item.label}`}
-                activeOpacity={0.75}
-                onPress={() => openMenu(item.key)}
-                style={[$.quickItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <View style={[$.quickIcon, { backgroundColor: colors.accentLight }]}>
-                  <Feather name={item.icon} size={fp(16)} color={colors.accent} />
-                </View>
-                <Text style={[$.quickValue, { color: colors.text }]}>{item.value}</Text>
-                <Text style={[$.quickLabel, { color: colors.textHint }]}>{item.label}</Text>
-              </TouchableOpacity>
+        <ShadowCard className="mb-6 px-1 py-4">
+          <View className="flex-row">
+            {heroStats.map((item, index) => (
+              <React.Fragment key={item.label}>
+                <Pressable onPress={() => handleMenuAction(item.action)} className="flex-1 items-center py-1">
+                  <Text className="text-[18px] font-extrabold text-slate-900">{item.value}</Text>
+                  <Text className="mt-1 text-[11px] text-slate-400">{item.label}</Text>
+                </Pressable>
+                {index < heroStats.length - 1 ? <View className="w-px self-stretch bg-slate-100" /> : null}
+              </React.Fragment>
             ))}
           </View>
-        </View>
+        </ShadowCard>
 
-        <View style={$.section}>
-          <Text style={[$.sectionTitle, { color: colors.text }]}>内容管理</Text>
-          <View style={[$.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {menuItems.map((item, index) => (
-              <TouchableOpacity
-                key={item.key}
-                activeOpacity={0.75}
-                onPress={() => openMenu(item.key)}
-                style={[
-                  $.listItem,
-                  index > 0 ? { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth } : null,
-                ]}
+        <ShadowCard className="mb-5 px-5 py-5">
+          <View className="mb-6 flex-row items-center justify-between">
+            <Text className="text-[15px] font-extrabold text-slate-900">我的订单</Text>
+            <Pressable onPress={() => openOrders('全部')} className="flex-row items-center">
+              <Text className="text-[12px] text-slate-400">查看全部</Text>
+              <Feather name="chevron-right" size={14} color="#94A3B8" />
+            </Pressable>
+          </View>
+
+          <View className="flex-row">
+            {orderItems.map((item) => (
+              <Pressable
+                key={item.label}
+                onPress={() => handleMenuAction(item.action)}
+                className="items-center"
+                style={{ width: '20%' }}
               >
-                <View style={[$.listIcon, { backgroundColor: colors.accentLight }]}>
-                  <Feather name={item.icon} size={fp(15)} color={colors.accent} />
+                <View className="relative mb-2 h-11 w-11 items-center justify-center rounded-full bg-slate-50">
+                  <Feather name={item.icon} size={19} color="#475569" />
+                  {item.count ? (
+                    <View className="absolute -right-1 -top-1 min-w-[18px] rounded-full border-2 border-white bg-red-500 px-1">
+                      <Text className="text-center text-[10px] font-bold text-white">{item.count}</Text>
+                    </View>
+                  ) : null}
                 </View>
-                <View style={$.listText}>
-                  <Text style={[$.listLabel, { color: colors.text }]}>{item.label}</Text>
-                  <Text style={[$.listDesc, { color: colors.textHint }]}>{item.desc}</Text>
-                </View>
-                <Feather name="chevron-right" size={fp(15)} color={colors.textHint} />
-              </TouchableOpacity>
+                <Text className="text-[11px] text-slate-600">{item.label}</Text>
+              </Pressable>
             ))}
           </View>
-        </View>
+        </ShadowCard>
 
-        <View style={$.section}>
-          <Text style={[$.sectionTitle, { color: colors.text }]}>其他</Text>
-          <View style={[$.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <ShadowCard className="mb-5 px-5 py-5">
+          <Text className="mb-6 text-[15px] font-extrabold text-slate-900">创作工具</Text>
+          <View className="flex-row flex-wrap">
             {toolItems.map((item, index) => (
-              <TouchableOpacity
-                key={item.key}
-                activeOpacity={0.75}
-                onPress={() => openMenu(item.key)}
-                style={[
-                  $.toolItem,
-                  index > 0 ? { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth } : null,
-                ]}
+              <Pressable
+                key={item.label}
+                onPress={() => handleMenuAction(item.action)}
+                className="items-center"
+                style={{ width: '25%', marginBottom: index < 4 ? 28 : 4 }}
               >
-                <View style={[$.toolIcon, { backgroundColor: colors.inputBg }]}>
-                  <Feather name={item.icon} size={fp(14)} color={colors.textSecondary} />
-                </View>
-                <Text style={[$.toolLabel, { color: colors.text }]}>{item.label}</Text>
-                <Feather name="chevron-right" size={fp(15)} color={colors.textHint} />
-              </TouchableOpacity>
+                <Feather name={item.icon} size={23} color="#475569" />
+                <Text className="mt-3 text-[11px] text-slate-700">{item.label}</Text>
+              </Pressable>
             ))}
           </View>
-        </View>
+        </ShadowCard>
+
+        <ShadowCard className="overflow-hidden">
+          {bottomItems.map((item, index) => (
+            <Pressable
+              key={item.label}
+              onPress={() => handleMenuAction(item.action)}
+              className={`flex-row items-center justify-between px-5 py-5 ${index < bottomItems.length - 1 ? 'border-b border-slate-100' : ''}`}
+            >
+              <View className="flex-row items-center">
+                <Feather name={item.icon} size={19} color="#64748B" />
+                <Text className="ml-4 text-[14px] font-semibold text-slate-800">{item.label}</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color="#CBD5E1" />
+            </Pressable>
+          ))}
+        </ShadowCard>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const $ = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: PAD,
-    paddingTop: wp(10),
-    paddingBottom: wp(8),
-  },
-  title: {
-    fontSize: fp(24),
-    fontWeight: '800',
-  },
-  headerActions: {
-    flexDirection: 'row',
-  },
-  headerButton: {
-    width: wp(36),
-    height: wp(36),
-    borderRadius: wp(18),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: wp(10),
-  },
-  card: {
-    marginHorizontal: PAD,
-    marginTop: wp(8),
-    borderRadius: wp(20),
-    borderWidth: 1,
-    padding: wp(16),
-    ...shadow(1, 8, 0.05, '#000', 1),
-  },
-  profileRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  profileText: {
-    marginLeft: wp(12),
-    flex: 1,
-  },
-  name: {
-    fontSize: fp(18),
-    fontWeight: '700',
-  },
-  account: {
-    fontSize: fp(12),
-    marginTop: wp(4),
-  },
-  pointsCard: {
-    minWidth: wp(72),
-    borderRadius: wp(14),
-    paddingVertical: wp(10),
-    paddingHorizontal: wp(12),
-    alignItems: 'center',
-  },
-  pointsLabel: {
-    fontSize: fp(10),
-    marginBottom: wp(4),
-  },
-  pointsValue: {
-    fontSize: fp(18),
-    fontWeight: '700',
-  },
-  actionsRow: {
-    marginTop: wp(16),
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statsRow: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: wp(8),
-    paddingRight: wp(8),
-  },
-  statItem: {
-    width: wp(54),
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: fp(17),
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: fp(11),
-    marginTop: wp(4),
-  },
-  signButton: {
-    flexShrink: 0,
-    marginLeft: wp(4),
-    paddingHorizontal: wp(14),
-    height: wp(30),
-    borderRadius: wp(15),
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signButtonText: {
-    fontSize: fp(12),
-    fontWeight: '700',
-  },
-  section: {
-    marginTop: wp(20),
-  },
-  sectionTitle: {
-    fontSize: fp(16),
-    fontWeight: '700',
-    marginBottom: wp(10),
-    paddingHorizontal: PAD,
-  },
-  quickGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: PAD,
-    justifyContent: 'space-between',
-  },
-  quickItem: {
-    width: '48%' as const,
-    borderRadius: wp(16),
-    borderWidth: 1,
-    paddingVertical: wp(16),
-    paddingHorizontal: wp(14),
-    marginBottom: wp(10),
-  },
-  quickIcon: {
-    width: wp(34),
-    height: wp(34),
-    borderRadius: wp(17),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quickValue: {
-    fontSize: fp(18),
-    fontWeight: '700',
-    marginTop: wp(12),
-  },
-  quickLabel: {
-    fontSize: fp(12),
-    marginTop: wp(4),
-  },
-  listCard: {
-    marginHorizontal: PAD,
-    borderRadius: wp(18),
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(14),
-    paddingVertical: wp(14),
-  },
-  listIcon: {
-    width: wp(36),
-    height: wp(36),
-    borderRadius: wp(12),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listText: {
-    flex: 1,
-    marginLeft: wp(12),
-  },
-  listLabel: {
-    fontSize: fp(14),
-    fontWeight: '600',
-  },
-  listDesc: {
-    fontSize: fp(11),
-    marginTop: wp(3),
-  },
-  toolItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(14),
-    paddingVertical: wp(14),
-  },
-  toolIcon: {
-    width: wp(32),
-    height: wp(32),
-    borderRadius: wp(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toolLabel: {
-    flex: 1,
-    fontSize: fp(14),
-    fontWeight: '500',
-    marginLeft: wp(12),
-  },
-});

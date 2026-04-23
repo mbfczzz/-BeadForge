@@ -6,8 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
-import { Avatar, HoverView, DanmakuOverlay, DanmakuInput } from '../../components/common';
+import { AppHeader, BeadGrid, ALL_PATTERNS, Avatar, HoverView, DanmakuOverlay, DanmakuInput } from '../../components/common';
 import { useDanmaku } from '../../hooks/useDanmaku';
 import { useToast } from '../../hooks/useFeedback';
 import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
@@ -81,16 +80,15 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部导航 */}
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={() => navigation.goBack()} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
-          <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </HoverView>
-        <Text style={[$.navTitle, { color: colors.text }]} numberOfLines={1}>作品详情</Text>
-        <HoverView onPress={() => setShowMore(!showMore)} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
-          <Feather name="more-horizontal" size={fp(18)} color={colors.text} />
-        </HoverView>
-      </View>
+      <AppHeader
+        title="作品详情"
+        onBack={() => navigation.goBack()}
+        right={
+          <HoverView onPress={() => setShowMore(!showMore)} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
+            <Feather name="more-horizontal" size={fp(18)} color={colors.text} />
+          </HoverView>
+        }
+      />
 
       {/* 更多菜单 */}
       {showMore && (

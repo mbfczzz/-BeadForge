@@ -21,7 +21,13 @@ export default {
     },
     plugins: [
       "expo-asset",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "允许 BeadForge 访问你的相册，用于选择和裁切头像。"
+        }
+      ]
     ],
     extra: {
       APP_ENV: process.env.APP_ENV || "local",

@@ -1,97 +1,96 @@
 /**
- * BeadForge 配色 — 温暖中性 + 活力强调色
- * 参考: Apple HIG / 小红书 / Pinterest 的温暖质感
+ * BeadForge 配色 — 白色 + 淡蓝色 + 简洁风格
  */
 export const LightTheme = {
   // 表面
-  bg: '#F5F5F5',
+  bg: '#F7FAFF',
   surface: '#FFFFFF',
-  surfaceHover: '#FAFAFA',
+  surfaceHover: '#F4F8FF',
   navBg: '#FFFFFF',
-  navBorder: '#F0F0F0',
+  navBorder: '#E4ECF7',
 
-  // 文字 — 纯中性灰，无色彩倾向
-  text: '#1A1A1A',
-  textSecondary: '#666666',
-  textHint: '#999999',
+  // 文字
+  text: '#16324F',
+  textSecondary: '#4C6987',
+  textHint: '#7F96B2',
 
   // 边框 / 分割
-  border: '#EBEBEB',
-  divider: '#F0F0F0',
+  border: '#DCE7F5',
+  divider: '#EAF1FA',
 
-  // 强调色 — 偏紫的靛蓝，有创意感
-  accent: '#5B5FFF',
-  accentDark: '#4A4ED9',
-  accentLight: '#EEEFFF',
-  accentGradStart: '#5B5FFF',
-  accentGradEnd: '#C084FC',
+  // 强调色
+  accent: '#4A90FF',
+  accentDark: '#3379E6',
+  accentLight: '#EAF3FF',
+  accentGradStart: '#4A90FF',
+  accentGradEnd: '#8FC1FF',
 
   // 功能色
-  gold: '#F5A623',
-  error: '#FF4757',
-  success: '#2ED573',
-  warning: '#FFA502',
+  gold: '#F5B545',
+  error: '#FF5E73',
+  success: '#2BBF88',
+  warning: '#FFB648',
 
   // 卡片
   cardBg: '#FFFFFF',
-  cardShadow: 'rgba(0,0,0,0.06)',
+  cardShadow: 'rgba(25,67,118,0.08)',
 
   // 输入
-  inputBg: '#F0F0F0',
-  overlay: 'rgba(0,0,0,0.4)',
+  inputBg: '#F3F7FD',
+  overlay: 'rgba(14, 29, 53, 0.38)',
 
   // 标签
-  tagBg: '#F0F0F0',
-  tagText: '#666666',
+  tagBg: '#EFF5FD',
+  tagText: '#4C6987',
 
   // 骨架屏
-  skeleton: '#EBEBEB',
+  skeleton: '#E5EEF9',
 };
 
 export const DarkTheme = {
-  // 表面 — 纯中性暗，无蓝色倾向
-  bg: '#0A0A0A',
-  surface: '#1A1A1A',
-  surfaceHover: '#222222',
-  navBg: '#111111',
-  navBorder: '#222222',
+  // 表面
+  bg: '#07111F',
+  surface: '#0F1D31',
+  surfaceHover: '#14253D',
+  navBg: '#0C1728',
+  navBorder: '#182A44',
 
   // 文字
-  text: '#F0F0F0',
-  textSecondary: '#A0A0A0',
-  textHint: '#666666',
+  text: '#EEF5FF',
+  textSecondary: '#AEC3DB',
+  textHint: '#7890AD',
 
   // 边框 / 分割
-  border: '#2A2A2A',
-  divider: '#222222',
+  border: '#1E324F',
+  divider: '#16263D',
 
-  // 强调色 — 暗底稍提亮
-  accent: '#7B7FFF',
-  accentDark: '#6A6EE8',
-  accentLight: '#1A1A30',
-  accentGradStart: '#7B7FFF',
-  accentGradEnd: '#C084FC',
+  // 强调色
+  accent: '#76B2FF',
+  accentDark: '#5A9CFF',
+  accentLight: '#13263F',
+  accentGradStart: '#76B2FF',
+  accentGradEnd: '#A1D0FF',
 
   // 功能色
-  gold: '#F5A623',
-  error: '#FF6B7A',
-  success: '#4CD97B',
-  warning: '#FFB74D',
+  gold: '#F5C05A',
+  error: '#FF7B8E',
+  success: '#4AD7A3',
+  warning: '#FFC466',
 
   // 卡片
-  cardBg: '#1A1A1A',
-  cardShadow: 'rgba(0,0,0,0.4)',
+  cardBg: '#0F1D31',
+  cardShadow: 'rgba(0,0,0,0.42)',
 
   // 输入
-  inputBg: '#1E1E1E',
-  overlay: 'rgba(0,0,0,0.6)',
+  inputBg: '#13233A',
+  overlay: 'rgba(0,0,0,0.56)',
 
   // 标签
-  tagBg: '#1E1E1E',
-  tagText: '#A0A0A0',
+  tagBg: '#13233A',
+  tagText: '#AEC3DB',
 
   // 骨架屏
-  skeleton: '#2A2A2A',
+  skeleton: '#1A2C46',
 };
 
 export type ThemeColors = typeof LightTheme;

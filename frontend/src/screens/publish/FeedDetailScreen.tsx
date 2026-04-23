@@ -1,19 +1,28 @@
 import React, { memo, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, TextInput,
-  KeyboardAvoidingView, Platform, Alert, Animated,
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
+import { SvgXml } from 'react-native-svg';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useTheme, FontSize, BorderRadius } from '../../theme';
+import { useTheme } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { Avatar, HoverView, BeadGrid, ALL_PATTERNS } from '../../components/common';
+import { Avatar, HoverView, AppHeader } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
-import type { RootScreenProps, RootStackParamList, FeedItemData } from '../../navigation/types';
-import { ALL_FEEDS } from '../../mock/app';
+import { getFeedMockMedia } from '../../utils/feedMedia';
+import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 
 const PAD = wp(15);
 
@@ -28,12 +37,12 @@ interface CommentItemData {
 
 const MOCK_COMMENTS: Record<number, CommentItemData[]> = {
   1: [
-    { id: 101, user: '新手练习生', title: '入门创作者', content: '这组猫咪挂件的边缘做得很干净，想知道用了几种暖灰色。', timeAgo: '1小时前', likeCount: 5 },
-    { id: 102, user: '木木手作', title: '创作者', content: '主体是两种橘色，一种深灰，最后又补了一层浅米色高光。', timeAgo: '50分钟前', likeCount: 8 },
+    { id: 101, user: '新手练习生', title: '入门创作者', content: '这组猫咪挂件的边缘压得很干净，暖灰背景也很适合展示。', timeAgo: '1小时前', likeCount: 5 },
+    { id: 102, user: '木木手作', title: '原作者', content: '主体用了两种橙色，最后又补了一层浅米色高光。', timeAgo: '50分钟前', likeCount: 8 },
   ],
   2: [
-    { id: 201, user: '像素观察者', title: '像素爱好者', content: 'AI 起稿后再微调边缘，这个流程对效率提升很明显。', timeAgo: '2小时前', likeCount: 12 },
-    { id: 202, user: '工具记录员', title: '流程整理', content: '如果把提示词也记录下来，会更方便后续复用。', timeAgo: '1小时前', likeCount: 6 },
+    { id: 201, user: '像素观察者', title: '拼豆爱好者', content: 'AI 起稿后再微调边缘，效率确实会高很多。', timeAgo: '2小时前', likeCount: 12 },
+    { id: 202, user: '工具记录员', title: '流程整理', content: '如果把提示词和色号一起记下来，后面复用会更方便。', timeAgo: '1小时前', likeCount: 6 },
   ],
 };
 
@@ -64,10 +73,9 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
   const likeAnim = useRef(new Animated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
 
-  const relatedFeeds = useMemo(() => ALL_FEEDS.filter((item) => item.id !== feed.id).slice(0, 3), [feed.id]);
-  const pattern = ALL_PATTERNS[feed.patternIdx % ALL_PATTERNS.length];
+  const media = useMemo(() => getFeedMockMedia(feed), [feed]);
   const previewW = screenW - PAD * 2 - wp(20);
-  const beadSize = Math.max(Math.floor(previewW / (pattern[0]?.length || 9)) - 1, 6);
+  const previewH = previewW / media.aspectRatio;
 
   const handleLike = () => {
     setLiked((value) => !value);
@@ -79,15 +87,17 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
 
   const handleSend = () => {
     if (!commentText.trim()) return;
-    const content = replyTo ? `回复 ${replyTo}：${commentText.trim()}` : commentText.trim();
+
+    const nextContent = replyTo ? `回复 ${replyTo}：${commentText.trim()}` : commentText.trim();
     const newComment: CommentItemData = {
       id: Date.now(),
       user: '测试用户',
       title: '本地账号',
-      content,
+      content: nextContent,
       timeAgo: '刚刚',
       likeCount: 0,
     };
+
     setComments((prev) => [newComment, ...prev]);
     setCommentText('');
     setReplyTo(null);
@@ -100,20 +110,17 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      <View style={[$.topBar, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={() => navigation.goBack()} style={$.navBtn} hoverScale={1.08} hoverLift={0}>
-          <MCI name="arrow-left" size={fp(22)} color={colors.text} />
-        </HoverView>
-        <View style={$.topBarCenter}>
-          <Avatar name={feed.user.name} size={wp(24)} />
-          <Text style={[$.topBarName, { color: colors.text }]} numberOfLines={1}>{feed.user.name}</Text>
-        </View>
-        <HoverView onPress={() => setShowMore((value) => !value)} style={$.navBtn} hoverScale={1.08} hoverLift={0}>
-          <MCI name="dots-vertical" size={fp(22)} color={colors.text} />
-        </HoverView>
-      </View>
+      <AppHeader
+        title={feed.user.name}
+        onBack={() => navigation.goBack()}
+        right={(
+          <HoverView onPress={() => setShowMore((value) => !value)} style={$.navBtn} hoverScale={1.08} hoverLift={0}>
+            <MCI name="dots-vertical" size={fp(22)} color={colors.text} />
+          </HoverView>
+        )}
+      />
 
-      {showMore && (
+      {showMore ? (
         <Pressable style={$.menuOverlay} onPress={() => setShowMore(false)}>
           <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(2, 12, 0.12, '#000', 6) }]}>
             {[
@@ -121,16 +128,25 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               { icon: 'flag-outline' as const, label: '举报内容', action: () => Alert.alert('举报', '当前演示环境不会提交举报。') },
               { icon: 'eye-off-outline' as const, label: '不感兴趣', action: () => navigation.goBack() },
             ].map((item) => (
-              <HoverView key={item.label} onPress={() => { setShowMore(false); item.action(); }} style={$.menuItem} hoverScale={1.02} hoverLift={0}>
+              <HoverView
+                key={item.label}
+                onPress={() => {
+                  setShowMore(false);
+                  item.action();
+                }}
+                style={$.menuItem}
+                hoverScale={1.02}
+                hoverLift={0}
+              >
                 <MCI name={item.icon} size={fp(18)} color={colors.text} />
                 <Text style={[$.menuLabel, { color: colors.text }]}>{item.label}</Text>
               </HoverView>
             ))}
           </View>
         </Pressable>
-      )}
+      ) : null}
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(110) + BOTTOM_SAFE_H }}>
           <View style={$.contentWrap}>
             <Pressable style={$.userRow} onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })}>
@@ -141,10 +157,13 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               </View>
               <HoverView
                 onPress={() => setFollowed((value) => !value)}
-                style={[$.followBtn, {
-                  backgroundColor: followed ? 'transparent' : colors.accent,
-                  borderColor: followed ? colors.border : colors.accent,
-                }]}
+                style={[
+                  $.followBtn,
+                  {
+                    backgroundColor: followed ? 'transparent' : colors.accent,
+                    borderColor: followed ? colors.border : colors.accent,
+                  },
+                ]}
                 hoverScale={1.03}
                 hoverLift={0}
               >
@@ -153,6 +172,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
             </Pressable>
 
             <Text style={[$.contentText, { color: colors.textSecondary }]}>{feed.content}</Text>
+            {feed.caption ? <Text style={[$.captionText, { color: colors.textHint }]}>{feed.caption}</Text> : null}
 
             <View style={$.tagWrap}>
               {feed.tags.map((tag) => (
@@ -162,8 +182,19 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               ))}
             </View>
 
-            <View style={[$.previewWrap, { backgroundColor: dark ? '#1E2027' : '#F8FAFC' }]}>
-              <BeadGrid pixels={pattern} beadSize={Math.min(beadSize, wp(16))} gap={1} round glossy />
+            <View style={[$.previewWrap, { backgroundColor: dark ? '#1E2027' : '#F8FAFC', height: previewH }]}>
+              <SvgXml xml={media.svg} width={previewW} height={previewH} />
+              <View style={$.mediaTopBadges}>
+                <View style={$.mediaTypeBadge}>
+                  <Text style={$.mediaTypeBadgeText}>{feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>
+                </View>
+                {feed.media.type === 'video' && feed.media.durationSec ? (
+                  <View style={$.mediaTypeBadge}>
+                    <MCI name="play" size={fp(10)} color="#FFFFFF" />
+                    <Text style={$.mediaTypeBadgeText}>{`0:${`${feed.media.durationSec}`.padStart(2, '0')}`}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
 
             <View style={[$.actionBar, { borderBottomColor: colors.border }]}>
@@ -186,7 +217,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               </HoverView>
             </View>
 
-            <View style={$.sectionHeader}>
+            <View style={$.commentHeader}>
               <Text style={[$.sectionTitle, { color: colors.text }]}>评论</Text>
               <Text style={[$.sectionHint, { color: colors.textHint }]}>{comments.length} 条</Text>
             </View>
@@ -194,19 +225,6 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
             <View style={$.commentList}>
               {comments.map((comment) => (
                 <CommentItem key={comment.id} comment={comment} colors={colors} onReply={handleReply} />
-              ))}
-            </View>
-
-            <View style={$.sectionHeader}>
-              <Text style={[$.sectionTitle, { color: colors.text }]}>相关推荐</Text>
-            </View>
-
-            <View style={$.relatedList}>
-              {relatedFeeds.map((item) => (
-                <Pressable key={item.id} style={[$.relatedCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.push('FeedDetail', { feed: item })}>
-                  <Text style={[$.relatedTitle, { color: colors.text }]} numberOfLines={1}>{item.user.name}</Text>
-                  <Text style={[$.relatedContent, { color: colors.textHint }]} numberOfLines={2}>{item.content}</Text>
-                </Pressable>
               ))}
             </View>
           </View>
@@ -222,13 +240,18 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
               value={commentText}
               onChangeText={setCommentText}
             />
-            {replyTo && (
+            {replyTo ? (
               <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
                 <Feather name="x-circle" size={fp(16)} color={colors.textHint} />
               </Pressable>
-            )}
+            ) : null}
           </View>
-          <HoverView onPress={handleSend} style={[$.sendBtn, { backgroundColor: colors.accent, opacity: commentText.trim() ? 1 : 0.45 }]} hoverScale={1.03} hoverLift={0}>
+          <HoverView
+            onPress={handleSend}
+            style={[$.sendBtn, { backgroundColor: colors.accent, opacity: commentText.trim() ? 1 : 0.45 }]}
+            hoverScale={1.03}
+            hoverLift={0}
+          >
             <Text style={$.sendBtnText}>发送</Text>
           </HoverView>
         </View>
@@ -243,7 +266,7 @@ const CommentItem: React.FC<{ comment: CommentItemData; colors: ThemeColors; onR
   return (
     <View style={$.commentItem}>
       <Avatar name={comment.user} size={wp(34)} />
-      <View style={{ flex: 1, marginLeft: wp(10) }}>
+      <View style={$.commentBody}>
         <View style={$.commentTop}>
           <View>
             <Text style={[$.commentUser, { color: colors.text }]}>{comment.user}</Text>
@@ -265,13 +288,6 @@ const CommentItem: React.FC<{ comment: CommentItemData; colors: ThemeColors; onR
 
 const $ = StyleSheet.create({
   root: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: wp(50),
-    paddingHorizontal: PAD,
-    borderBottomWidth: 1,
-  },
   navBtn: {
     width: wp(34),
     height: wp(34),
@@ -279,8 +295,6 @@ const $ = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  topBarCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: wp(8) },
-  topBarName: { maxWidth: wp(180), fontSize: fp(14), fontWeight: '700' },
   menuOverlay: {
     position: 'absolute',
     top: wp(50),
@@ -297,7 +311,13 @@ const $ = StyleSheet.create({
     borderRadius: wp(16),
     paddingVertical: wp(6),
   },
-  menuItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(14), paddingVertical: wp(11), gap: wp(10) },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(11),
+    gap: wp(10),
+  },
   menuLabel: { fontSize: fp(12) },
   contentWrap: { paddingHorizontal: PAD, paddingTop: wp(14) },
   userRow: { flexDirection: 'row', alignItems: 'center' },
@@ -314,15 +334,37 @@ const $ = StyleSheet.create({
   },
   followBtnText: { fontSize: fp(12), fontWeight: '700' },
   contentText: { marginTop: wp(12), fontSize: fp(14), lineHeight: fp(21) },
+  captionText: { marginTop: wp(8), fontSize: fp(12), lineHeight: fp(18) },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8), marginTop: wp(12) },
   tagChip: { borderRadius: wp(12), paddingHorizontal: wp(10), paddingVertical: wp(6) },
   tagText: { fontSize: fp(11) },
   previewWrap: {
     marginTop: wp(14),
     borderRadius: wp(18),
-    paddingVertical: wp(18),
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mediaTopBadges: {
+    position: 'absolute',
+    top: wp(12),
+    left: wp(12),
+    flexDirection: 'row',
+    gap: wp(8),
+  },
+  mediaTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(4),
+    borderRadius: wp(999),
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(6),
+    backgroundColor: 'rgba(15,23,42,0.72)',
+  },
+  mediaTypeBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fp(10),
+    fontWeight: '700',
   },
   actionBar: {
     flexDirection: 'row',
@@ -334,11 +376,17 @@ const $ = StyleSheet.create({
   },
   actionItem: { flexDirection: 'row', alignItems: 'center', gap: wp(6) },
   actionText: { fontSize: fp(11), fontWeight: '600' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginTop: wp(18) },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginTop: wp(18),
+  },
   sectionTitle: { fontSize: fp(15), fontWeight: '700' },
   sectionHint: { fontSize: fp(11) },
   commentList: { gap: wp(14), marginTop: wp(14) },
   commentItem: { flexDirection: 'row', alignItems: 'flex-start' },
+  commentBody: { flex: 1, marginLeft: wp(10) },
   commentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   commentUser: { fontSize: fp(13), fontWeight: '700' },
   commentMeta: { fontSize: fp(11), marginTop: wp(2) },
@@ -347,14 +395,6 @@ const $ = StyleSheet.create({
   commentContent: { marginTop: wp(8), fontSize: fp(13), lineHeight: fp(18) },
   replyBtn: { marginTop: wp(8), alignSelf: 'flex-start' },
   replyText: { fontSize: fp(11), fontWeight: '700' },
-  relatedList: { gap: wp(10), marginTop: wp(12) },
-  relatedCard: {
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1,
-    padding: wp(12),
-  },
-  relatedTitle: { fontSize: fp(13), fontWeight: '700' },
-  relatedContent: { marginTop: wp(6), fontSize: fp(12), lineHeight: fp(17) },
   inputBar: {
     position: 'absolute',
     left: 0,

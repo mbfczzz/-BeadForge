@@ -1,63 +1,66 @@
 import { create } from 'zustand';
-import { MOCK_PATTERN_LISTINGS } from '../mock/app';
+import type { HomeBannerItem } from '../api/discovery';
+import type { MarketPattern, PatternListingSeed, PublishPatternInput, ResourceAccessMode } from '../api/market';
+import { getDefaultHomeBanners } from '../mock/discovery';
+import { MOCK_PATTERN_LISTINGS } from '../mock/market';
 
-export interface MarketPattern {
-  id: number;
-  title: string;
-  author: string;
-  authorId: number;
-  price: number;
-  free: boolean;
-  patIdx: number;
-  cat: string;
-  downloads: number;
-  rating: number;
-  cols: number;
-  rows: number;
-  desc: string;
-  gridData?: string[][];
-  createdAt: string;
-}
+export type { MarketPattern } from '../api/market';
 
 interface PatternState {
   listings: MarketPattern[];
-  purchased: Set<number>;
   myListings: Set<number>;
-  buy: (id: number) => void;
-  publish: (pattern: Omit<MarketPattern, 'id' | 'downloads' | 'rating' | 'createdAt'>) => number;
+  refreshing: boolean;
+  homeBanners: HomeBannerItem[];
+  setHomeBanners: (banners: HomeBannerItem[]) => void;
+  publish: (pattern: PublishPatternInput) => number;
   unlist: (id: number) => void;
-  hasBought: (id: number) => boolean;
   isMine: (id: number) => boolean;
+  refreshListings: () => Promise<void>;
 }
 
 let nextId = 300;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const normalizeListing = (item: PatternListingSeed): MarketPattern => {
+  const accessMode: ResourceAccessMode = item.accessMode || (item.free ? 'free' : 'points');
+  const pointsCost = typeof item.pointsCost === 'number' ? item.pointsCost : (item.free ? 0 : Math.round((item.price || 0) * 10));
+
+  return {
+    ...item,
+    accessMode,
+    pointsCost,
+    free: accessMode === 'free',
+    price: item.price || 0,
+  };
+};
 
 export const usePatternStore = create<PatternState>((set, get) => ({
-  listings: MOCK_PATTERN_LISTINGS,
-  purchased: new Set<number>(),
+  listings: MOCK_PATTERN_LISTINGS.map(normalizeListing),
   myListings: new Set<number>(),
+  refreshing: false,
+  homeBanners: getDefaultHomeBanners(),
 
-  buy: (id) => {
-    set((state) => {
-      const purchased = new Set(state.purchased);
-      purchased.add(id);
-      return {
-        purchased,
-        listings: state.listings.map((item) =>
-          item.id === id ? { ...item, downloads: item.downloads + 1 } : item,
-        ),
-      };
+  setHomeBanners: (banners) => {
+    set({
+      homeBanners: [...banners]
+        .filter((item) => item.enabled !== false)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     });
   },
 
   publish: (pattern) => {
     const id = nextId++;
+    const pointsCost = pattern.accessMode === 'points' ? Math.max(0, pattern.pointsCost || 0) : 0;
+
     const newPattern: MarketPattern = {
       ...pattern,
       id,
       downloads: 0,
       rating: 5,
       createdAt: new Date().toISOString().slice(0, 10),
+      free: pattern.accessMode === 'free',
+      pointsCost,
+      price: pointsCost,
     };
 
     set((state) => {
@@ -83,6 +86,12 @@ export const usePatternStore = create<PatternState>((set, get) => ({
     });
   },
 
-  hasBought: (id) => get().purchased.has(id) || get().myListings.has(id),
   isMine: (id) => get().myListings.has(id),
+
+  refreshListings: async () => {
+    if (get().refreshing) return;
+    set({ refreshing: true });
+    await wait(320);
+    set({ refreshing: false });
+  },
 }));
