@@ -174,11 +174,11 @@ const $ = StyleSheet.create({
 
   priceSection: { paddingHorizontal: PAD, paddingVertical: wp(16) },
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  priceSymbol: { color: '#FF6B95', fontSize: fp(16), fontWeight: '700' },
-  priceVal: { color: '#FF6B95', fontSize: fp(28), fontWeight: '800', marginLeft: wp(2) },
+  priceSymbol: { color: '#C8302B', fontSize: fp(16), fontWeight: '700' },
+  priceVal: { color: '#C8302B', fontSize: fp(28), fontWeight: '800', marginLeft: wp(2) },
   priceOld: { fontSize: fp(14), textDecorationLine: 'line-through', marginLeft: wp(8) },
-  savedTag: { backgroundColor: '#FFE5EC', paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999), marginLeft: wp(8) },
-  savedText: { color: '#FF6B95', fontSize: fp(11), fontWeight: '700' },
+  savedTag: { backgroundColor: '#FBE8E6', paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999), marginLeft: wp(8) },
+  savedText: { color: '#C8302B', fontSize: fp(11), fontWeight: '700' },
 
   productName: { fontSize: fp(18), fontWeight: '700', marginTop: wp(10) },
   productDesc: { fontSize: fp(13), marginTop: wp(6), lineHeight: fp(19) },
@@ -207,7 +207,7 @@ const $ = StyleSheet.create({
   qtyRow: { flexDirection: 'row', alignItems: 'center' },
   qtyBtn: { width: wp(32), height: wp(32), borderRadius: wp(16), borderWidth: 1, justifyContent: 'center', alignItems: 'center' },
   qtyNum: { fontSize: fp(15), fontWeight: '700', marginHorizontal: wp(12) },
-  totalPrice: { color: '#FF6B95', fontSize: fp(18), fontWeight: '800', marginRight: wp(12) },
+  totalPrice: { color: '#C8302B', fontSize: fp(18), fontWeight: '800', marginRight: wp(12) },
   buyBtn: { paddingHorizontal: wp(24), paddingVertical: wp(12), borderRadius: wp(9999) },
   buyBtnText: { color: '#fff', fontSize: fp(15), fontWeight: '800', letterSpacing: 1 },
 });

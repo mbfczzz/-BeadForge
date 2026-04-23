@@ -28,15 +28,15 @@ const HOT_TOPICS = [
   { tag: '迷你珠饰品', count: '3.8k' },
 ];
 
-// 活跃用户 Stories — 糖果渐变色环
+// 水墨国风 Story 环（朱砂 / 青莲 / 藤黄 / 竹青 / 赭石）
 const STORY_USERS = [
-  { name: '小豆子',     hasNew: true,  ring: ['#FF8FB1', '#FFB894'] },  // 粉→橘
-  { name: '像素艺术家', hasNew: true,  ring: ['#D4B8FF', '#B8E0FF'] },  // 薰衣草→天空蓝
-  { name: '彩虹桥',     hasNew: true,  ring: ['#FFC870', '#FFB4C6'] },  // 奶黄→糖果粉
-  { name: '拼豆小屋',   hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },  // 淡灰紫
-  { name: '花花世界',   hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },
-  { name: '游戏迷',     hasNew: true,  ring: ['#B8E7D4', '#A8DCC7'] },  // 薄荷
-  { name: '钻石控',     hasNew: false, ring: ['#E8E0E8', '#F0E8F0'] },
+  { name: '小豆子',     hasNew: true,  ring: ['#C8302B', '#CC7B3F'] },  // 朱砂→柿红
+  { name: '像素艺术家', hasNew: true,  ring: ['#6B4F8F', '#7BA4C9'] },  // 青莲→天青
+  { name: '彩虹桥',     hasNew: true,  ring: ['#D4A017', '#CC7B3F'] },  // 藤黄→柿红
+  { name: '拼豆小屋',   hasNew: false, ring: ['#D9CFB8', '#E8DFC8'] },  // 浅赭/淡灰
+  { name: '花花世界',   hasNew: false, ring: ['#D9CFB8', '#E8DFC8'] },
+  { name: '游戏迷',     hasNew: true,  ring: ['#8FB59A', '#A3C4A8'] },  // 竹青
+  { name: '钻石控',     hasNew: false, ring: ['#D9CFB8', '#E8DFC8'] },
 ];
 
 const TABS = ['推荐', '关注', '最新'];
@@ -345,7 +345,7 @@ const FeedCard: React.FC<{
         { backgroundColor: colors.surface },
         !isFirst && { marginTop: wp(10) },
         { borderRadius: BorderRadius.xl, marginHorizontal: PAD, borderWidth: 1, borderColor: colors.border },
-        shadow(3, 10, 0.08, '#FF8FB1', 2),
+        shadow(3, 10, 0.08, '#5A4A3E', 2),
       ]}>
         {/* 用户头部 */}
         <View style={$.feedHeader}>

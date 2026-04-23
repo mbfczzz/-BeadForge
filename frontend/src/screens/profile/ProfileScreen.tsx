@@ -30,23 +30,23 @@ type SubPage =
   | 'likes' | 'settings' | 'myFeeds' | 'purchased'
   | 'followers' | 'following' | 'wallet';
 
-// 糖果马卡龙配色：color 做图标 / bg 做柔底
+// 水墨国风配色：传统色点缀
 const QUICK = [
-  { key: 'myDesigns',   label: '作品', icon: 'grid' as const,     color: '#FF8FB1', bg: '#FFE8F0' },
-  { key: 'myDrafts',    label: '草稿', icon: 'edit-3' as const,   color: '#FFB894', bg: '#FFF1E4' },
-  { key: 'myFavorites', label: '收藏', icon: 'bookmark' as const, color: '#FFC870', bg: '#FFF6E0' },
-  { key: 'myLikes',     label: '点赞', icon: 'heart' as const,    color: '#FF7A95', bg: '#FFE5EC' },
+  { key: 'myDesigns',   label: '作品', icon: 'grid' as const,     color: '#C8302B', bg: '#FBE8E6' }, // 朱砂
+  { key: 'myDrafts',    label: '草稿', icon: 'edit-3' as const,   color: '#CC7B3F', bg: '#FAEBE0' }, // 柿红
+  { key: 'myFavorites', label: '收藏', icon: 'bookmark' as const, color: '#D4A017', bg: '#FAF2D7' }, // 藤黄
+  { key: 'myLikes',     label: '点赞', icon: 'heart' as const,    color: '#C94F5D', bg: '#FAE3E6' }, // 胭脂
 ];
 
 const MENU_CONTENT = [
-  { key: 'wallet',    label: '拼豆币钱包', icon: 'dollar-sign' as const,    desc: '充值·余额·交易记录', iconColor: '#FFB740', iconBg: '#FFF3D1' },
-  { key: 'myFeeds',   label: '我的动态',   icon: 'message-circle' as const, desc: '查看已发布的动态',   iconColor: '#B67CFF', iconBg: '#F1E5FF' },
-  { key: 'purchased', label: '已购图纸',   icon: 'shopping-bag' as const,   desc: '已购买的图纸资源',   iconColor: '#6ED39F', iconBg: '#E1F5EA' },
+  { key: 'wallet',    label: '拼豆币钱包', icon: 'dollar-sign' as const,    desc: '充值·余额·交易记录', iconColor: '#D4A017', iconBg: '#FAF2D7' }, // 藤黄
+  { key: 'myFeeds',   label: '我的动态',   icon: 'message-circle' as const, desc: '查看已发布的动态',   iconColor: '#6B4F8F', iconBg: '#EEE8F5' }, // 青莲
+  { key: 'purchased', label: '已购图纸',   icon: 'shopping-bag' as const,   desc: '已购买的图纸资源',   iconColor: '#4D8A5E', iconBg: '#E3EFE5' }, // 松绿
 ];
 
 const MENU_OTHER = [
-  { key: 'settings', label: '设置',        icon: 'settings' as const, iconColor: '#7A6C7A', iconBg: '#F4EFF2' },
-  { key: 'about',    label: '关于 BeadForge', icon: 'info' as const,  iconColor: '#7A6C7A', iconBg: '#F4EFF2' },
+  { key: 'settings', label: '设置',        icon: 'settings' as const, iconColor: '#5A4A3E', iconBg: '#EFE8D8' }, // 赭石
+  { key: 'about',    label: '关于 BeadForge', icon: 'info' as const,  iconColor: '#5A4A3E', iconBg: '#EFE8D8' },
 ];
 
 /** 数字格式化：1200 → 1.2k */
@@ -114,11 +114,11 @@ export const ProfileScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
         }
       >
-        {/* ═══ 顶部糖果渐变（粉 → 桃 → 紫薰衣草） ═══ */}
+        {/* ═══ 顶部水墨渐变（朱砂 → 柿红 → 藤黄，暖水墨） ═══ */}
         <LinearGradient
           colors={dark
-            ? ['#3D1F32', '#2A1A28', '#1A1220']
-            : ['#FF8FB1', '#FFB894', '#D4B8FF']}
+            ? ['#3A1F1C', '#2A1F1C', '#1A1413']
+            : ['#C8302B', '#CC7B3F', '#D4A017']}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={$.header}
         >
@@ -184,7 +184,7 @@ export const ProfileScreen: React.FC = () => {
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
           // 暗模式下不要糖果粉阴影（会被背景吞掉），改用无阴影
-          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(4, 14, 0.12, '#FF8FB1', 4)),
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(4, 14, 0.12, '#5A4A3E', 4)),
         }]}>
           {QUICK.map((q, idx) => (
             <TouchableOpacity key={q.key} activeOpacity={0.6} onPress={() => nav(q.key)} style={$.quickItem}>
@@ -204,7 +204,7 @@ export const ProfileScreen: React.FC = () => {
           backgroundColor: colors.surface,
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
-          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#FF8FB1', 1)),
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#5A4A3E', 1)),
         }]}>
           {MENU_CONTENT.map((m, idx) => (
             <TouchableOpacity
@@ -231,7 +231,7 @@ export const ProfileScreen: React.FC = () => {
           backgroundColor: colors.surface,
           borderColor: dark ? colors.border : 'transparent',
           borderWidth: dark ? 1 : 0,
-          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#FF8FB1', 1)),
+          ...(dark ? { shadowOpacity: 0, elevation: 0 } : shadow(2, 8, 0.06, '#5A4A3E', 1)),
         }]}>
           {MENU_OTHER.map((m, idx) => (
             <TouchableOpacity
@@ -303,7 +303,7 @@ const $ = StyleSheet.create({
   avatarBadge: {
     position: 'absolute', bottom: wp(0), right: wp(0),
     width: wp(16), height: wp(16), borderRadius: wp(8),
-    backgroundColor: '#22C55E', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: '#4D8A5E', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center', alignItems: 'center',
   },
   userInfo: { flex: 1, marginLeft: wp(14) },
@@ -391,6 +391,6 @@ const $ = StyleSheet.create({
     borderRadius: wp(14),
     paddingVertical: wp(14),
   },
-  logoutText: { color: '#EF4444', fontSize: fp(14), fontWeight: '600' },
+  logoutText: { color: '#A22520', fontSize: fp(14), fontWeight: '600' },
   footer: { textAlign: 'center', fontSize: fp(10), marginTop: wp(12), marginBottom: wp(6) },
 });

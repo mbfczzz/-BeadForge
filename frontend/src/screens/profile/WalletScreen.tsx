@@ -106,9 +106,9 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
-        {/* 余额卡片 — 糖果渐变 */}
+        {/* 余额卡片 — 水墨渐变（朱砂→柿红） */}
         <LinearGradient
-          colors={dark ? ['#3D1F32', '#2A1A28'] as const : ['#FF8FB1', '#FFB894'] as const}
+          colors={dark ? ['#3A1F1C', '#2A1F1C'] as const : ['#C8302B', '#CC7B3F'] as const}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={[$.balanceCard, candyShadow(colors.accent, 'md')]}
         >
@@ -142,7 +142,7 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
                   backgroundColor: on ? colors.accent : colors.surface,
                   borderColor: on ? colors.accent : colors.border,
                 }]}>
-                {opt.badge ? <View style={[$.chargeBadge, { backgroundColor: '#EF4444' }]}><Text style={$.chargeBadgeT}>{opt.badge}</Text></View> : null}
+                {opt.badge ? <View style={[$.chargeBadge, { backgroundColor: '#C8302B' }]}><Text style={$.chargeBadgeT}>{opt.badge}</Text></View> : null}
                 <Feather name="hexagon" size={fp(14)} color={on ? '#FCD34D' : '#FBBF24'} />
                 <Text style={[$.chargeCoins, { color: on ? '#fff' : colors.text }]}>{opt.label}</Text>
                 <Text style={[$.chargePrice, { color: on ? 'rgba(255,255,255,0.7)' : colors.textHint }]}>¥{opt.amount}</Text>

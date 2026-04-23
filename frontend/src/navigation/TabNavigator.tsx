@@ -22,13 +22,13 @@ const Tab = createBottomTabNavigator();
  * 全部用 RN 内置 Animated（Expo Go 任何版本都兼容）
  */
 
-// 糖果化配色（非冷调）
+// 水墨国风配色（朱砂 / 竹青 / 藤黄 / 柿红 / 紫檀）
 const TABS: { name: string; label: string; icon: string; color: string; center?: boolean }[] = [
-  { name: 'Home',    label: '发现', icon: 'compass',       color: '#FF8FB1' },
-  { name: 'Publish', label: '动态', icon: 'zap',           color: '#6ED39F' },
-  { name: 'Create',  label: '创作', icon: 'plus',          color: '#FFB894', center: true },
-  { name: 'Market',  label: '市场', icon: 'shopping-bag',  color: '#FFC870' },
-  { name: 'Profile', label: '我的', icon: 'user',          color: '#D4B8FF' },
+  { name: 'Home',    label: '发现', icon: 'compass',       color: '#C8302B' },   // 朱砂
+  { name: 'Publish', label: '动态', icon: 'zap',           color: '#4D8A5E' },   // 松绿
+  { name: 'Create',  label: '创作', icon: 'plus',          color: '#CC7B3F', center: true }, // 柿红
+  { name: 'Market',  label: '市场', icon: 'shopping-bag',  color: '#D4A017' },   // 藤黄
+  { name: 'Profile', label: '我的', icon: 'user',          color: '#7BA4C9' },   // 天青
 ];
 
 const SCREENS: Record<string, React.ComponentType<any>> = {

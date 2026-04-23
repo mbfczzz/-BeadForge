@@ -712,7 +712,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: wp(40), paddingVertical: wp(30),
     borderRadius: BorderRadius.xl,
     alignItems: 'center', gap: wp(14),
-    ...shadow(4, 16, 0.18, '#FF8FB1', 6),
+    ...shadow(4, 16, 0.18, '#5A4A3E', 6),
   },
   genText: { fontSize: FontSize.lg, fontWeight: '600' },
   genDots: { flexDirection: 'row', gap: wp(6) },
@@ -739,7 +739,7 @@ const $ = StyleSheet.create({
   canvasWrap: {
     margin: PAD, borderRadius: BorderRadius.lg,
     padding: wp(12), alignItems: 'center', justifyContent: 'center',
-    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
+    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
   },
 
   // 当前颜色栏
@@ -793,7 +793,7 @@ const $ = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: wp(20), paddingVertical: wp(10),
     borderRadius: wp(9999), gap: wp(6),
-    ...shadow(3, 10, 0.22, '#FF8FB1', 4),
+    ...shadow(3, 10, 0.22, '#5A4A3E', 4),
   },
   saveBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 

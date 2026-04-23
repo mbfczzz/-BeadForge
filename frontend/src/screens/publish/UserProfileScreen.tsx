@@ -247,7 +247,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                       <PressableScale scale={0.97}
                         onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: patCols, rows: patRows })}
                       >
-                        <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(3, 10, 0.08, '#FF8FB1', 2) }]}>
+                        <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(3, 10, 0.08, '#5A4A3E', 2) }]}>
                           <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#f8f8fa' }]}>
                             <BeadGrid pixels={pat} beadSize={bs} gap={1} round glossy />
                           </View>
@@ -351,7 +351,7 @@ const $ = StyleSheet.create({
   profileCard: {
     marginTop: -wp(40), marginHorizontal: PAD,
     borderRadius: BorderRadius.xxl, paddingHorizontal: wp(18), paddingBottom: wp(18),
-    ...shadow(4, 14, 0.12, '#FF8FB1', 4),
+    ...shadow(4, 14, 0.12, '#5A4A3E', 4),
   },
   avatarWrap: { alignItems: 'center', marginTop: -wp(36) },
   avatarRing: {

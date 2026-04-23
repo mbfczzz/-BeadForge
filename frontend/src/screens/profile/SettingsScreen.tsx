@@ -202,7 +202,7 @@ const $ = StyleSheet.create({
   groupTitle: { fontSize: FontSize.xs, fontWeight: '600', marginBottom: wp(8), marginLeft: wp(4) },
   groupCard: {
     borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
-    ...shadow(2, 8, 0.06, '#FF8FB1', 1),
+    ...shadow(2, 8, 0.06, '#5A4A3E', 1),
   },
   item: {
     flexDirection: 'row', alignItems: 'center',

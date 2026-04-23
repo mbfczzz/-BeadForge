@@ -12,9 +12,9 @@ import { shadow } from '../../utils/shadow';
 
 const PAD = wp(16);
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: '草稿', color: '#FFB740' },        // 糖果黄
-  PUBLISHED: { label: '已发布', color: '#6ED39F' }, // 糖果绿
-  ARCHIVED: { label: '已归档', color: '#B0A5B0' },  // 糖果灰紫
+  DRAFT: { label: '草稿', color: '#D4A017' },       // 藤黄
+  PUBLISHED: { label: '已发布', color: '#4D8A5E' }, // 松绿
+  ARCHIVED: { label: '已归档', color: '#8A7C6E' },  // 赭石
 };
 
 interface Props { onBack: () => void }
@@ -91,7 +91,7 @@ const $ = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden',
-    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
+    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
   },
   statusBadgeRound: {
     paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999),

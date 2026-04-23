@@ -125,7 +125,7 @@ const $ = StyleSheet.create({
   },
   card: {
     borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
-    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
+    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
   },
   cardCover: {
     height: wp(90), justifyContent: 'center', alignItems: 'center',

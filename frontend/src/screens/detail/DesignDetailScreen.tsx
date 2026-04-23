@@ -349,7 +349,7 @@ const $ = StyleSheet.create({
     position: 'absolute', top: wp(52), right: PAD,
     borderRadius: BorderRadius.md, borderWidth: 1,
     paddingVertical: wp(4), zIndex: 50, minWidth: wp(130),
-    ...shadow(4, 12, 0.18, '#FF8FB1', 6),
+    ...shadow(4, 12, 0.18, '#5A4A3E', 6),
   },
   moreItem: {
     flexDirection: 'row', alignItems: 'center', gap: wp(10),
@@ -364,7 +364,7 @@ const $ = StyleSheet.create({
     paddingVertical: wp(25),
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
-    ...shadow(3, 10, 0.1, '#FF8FB1', 2),
+    ...shadow(3, 10, 0.1, '#5A4A3E', 2),
   },
 
   // 弹幕控制
@@ -439,7 +439,7 @@ const $ = StyleSheet.create({
   },
   colorDot: {
     width: wp(22), height: wp(22), borderRadius: wp(11),
-    ...shadow(0, 2, 0.12, '#FF8FB1', 1),
+    ...shadow(0, 2, 0.12, '#5A4A3E', 1),
   },
   colorHex: { fontSize: FontSize.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginLeft: wp(10), width: wp(80) },
   colorCount: { fontSize: FontSize.sm, flex: 1, textAlign: 'right' },
@@ -480,7 +480,7 @@ const $ = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: wp(22), paddingVertical: wp(12),
     borderRadius: wp(9999), gap: wp(6),
-    ...shadow(3, 10, 0.22, '#FF8FB1', 4),
+    ...shadow(3, 10, 0.22, '#5A4A3E', 4),
   },
   makeBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 });

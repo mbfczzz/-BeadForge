@@ -1,140 +1,150 @@
 /**
- * BeadForge 配色 — 糖果马卡龙（candy macaron）主题
+ * BeadForge 配色 — 水墨国风主题
  *
  * 设计意图：
- * - 拼豆 = 彩色糖果珠 → 视觉语言向"可爱、温柔、童趣"靠拢
- * - 主 accent 改为糖果粉橘渐变（#FF8FB1 → #FFB894）
- * - 文字改为微紫灰代替纯黑，避免刚硬
- * - 背景奶油暖白 #FFF7F3 替代冷灰 #F5F5F5
- * - 新增 candy.* 色板：粉/橘/薄荷/奶黄/淡紫/天空蓝，用于装饰元素（标签、气泡、贴纸）
- * - 保留旧字段名（accent / accentLight / accentGradStart 等）以避免大面积破坏旧代码，仅替换色值
+ * - 宣纸米白打底 + 墨色文字 + 朱砂红主强调
+ * - 传统色板：朱砂 / 藤黄 / 竹青 / 天青 / 胭脂 / 紫檀 / 琥珀
+ * - 保留 `candy` 命名空间（向后兼容），色值换为国风传统色
+ * - 阴影改用墨色（#2A1E1A 的淡 alpha），产生"宣纸上墨渍"的质感
  */
 
-/** 糖果色板（马卡龙）— 用于装饰、标签、气泡、随机色分配 */
+/**
+ * 传统色板（key 沿用原糖果命名以零成本替换色值；语义对应如下）：
+ * - pink:      胭脂红（温润少女红）
+ * - peach:     琥珀桃（暖棕）
+ * - mint:      竹青（墨绿）
+ * - cream:     米黄
+ * - lavender:  紫檀（典雅紫）
+ * - sky:       天青（宋瓷蓝）
+ * - bubblegum: 朱砂红（主强调色）
+ * - sunshine:  藤黄（金黄）
+ * - mango:     柿红（暖橘）
+ * - grape:     青莲（深紫）
+ */
 export const CandyPaletteLight = {
-  pink: '#FFB4C6',
-  peach: '#FFCDB2',
-  mint: '#B8E7D4',
-  cream: '#FFE8A3',
-  lavender: '#D4B8FF',
-  sky: '#B8E0FF',
-  bubblegum: '#FF8FB1',
-  sunshine: '#FFC870',
-  mango: '#FFA576',
-  grape: '#B67CFF',
+  pink: '#C94F5D',       // 胭脂红
+  peach: '#D9A080',      // 琥珀桃
+  mint: '#8FB59A',       // 竹青
+  cream: '#E8D58E',      // 米黄
+  lavender: '#9B8CB5',   // 紫檀
+  sky: '#7BA4C9',        // 天青
+  bubblegum: '#C8302B',  // 朱砂红（主强调）
+  sunshine: '#D4A017',   // 藤黄
+  mango: '#CC7B3F',      // 柿红
+  grape: '#6B4F8F',      // 青莲
 };
 
 export const CandyPaletteDark = {
-  pink: '#F095A9',
-  peach: '#EBB89E',
-  mint: '#9FC7B9',
-  cream: '#E6D08A',
-  lavender: '#B89EE6',
-  sky: '#9AC0DF',
-  bubblegum: '#FF9FC0',
-  sunshine: '#F0B25D',
-  mango: '#E8926A',
-  grape: '#A06EE8',
+  pink: '#E47484',
+  peach: '#E8B896',
+  mint: '#A7C8B2',
+  cream: '#E8D79E',
+  lavender: '#B0A3C9',
+  sky: '#95B9D9',
+  bubblegum: '#E04F48',
+  sunshine: '#E8B82B',
+  mango: '#E09356',
+  grape: '#8A6EB0',
 };
 
 export const LightTheme = {
-  // 表面 — 奶油暖白
-  bg: '#FFF7F3',
-  surface: '#FFFFFF',
-  surfaceHover: '#FFF1EA',
-  navBg: '#FFFFFF',
-  navBorder: '#FFEDE2',
+  // 表面 — 宣纸米白
+  bg: '#F7F2E7',
+  surface: '#FDFBF5',
+  surfaceHover: '#F2EBDA',
+  navBg: '#FDFBF5',
+  navBorder: '#E8DFC8',
 
-  // 文字 — 微紫灰，比纯黑更柔和
-  text: '#3D2F3D',
-  textSecondary: '#7A6C7A',
-  textHint: '#B0A5B0',
+  // 文字 — 墨色（比纯黑更温润）
+  text: '#2A1E1A',
+  textSecondary: '#5A4A3E',
+  textHint: '#8A7C6E',
 
-  // 边框 — 淡粉橘
-  border: '#FFE5D6',
-  divider: '#FFF0E5',
+  // 边框 / 分割 — 浅赭
+  border: '#E2D5B8',
+  divider: '#EBDFCB',
 
-  // 主强调色 — 糖果粉 + 粉橘渐变
-  accent: '#FF8FB1',
-  accentDark: '#F07193',
-  accentLight: '#FFE8F0',
-  accentGradStart: '#FF8FB1',
-  accentGradEnd: '#FFB894',
+  // 主强调色 — 朱砂红，渐变到柿橘（暖水墨）
+  accent: '#C8302B',
+  accentDark: '#A22520',
+  accentLight: '#FBE8E6',
+  accentGradStart: '#C8302B',
+  accentGradEnd: '#CC7B3F',
 
-  // 糖果色板
+  // 糖果色板（key 名兼容，值已换为国风）
   candy: CandyPaletteLight,
 
-  // 功能色（糖果化）
-  gold: '#FFB740',
-  error: '#FF7A8F',
-  success: '#6ED39F',
-  warning: '#FFB156',
+  // 功能色（国风）
+  gold: '#D4A017',       // 藤黄
+  error: '#A22520',      // 深朱砂
+  success: '#4D8A5E',    // 松绿
+  warning: '#D4A017',    // 藤黄
 
-  // 卡片 — 粉色微阴影
-  cardBg: '#FFFFFF',
-  cardShadow: 'rgba(255, 143, 177, 0.15)',
-  cardShadowSoft: 'rgba(255, 143, 177, 0.08)',
+  // 卡片 — 墨色阴影（宣纸上的墨渍感）
+  cardBg: '#FDFBF5',
+  cardShadow: 'rgba(42, 30, 26, 0.12)',
+  cardShadowSoft: 'rgba(42, 30, 26, 0.06)',
 
   // 输入
-  inputBg: '#FFF0E5',
-  overlay: 'rgba(61, 47, 61, 0.4)',
+  inputBg: '#F2EBDA',
+  overlay: 'rgba(42, 30, 26, 0.5)',
 
   // 标签
-  tagBg: '#FFE8F0',
-  tagText: '#C16888',
+  tagBg: '#FBE8E6',
+  tagText: '#A22520',
 
   // 骨架屏
-  skeleton: '#FFEDE2',
+  skeleton: '#EBDFCB',
 };
 
 export const DarkTheme = {
-  // 表面 — 葡萄紫暗调
-  bg: '#1A1220',
-  surface: '#26182D',
-  surfaceHover: '#2F1F38',
-  navBg: '#1F1425',
-  navBorder: '#2A1E33',
+  // 表面 — 深墨
+  bg: '#1A1413',
+  surface: '#2A1F1C',
+  surfaceHover: '#32251F',
+  navBg: '#221A18',
+  navBorder: '#3A2D28',
 
-  // 文字
-  text: '#F5EDF5',
-  textSecondary: '#BCA8BC',
-  textHint: '#7A6A7A',
+  // 文字 — 雪色
+  text: '#EADFD5',
+  textSecondary: '#B9AA9C',
+  textHint: '#7A6E63',
 
   // 边框
-  border: '#3A2A44',
-  divider: '#2E1F38',
+  border: '#3A2D28',
+  divider: '#2E221E',
 
-  // 主强调色 — 暗底稍提亮
-  accent: '#FF9FC0',
-  accentDark: '#EB8BAD',
-  accentLight: '#3A1F2E',
-  accentGradStart: '#FF9FC0',
-  accentGradEnd: '#FFB894',
+  // 主强调色
+  accent: '#E04F48',
+  accentDark: '#C83A33',
+  accentLight: '#3A1F1C',
+  accentGradStart: '#E04F48',
+  accentGradEnd: '#E09356',
 
   // 糖果色板
   candy: CandyPaletteDark,
 
   // 功能色
-  gold: '#FFC568',
-  error: '#FF8FA0',
-  success: '#7EDBA6',
-  warning: '#FFC47A',
+  gold: '#E8B82B',
+  error: '#E04F48',
+  success: '#6FB085',
+  warning: '#E8B82B',
 
   // 卡片
-  cardBg: '#26182D',
-  cardShadow: 'rgba(0, 0, 0, 0.4)',
+  cardBg: '#2A1F1C',
+  cardShadow: 'rgba(0, 0, 0, 0.45)',
   cardShadowSoft: 'rgba(0, 0, 0, 0.25)',
 
   // 输入
-  inputBg: '#2A1E33',
+  inputBg: '#2E221E',
   overlay: 'rgba(0, 0, 0, 0.7)',
 
   // 标签
-  tagBg: '#3A1F2E',
-  tagText: '#EBA5BF',
+  tagBg: '#3A1F1C',
+  tagText: '#E47484',
 
   // 骨架屏
-  skeleton: '#2E1F38',
+  skeleton: '#2E221E',
 };
 
 export type ThemeColors = typeof LightTheme;
@@ -142,7 +152,6 @@ export const Colors = LightTheme;
 
 /** 按 key 稳定取糖果色（用于 Avatar 背景、标签色彩分配等） */
 export function candyColorFor(seed: string | number, palette: typeof CandyPaletteLight = CandyPaletteLight): string {
-  // 覆盖所有 10 个色板 key，让分配更均匀
   const keys: (keyof typeof palette)[] = ['pink', 'peach', 'mint', 'cream', 'lavender', 'sky', 'bubblegum', 'sunshine', 'mango', 'grape'];
   const s = typeof seed === 'number' ? seed : Array.from(seed).reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return palette[keys[Math.abs(s) % keys.length]];

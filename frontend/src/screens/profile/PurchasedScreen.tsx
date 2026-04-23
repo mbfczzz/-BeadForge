@@ -27,10 +27,15 @@ interface PatternItem {
   rating: number;
 }
 
+// 水墨国风分类色
 const CATEGORY_COLORS: Record<string, string> = {
-  '抽象': '#8B5CF6', '动物': '#F97316', '卡通': '#EF4444',
-  '花卉': '#EC4899', '美食': '#22C55E', '像素': '#0EA5E9',
-  '风景': '#14B8A6',
+  '抽象': '#6B4F8F', // 青莲
+  '动物': '#CC7B3F', // 柿红
+  '卡通': '#C8302B', // 朱砂
+  '花卉': '#C94F5D', // 胭脂
+  '美食': '#4D8A5E', // 松绿
+  '像素': '#7BA4C9', // 天青
+  '风景': '#8FB59A', // 竹青
 };
 
 interface Props { onBack: () => void }
@@ -85,7 +90,7 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
       <View style={[$.card, {
         backgroundColor: colors.surface,
         borderColor: dark ? colors.border : colors.border,
-        ...(dark ? {} : shadow(3, 10, 0.08, '#FF8FB1', 2)),
+        ...(dark ? {} : shadow(3, 10, 0.08, '#5A4A3E', 2)),
       }]}>
         {/* 封面占位 */}
         <View style={[$.cardCover, { backgroundColor: dark ? '#1e1e1e' : '#FAFAFA' }]}>
@@ -120,7 +125,7 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[$.priceBadge, {
               backgroundColor: item.isFree ? '#22C55E12' : catColor + '12',
             }]}>
-              <Text style={[$.priceText, { color: item.isFree ? '#22C55E' : catColor }]}>
+              <Text style={[$.priceText, { color: item.isFree ? '#4D8A5E' : catColor }]}>
                 {item.isFree ? '免费' : `¥${item.price}`}
               </Text>
             </View>
@@ -159,8 +164,8 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
           ? <StateView loading />
           : (
             <View style={$.emptyWrap}>
-              <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a2a' : '#E8F7FE' }]}>
-                <Feather name="shopping-bag" size={fp(28)} color="#0EA5E9" />
+              <View style={[$.emptyIcon, { backgroundColor: dark ? colors.candy.sky + '30' : '#E5EEF5' }]}>
+                <Feather name="shopping-bag" size={fp(28)} color="#7BA4C9" />
               </View>
               <Text style={[$.emptyTitle, { color: colors.text }]}>还没有购买图纸</Text>
               <Text style={[$.emptySub, { color: colors.textHint }]}>去图纸市场逛逛吧</Text>

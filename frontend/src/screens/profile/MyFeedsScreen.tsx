@@ -67,7 +67,7 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
       backgroundColor: colors.surface,
       borderColor: dark ? colors.border : 'transparent',
       borderWidth: dark ? 1 : 0,
-      ...(dark ? {} : shadow(3, 10, 0.08, '#FF8FB1', 2)),
+      ...(dark ? {} : shadow(3, 10, 0.08, '#5A4A3E', 2)),
     }]}>
       {/* 头部 */}
       <View style={$.cardHeader}>
@@ -95,9 +95,9 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
       {/* 互动栏 */}
       <View style={[$.cardActions, { borderTopColor: colors.divider }]}>
         {[
-          { icon: 'heart' as const, count: item.likeCount, activeColor: '#EF4444' },
-          { icon: 'message-circle' as const, count: item.commentCount, activeColor: '#5B5FFF' },
-          { icon: 'share-2' as const, count: item.shareCount, activeColor: '#22C55E' },
+          { icon: 'heart' as const, count: item.likeCount, activeColor: '#C8302B' },       // 朱砂
+          { icon: 'message-circle' as const, count: item.commentCount, activeColor: '#7BA4C9' }, // 天青
+          { icon: 'share-2' as const, count: item.shareCount, activeColor: '#4D8A5E' },     // 松绿
         ].map((a) => (
           <View key={a.icon} style={$.actionItem}>
             <Feather name={a.icon} size={fp(14)} color={a.count > 0 ? a.activeColor : colors.textHint} />
@@ -137,7 +137,7 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
           ? <StateView loading />
           : (
             <View style={$.emptyWrap}>
-              <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a30' : '#F3EEFF' }]}>
+              <View style={[$.emptyIcon, { backgroundColor: dark ? colors.candy.lavender + '30' : '#EEE8F5' }]}>
                 <Feather name="edit" size={fp(28)} color={colors.accent} />
               </View>
               <Text style={[$.emptyTitle, { color: colors.text }]}>还没有动态</Text>

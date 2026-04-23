@@ -166,7 +166,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
       {/* 更多菜单 */}
       {showMore && (
         <Pressable style={$.menuOverlay} onPress={() => setShowMore(false)}>
-          <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(4, 14, 0.18, '#FF8FB1', 6) }]}>
+          <View style={[$.menuSheet, { backgroundColor: colors.surface, ...shadow(4, 14, 0.18, '#5A4A3E', 6) }]}>
             {[
               { icon: 'link-variant' as const, label: '复制链接', action: () => {} },
               { icon: 'flag-outline' as const, label: '举报内容', action: () => Alert.alert('举报', '感谢反馈，我们会尽快处理', [{ text: '好的' }]) },

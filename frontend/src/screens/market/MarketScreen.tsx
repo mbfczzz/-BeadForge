@@ -601,7 +601,7 @@ const $ = StyleSheet.create({
   toastT: { fontSize: fp(12), fontWeight: '500', marginLeft: wp(5) },
 
   // 卡片通用
-  card: { borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden', ...shadow(3, 10, 0.08, '#FF8FB1', 2) },
+  card: { borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden', ...shadow(3, 10, 0.08, '#5A4A3E', 2) },
   cardCover: { height: wp(70), justifyContent: 'center', alignItems: 'center' },
   cardIconC: { width: wp(36), height: wp(36), borderRadius: wp(18), justifyContent: 'center', alignItems: 'center' },
   cardTag: { position: 'absolute', top: wp(5), left: wp(5), paddingHorizontal: wp(5), paddingVertical: wp(1), borderRadius: wp(3) },

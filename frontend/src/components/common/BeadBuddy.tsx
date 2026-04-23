@@ -33,7 +33,7 @@ interface Props {
 
 export const BeadBuddy: React.FC<Props> = ({
   size = 120,
-  color = '#FFB4C6',
+  color = '#C94F5D',  // 胭脂红默认
   mood = 'happy',
   style,
 }) => {
@@ -71,8 +71,8 @@ export const BeadBuddy: React.FC<Props> = ({
         <Ellipse cx="42" cy="30" rx="14" ry="8" fill="url(#shine)" />
 
         {/* 腮红 */}
-        <Ellipse cx="30" cy="58" rx="5" ry="3" fill="#FF6B9D" opacity={0.4} />
-        <Ellipse cx="70" cy="58" rx="5" ry="3" fill="#FF6B9D" opacity={0.4} />
+        <Ellipse cx="30" cy="58" rx="5" ry="3" fill="#C94F5D" opacity={0.4} />
+        <Ellipse cx="70" cy="58" rx="5" ry="3" fill="#C94F5D" opacity={0.4} />
 
         {/* 表情 */}
         <Face mood={mood} />
@@ -96,19 +96,19 @@ const Face: React.FC<{ mood: BuddyMood }> = ({ mood }) => {
       return (
         <G>
           {/* 左眼闭 */}
-          <Path d="M34 48 Q38 52 42 48" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          <Path d="M34 48 Q38 52 42 48" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
           {/* 右眼开 */}
-          <Circle cx="62" cy="48" r="2.5" fill="#3D2F3D" />
+          <Circle cx="62" cy="48" r="2.5" fill="#2A1E1A" />
           <Smile />
         </G>
       );
     case 'sleep':
       return (
         <G>
-          <Path d="M34 48 Q38 52 42 48" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
-          <Path d="M58 48 Q62 52 66 48" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          <Path d="M34 48 Q38 52 42 48" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          <Path d="M58 48 Q62 52 66 48" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
           {/* Zzz */}
-          <Path d="M72 32 L78 32 L72 40 L78 40" stroke="#3D2F3D" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+          <Path d="M72 32 L78 32 L72 40 L78 40" stroke="#2A1E1A" strokeWidth={1.5} fill="none" strokeLinecap="round" />
         </G>
       );
     case 'sparkle':
@@ -124,21 +124,21 @@ const Face: React.FC<{ mood: BuddyMood }> = ({ mood }) => {
       return (
         <G>
           {/* 眯眯眼 */}
-          <Path d="M33 46 L43 50" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
-          <Path d="M57 50 L67 46" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          <Path d="M33 46 L43 50" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+          <Path d="M57 50 L67 46" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
           {/* 泪滴 */}
-          <Path d="M40 53 Q38 60 40 65 Q42 60 40 53 Z" fill="#7EC8FF" />
-          <Path d="M60 53 Q58 60 60 65 Q62 60 60 53 Z" fill="#7EC8FF" />
+          <Path d="M40 53 Q38 60 40 65 Q42 60 40 53 Z" fill="#7BA4C9" />
+          <Path d="M60 53 Q58 60 60 65 Q62 60 60 53 Z" fill="#7BA4C9" />
           {/* 嘟嘴 */}
-          <Ellipse cx="50" cy="66" rx="3" ry="2" fill="#FF6B9D" />
+          <Ellipse cx="50" cy="66" rx="3" ry="2" fill="#C94F5D" />
         </G>
       );
     case 'happy':
     default:
       return (
         <G>
-          <Circle cx="38" cy="48" r="2.5" fill="#3D2F3D" />
-          <Circle cx="62" cy="48" r="2.5" fill="#3D2F3D" />
+          <Circle cx="38" cy="48" r="2.5" fill="#2A1E1A" />
+          <Circle cx="62" cy="48" r="2.5" fill="#2A1E1A" />
           <Smile />
         </G>
       );
@@ -146,11 +146,11 @@ const Face: React.FC<{ mood: BuddyMood }> = ({ mood }) => {
 };
 
 const Smile: React.FC = () => (
-  <Path d="M42 60 Q50 67 58 60" stroke="#3D2F3D" strokeWidth={2.5} strokeLinecap="round" fill="none" />
+  <Path d="M42 60 Q50 67 58 60" stroke="#2A1E1A" strokeWidth={2.5} strokeLinecap="round" fill="none" />
 );
 
 const OpenMouth: React.FC = () => (
-  <Ellipse cx="50" cy="62" rx="5" ry="4" fill="#3D2F3D" />
+  <Ellipse cx="50" cy="62" rx="5" ry="4" fill="#2A1E1A" />
 );
 
 const Heart: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
@@ -160,7 +160,7 @@ const Heart: React.FC<{ cx: number; cy: number }> = ({ cx, cy }) => (
         A 2.2 2.2 0 0 1 ${cx} ${cy - 1}
         A 2.2 2.2 0 0 1 ${cx + 4} ${cy - 1}
         Q ${cx + 4} ${cy - 2} ${cx} ${cy + 3} Z`}
-    fill="#FF6B9D"
+    fill="#C94F5D"
   />
 );
 
@@ -172,7 +172,7 @@ const Star: React.FC<{ cx: number; cy: number; size: number }> = ({ cx, cy, size
     const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
     pts.push(`${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`);
   }
-  return <Path d={`M ${pts.join(' L ')} Z`} fill="#FFD94A" />;
+  return <Path d={`M ${pts.join(' L ')} Z`} fill="#D4A017" />;
 };
 
 /** 颜色工具 — 简易 lighten/darken（假设 #RRGGBB 格式） */

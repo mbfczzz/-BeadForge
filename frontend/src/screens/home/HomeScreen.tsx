@@ -30,12 +30,12 @@ const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','�
 const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel','festival','figure','building','game','chinese'];
 const CAT_FOLD_LIMIT = 10;
 
-// 糖果马卡龙 banner 配色
+// 水墨国风 banner 配色（朱砂 / 柿红 / 竹青 / 天青）
 const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#FF8FB1', sort: 'hot', cat: '' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集', pi: 1, bg: '#FFB894', sort: 'popular', cat: 'animal' },
-  { id: 3, title: '像素经典', sub: '游戏角色完美还原', pi: 2, bg: '#A8D8B9', sort: 'popular', cat: 'pixel' },
-  { id: 4, title: '花之物语', sub: '春日花卉图案', pi: 3, bg: '#D4B8FF', sort: 'latest', cat: 'flower' },
+  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#C8302B', sort: 'hot',     cat: '' },
+  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集',     pi: 1, bg: '#CC7B3F', sort: 'popular', cat: 'animal' },
+  { id: 3, title: '像素经典', sub: '游戏角色完美还原',     pi: 2, bg: '#8FB59A', sort: 'popular', cat: 'pixel' },
+  { id: 4, title: '花之物语', sub: '春日花卉图案',         pi: 3, bg: '#7BA4C9', sort: 'latest',  cat: 'flower' },
 ];
 
 export const HomeScreen: React.FC = () => {
@@ -333,7 +333,7 @@ const $ = StyleSheet.create({
   card: {
     borderRadius: BorderRadius.xl, overflow: 'hidden',
     borderWidth: 1,
-    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
+    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
   },
   cardCover: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   cardBody: { padding: wp(10) },
@@ -351,6 +351,6 @@ const $ = StyleSheet.create({
     width: wp(44), height: wp(44), borderRadius: wp(22),
     justifyContent: 'center', alignItems: 'center',
     borderWidth: 1,
-    ...shadow(3, 12, 0.2, '#FF8FB1', 4),
+    ...shadow(3, 12, 0.2, '#5A4A3E', 4),
   },
 });

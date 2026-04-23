@@ -31,9 +31,10 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
     finally { setLoading(false); }
   };
 
+  // 国风淡彩：宣纸白 → 朱砂淡粉 → 藤黄浅
   const gradient = dark
-    ? ['#3D1F32', '#2A1A28', '#1A1220'] as const
-    : ['#FFE0EB', '#FFF0E5', '#F0E5FF'] as const;
+    ? ['#3A1F1C', '#2A1F1C', '#1A1413'] as const
+    : ['#FBE8E6', '#F5EFE0', '#FAF2D7'] as const;
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>

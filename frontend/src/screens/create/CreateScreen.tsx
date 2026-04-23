@@ -46,9 +46,9 @@ export const CreateScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部 — 糖果渐变 */}
+      {/* 顶部 — 水墨渐变（朱砂→柿红） */}
       <LinearGradient
-        colors={dark ? ['#3D1F32', '#2A1A28'] as const : ['#FF8FB1', '#FFB894'] as const}
+        colors={dark ? ['#3A1F1C', '#2A1F1C'] as const : ['#C8302B', '#CC7B3F'] as const}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={$.header}
       >
@@ -105,7 +105,7 @@ export const CreateScreen: React.FC = () => {
             style={[
               $.methodBtn,
               { backgroundColor: colors.surface, borderColor: colors.border },
-              shadow(3, 10, 0.08, '#FF8FB1', 2),
+              shadow(3, 10, 0.08, '#5A4A3E', 2),
             ]}
           >
             <View style={[$.methodIcon, { backgroundColor: m.color }, shadow(2, 6, 0.22, m.color, 3)]}>
