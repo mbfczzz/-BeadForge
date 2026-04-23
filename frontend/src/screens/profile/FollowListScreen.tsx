@@ -82,7 +82,7 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
           <Text style={$.followBtnText}>回关</Text>
         </TouchableOpacity>
       ) : (
-        <TouchableOpacity style={[$.followingBtn, { backgroundColor: dark ? colors.border : '#F3F4F6' }]} activeOpacity={0.7}>
+        <TouchableOpacity style={[$.followingBtn, { backgroundColor: dark ? colors.border : colors.inputBg }]} activeOpacity={0.7}>
           <Feather name="check" size={fp(11)} color={colors.textSecondary} />
           <Text style={[$.followingBtnText, { color: colors.textSecondary }]}>已关注</Text>
         </TouchableOpacity>
@@ -119,7 +119,7 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
           ? <StateView loading />
           : (
             <View style={$.emptyWrap}>
-              <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a2a' : '#F3EEFF' }]}>
+              <View style={[$.emptyIcon, { backgroundColor: dark ? colors.candy.lavender + '30' : colors.candy.lavender + '40' }]}>
                 <Feather name={type === 'followers' ? 'users' : 'user-plus'} size={fp(28)} color={colors.accent} />
               </View>
               <Text style={[$.emptyTitle, { color: colors.text }]}>
@@ -168,13 +168,13 @@ const $ = StyleSheet.create({
   followBtn: {
     flexDirection: 'row', alignItems: 'center', gap: wp(4),
     paddingHorizontal: wp(14), paddingVertical: wp(7),
-    borderRadius: wp(16),
+    borderRadius: wp(9999),
   },
   followBtnText: { color: '#fff', fontSize: fp(12), fontWeight: '700' },
   followingBtn: {
     flexDirection: 'row', alignItems: 'center', gap: wp(4),
     paddingHorizontal: wp(12), paddingVertical: wp(7),
-    borderRadius: wp(16),
+    borderRadius: wp(9999),
   },
   followingBtnText: { fontSize: fp(12), fontWeight: '500' },
 

@@ -53,8 +53,8 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
         {MOCK_LIKES.length === 0 && (
           <View style={$.emptyWrap}>
-            <View style={[$.emptyIcon, { backgroundColor: dark ? '#2a1a1a' : '#FFECEC' }]}>
-              <Feather name="heart" size={fp(28)} color="#EF4444" />
+            <View style={[$.emptyIcon, { backgroundColor: dark ? colors.candy.pink + '30' : colors.accentLight }]}>
+              <Feather name="heart" size={fp(28)} color={colors.accent} />
             </View>
             <Text style={[$.emptyTitle, { color: colors.text }]}>还没有点赞</Text>
             <Text style={[$.emptySub, { color: colors.textHint }]}>去发现喜欢的作品吧</Text>
@@ -82,7 +82,7 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
               </View>
               <View style={$.likeRight}>
                 <View style={$.likeCountRow}>
-                  <Feather name="heart" size={fp(12)} color="#EF4444" />
+                  <Feather name="heart" size={fp(12)} color={colors.accent} />
                   <Text style={[$.likeNum, { color: colors.textSecondary }]}>{item.likeCount}</Text>
                 </View>
                 <Text style={[$.likeTime, { color: colors.textHint }]}>{item.timeAgo}</Text>
@@ -128,7 +128,7 @@ const $ = StyleSheet.create({
     gap: wp(12),
   },
   thumb: {
-    width: wp(54), height: wp(54), borderRadius: wp(12),
+    width: wp(54), height: wp(54), borderRadius: wp(16),
     justifyContent: 'center', alignItems: 'center',
     overflow: 'hidden',
   },

@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
 import { HoverView, BeadGrid, ALL_PATTERNS } from '../../components/common';
 import { wp, fp } from '../../utils/responsive';
+import { shadow } from '../../utils/shadow';
 
 const PAD = wp(16);
 const GAP = wp(10);
@@ -52,8 +53,8 @@ export const FavoritesScreen: React.FC<Props> = ({ onBack }) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
         {MOCK_FAVS.length === 0 ? (
           <View style={$.emptyWrap}>
-            <View style={[$.emptyIcon, { backgroundColor: dark ? '#1a1a2a' : '#FFF9E6' }]}>
-              <Feather name="bookmark" size={fp(28)} color="#FBBF24" />
+            <View style={[$.emptyIcon, { backgroundColor: dark ? colors.candy.cream + '30' : colors.candy.cream }]}>
+              <Feather name="bookmark" size={fp(28)} color={colors.candy.sunshine} />
             </View>
             <Text style={[$.emptyTitle, { color: colors.text }]}>还没有收藏</Text>
             <Text style={[$.emptySub, { color: colors.textHint }]}>去发现页逛逛吧</Text>
@@ -123,7 +124,8 @@ const $ = StyleSheet.create({
     paddingHorizontal: PAD, paddingTop: wp(12),
   },
   card: {
-    borderRadius: wp(12), borderWidth: 1, overflow: 'hidden',
+    borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
+    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
   },
   cardCover: {
     height: wp(90), justifyContent: 'center', alignItems: 'center',

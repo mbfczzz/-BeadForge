@@ -67,7 +67,7 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
       backgroundColor: colors.surface,
       borderColor: dark ? colors.border : 'transparent',
       borderWidth: dark ? 1 : 0,
-      ...shadow(2, 8, dark ? 0 : 0.06),
+      ...(dark ? {} : shadow(3, 10, 0.08, '#FF8FB1', 2)),
     }]}>
       {/* 头部 */}
       <View style={$.cardHeader}>
@@ -170,7 +170,7 @@ const $ = StyleSheet.create({
   statsText: { fontSize: fp(12), fontWeight: '500' },
 
   card: {
-    borderRadius: wp(14), padding: PAD,
+    borderRadius: wp(20), padding: PAD,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: wp(12) },
   cardHeaderInfo: { marginLeft: wp(10), flex: 1 },

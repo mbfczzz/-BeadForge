@@ -4,12 +4,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useTheme, BorderRadius } from '../../theme';
+import { useTheme, BorderRadius, candyShadow } from '../../theme';
 import { HoverView } from '../../components/common';
 import { Toast } from '../../components/common/Toast';
 import { useToast, hapticSuccess, hapticLight } from '../../hooks/useFeedback';
 import client from '../../api/client';
 import { wp, fp } from '../../utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const PAD = wp(16);
 
@@ -105,9 +106,13 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
-        {/* 余额卡片 */}
-        <View style={[$.balanceCard, { backgroundColor: colors.accent }]}>
-          <Text style={$.balanceLabel}>拼豆币余额</Text>
+        {/* 余额卡片 — 糖果渐变 */}
+        <LinearGradient
+          colors={dark ? ['#3D1F32', '#2A1A28'] as const : ['#FF8FB1', '#FFB894'] as const}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={[$.balanceCard, candyShadow(colors.accent, 'md')]}
+        >
+          <Text style={$.balanceLabel}>拼豆币余额 💎</Text>
           <View style={$.balanceValueRow}>
             <Feather name="hexagon" size={fp(22)} color="#FCD34D" />
             <Text style={$.balanceValue}>{balance}</Text>
@@ -123,7 +128,7 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
               <Text style={$.balanceStatVal}>{totalSpent}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* 充值选项 */}
         <Text style={[$.secTitle, { color: colors.text }]}>选择充值</Text>
@@ -204,14 +209,14 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
         ) : (
           logs.map((log: any) => (
             <View key={log.id} style={[$.logItem, { borderBottomColor: colors.divider }]}>
-              <View style={[$.logIcon, { backgroundColor: log.amount > 0 ? '#DCFCE7' : '#FEE2E2' }]}>
-                <Feather name={log.amount > 0 ? 'arrow-down-left' : 'arrow-up-right'} size={fp(14)} color={log.amount > 0 ? '#16A34A' : '#EF4444'} />
+              <View style={[$.logIcon, { backgroundColor: log.amount > 0 ? colors.candy.mint + '40' : colors.accentLight }]}>
+                <Feather name={log.amount > 0 ? 'arrow-down-left' : 'arrow-up-right'} size={fp(14)} color={log.amount > 0 ? colors.success : colors.error} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[$.logDesc, { color: colors.text }]} numberOfLines={1}>{log.description}</Text>
                 <Text style={[$.logTime, { color: colors.textHint }]}>{log.createdAt?.replace('T', ' ').slice(0, 16)}</Text>
               </View>
-              <Text style={[$.logAmount, { color: log.amount > 0 ? '#16A34A' : '#EF4444' }]}>
+              <Text style={[$.logAmount, { color: log.amount > 0 ? colors.success : colors.error }]}>
                 {log.amount > 0 ? '+' : ''}{log.amount}
               </Text>
             </View>
@@ -230,7 +235,7 @@ const $ = StyleSheet.create({
   navBtn: { width: wp(34), height: wp(34), borderRadius: wp(17), justifyContent: 'center', alignItems: 'center' },
 
   // 余额
-  balanceCard: { marginHorizontal: PAD, marginTop: wp(14), borderRadius: wp(16), padding: wp(20) },
+  balanceCard: { marginHorizontal: PAD, marginTop: wp(14), borderRadius: wp(24), padding: wp(22) },
   balanceLabel: { color: 'rgba(255,255,255,0.7)', fontSize: fp(12) },
   balanceValueRow: { flexDirection: 'row', alignItems: 'center', gap: wp(6), marginTop: wp(6) },
   balanceValue: { color: '#fff', fontSize: fp(36), fontWeight: '800' },
@@ -245,8 +250,8 @@ const $ = StyleSheet.create({
   // 充值选项
   chargeGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: PAD, justifyContent: 'space-between' },
   chargeItem: {
-    width: '31%' as any, paddingVertical: wp(14), borderRadius: wp(12),
-    borderWidth: 1, alignItems: 'center', marginBottom: wp(10),
+    width: '31%' as any, paddingVertical: wp(16), borderRadius: wp(18),
+    borderWidth: 1.5, alignItems: 'center', marginBottom: wp(10),
   },
   chargeBadge: { position: 'absolute', top: -wp(1), right: wp(6), paddingHorizontal: wp(5), paddingVertical: wp(1), borderRadius: wp(4) },
   chargeBadgeT: { color: '#fff', fontSize: fp(8), fontWeight: '700' },
@@ -257,16 +262,16 @@ const $ = StyleSheet.create({
   payOption: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: PAD, marginBottom: wp(10),
-    padding: wp(14), borderRadius: wp(12), borderWidth: 1.5,
+    padding: wp(14), borderRadius: wp(18), borderWidth: 1.5,
   },
-  payIcon: { width: wp(34), height: wp(34), borderRadius: wp(10), justifyContent: 'center', alignItems: 'center', marginRight: wp(12) },
+  payIcon: { width: wp(36), height: wp(36), borderRadius: wp(18), justifyContent: 'center', alignItems: 'center', marginRight: wp(12) },
   payLabel: { fontSize: fp(14), fontWeight: '600' },
   radio: { width: wp(20), height: wp(20), borderRadius: wp(10), borderWidth: 2, justifyContent: 'center', alignItems: 'center' },
   radioDot: { width: wp(10), height: wp(10), borderRadius: wp(5) },
 
   payBtn: {
-    marginHorizontal: PAD, marginTop: wp(6), height: wp(48),
-    borderRadius: wp(12), justifyContent: 'center', alignItems: 'center',
+    marginHorizontal: PAD, marginTop: wp(6), height: wp(52),
+    borderRadius: wp(9999), justifyContent: 'center', alignItems: 'center',
   },
   payBtnText: { color: '#fff', fontSize: fp(16), fontWeight: '700' },
   payHint: { textAlign: 'center', fontSize: fp(11), marginTop: wp(8) },
@@ -279,7 +284,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: PAD, paddingVertical: wp(12),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  logIcon: { width: wp(34), height: wp(34), borderRadius: wp(10), justifyContent: 'center', alignItems: 'center', marginRight: wp(10) },
+  logIcon: { width: wp(34), height: wp(34), borderRadius: wp(17), justifyContent: 'center', alignItems: 'center', marginRight: wp(10) },
   logDesc: { fontSize: fp(13), fontWeight: '500' },
   logTime: { fontSize: fp(10), marginTop: wp(2) },
   logAmount: { fontSize: fp(16), fontWeight: '800' },

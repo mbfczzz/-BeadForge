@@ -98,7 +98,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
           </View>
 
           {/* 用户名不可改 */}
-          <View style={[$.infoCard, { backgroundColor: dark ? '#1a1a1a' : '#FAFAFA' }]}>
+          <View style={[$.infoCard, { backgroundColor: dark ? colors.inputBg : colors.accentLight }]}>
             <Feather name="info" size={fp(12)} color={colors.textHint} />
             <Text style={[$.infoText, { color: colors.textHint }]}>
               用户名 @{user?.username} 创建后不可修改
@@ -124,8 +124,8 @@ const $ = StyleSheet.create({
   },
   navTitle: { fontSize: fp(16), fontWeight: '700' },
   saveBtn: {
-    paddingHorizontal: wp(16), paddingVertical: wp(7),
-    borderRadius: wp(14),
+    paddingHorizontal: wp(18), paddingVertical: wp(8),
+    borderRadius: wp(9999),
   },
   saveBtnText: { color: '#fff', fontSize: fp(13), fontWeight: '700' },
 
@@ -144,15 +144,15 @@ const $ = StyleSheet.create({
 
   /* 表单 */
   formCard: {
-    marginHorizontal: PAD, borderRadius: wp(14),
+    marginHorizontal: PAD, borderRadius: wp(20),
     paddingHorizontal: PAD, paddingVertical: wp(4),
   },
   fieldWrap: { paddingVertical: wp(12) },
   fieldLabel: { fontSize: fp(12), fontWeight: '600', marginBottom: wp(8) },
   fieldBox: {
     flexDirection: 'row', alignItems: 'center',
-    height: wp(46), borderRadius: wp(12), borderWidth: 1,
-    paddingHorizontal: wp(14),
+    height: wp(48), borderRadius: wp(9999), borderWidth: 1,
+    paddingHorizontal: wp(16),
   },
   fieldInput: { flex: 1, fontSize: fp(14), marginLeft: wp(10), padding: 0 },
 

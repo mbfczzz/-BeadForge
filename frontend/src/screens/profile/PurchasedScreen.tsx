@@ -84,8 +84,8 @@ export const PurchasedScreen: React.FC<Props> = ({ onBack }) => {
     return (
       <View style={[$.card, {
         backgroundColor: colors.surface,
-        borderColor: dark ? colors.border : '#F0F0F0',
-        ...shadow(2, 6, dark ? 0 : 0.06),
+        borderColor: dark ? colors.border : colors.border,
+        ...(dark ? {} : shadow(3, 10, 0.08, '#FF8FB1', 2)),
       }]}>
         {/* 封面占位 */}
         <View style={[$.cardCover, { backgroundColor: dark ? '#1e1e1e' : '#FAFAFA' }]}>
@@ -192,7 +192,7 @@ const $ = StyleSheet.create({
   statsText: { fontSize: fp(12), fontWeight: '500' },
 
   card: {
-    width: CARD_W, borderRadius: wp(14), borderWidth: 1, overflow: 'hidden',
+    width: CARD_W, borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
   },
   cardCover: {
     height: wp(95), justifyContent: 'center', alignItems: 'center',

@@ -157,10 +157,10 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
                   style={[$.item, idx > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.divider }]}
                   scale={item.type === 'nav' ? 0.985 : 1}
                 >
-                  <View style={[$.itemIcon, { backgroundColor: item.danger ? '#FEE2E2' : colors.accentLight }]}>
-                    <Feather name={item.icon as any} size={fp(14)} color={item.danger ? '#EF4444' : colors.accent} />
+                  <View style={[$.itemIcon, { backgroundColor: item.danger ? '#FFE5EC' : colors.accentLight }]}>
+                    <Feather name={item.icon as any} size={fp(14)} color={item.danger ? colors.error : colors.accent} />
                   </View>
-                  <Text style={[$.itemLabel, { color: item.danger ? '#EF4444' : colors.text }]}>{item.label}</Text>
+                  <Text style={[$.itemLabel, { color: item.danger ? colors.error : colors.text }]}>{item.label}</Text>
                   {item.type === 'toggle' && (
                     <Switch
                       value={(settings as any)[item.key] ?? false}
@@ -201,15 +201,15 @@ const $ = StyleSheet.create({
   group: { paddingHorizontal: PAD, marginTop: wp(20) },
   groupTitle: { fontSize: FontSize.xs, fontWeight: '600', marginBottom: wp(8), marginLeft: wp(4) },
   groupCard: {
-    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
-    ...shadow(1, 4, 0.05, '#000', 1),
+    borderRadius: wp(20), borderWidth: 1, overflow: 'hidden',
+    ...shadow(2, 8, 0.06, '#FF8FB1', 1),
   },
   item: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: wp(14), paddingHorizontal: wp(14), gap: wp(12),
   },
   itemIcon: {
-    width: wp(32), height: wp(32), borderRadius: wp(8),
+    width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
   },
   itemLabel: { flex: 1, fontSize: FontSize.md, fontWeight: '500' },

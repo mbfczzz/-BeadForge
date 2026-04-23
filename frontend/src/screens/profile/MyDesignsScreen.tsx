@@ -12,9 +12,9 @@ import { shadow } from '../../utils/shadow';
 
 const PAD = wp(16);
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  DRAFT: { label: '草稿', color: '#F59E0B' },
-  PUBLISHED: { label: '已发布', color: '#22C55E' },
-  ARCHIVED: { label: '已归档', color: '#6B7280' },
+  DRAFT: { label: '草稿', color: '#FFB740' },        // 糖果黄
+  PUBLISHED: { label: '已发布', color: '#6ED39F' }, // 糖果绿
+  ARCHIVED: { label: '已归档', color: '#B0A5B0' },  // 糖果灰紫
 };
 
 interface Props { onBack: () => void }
@@ -90,8 +90,11 @@ const $ = StyleSheet.create({
   },
   card: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
-    ...shadow(1, 4, 0.05, '#000', 1),
+    borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden',
+    ...shadow(3, 10, 0.08, '#FF8FB1', 2),
+  },
+  statusBadgeRound: {
+    paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999),
   },
   cardCover: {
     width: wp(72), height: wp(72),
@@ -103,7 +106,7 @@ const $ = StyleSheet.create({
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: wp(8), marginTop: wp(2) },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: wp(4),
-    paddingHorizontal: wp(8), paddingVertical: wp(2), borderRadius: wp(4),
+    paddingHorizontal: wp(10), paddingVertical: wp(3), borderRadius: wp(9999),
   },
   statusDot: { width: wp(5), height: wp(5), borderRadius: wp(2.5) },
   statusText: { fontSize: fp(10), fontWeight: '600' },
