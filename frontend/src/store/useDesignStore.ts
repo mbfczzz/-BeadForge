@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import client from '../api/client';
-import { DesignItem } from '../api/design';
+import type { DesignItem } from '../api/design';
+import { getMockMyDesignPage, getMockPublicDesignPage } from '../mock/design';
+import { useAuthStore } from './useAuthStore';
 
 interface DesignState {
   designs: DesignItem[];
@@ -12,11 +13,9 @@ interface DesignState {
   sortBy: string;
   category: string | null;
   searchKeyword: string;
-
   setFilter: (sortBy?: string, category?: string | null) => void;
   setSearchKeyword: (keyword: string) => void;
   fetchDesigns: (refresh?: boolean) => Promise<void>;
-
   myDesigns: DesignItem[];
   myPage: number;
   myHasMore: boolean;
@@ -25,6 +24,7 @@ interface DesignState {
 }
 
 const PAGE_SIZE = 10;
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useDesignStore = create<DesignState>((set, get) => ({
   designs: [],
@@ -33,11 +33,9 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   loading: false,
   refreshing: false,
   error: null,
-
   sortBy: 'latest',
   category: null,
   searchKeyword: '',
-
   myDesigns: [],
   myPage: 1,
   myHasMore: true,
@@ -48,7 +46,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     if (sortBy !== undefined) updates.sortBy = sortBy;
     if (category !== undefined) updates.category = category;
     set({ ...updates, designs: [], page: 1, hasMore: true });
-    get().fetchDesigns(true);
+    void get().fetchDesigns(true);
   },
 
   setSearchKeyword: (keyword) => {
@@ -63,16 +61,15 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ loading: true, refreshing: refresh, error: null });
 
     try {
-      const res: any = await client.get('/designs/public/list', {
-        params: {
-          page,
-          size: PAGE_SIZE,
-          sortBy: state.sortBy,
-          category: state.category || undefined,
-        },
+      await wait(250);
+      const data = getMockPublicDesignPage({
+        page,
+        size: PAGE_SIZE,
+        sortBy: state.sortBy,
+        category: state.category,
+        keyword: state.searchKeyword,
       });
-      const data = res.data;
-      const records: DesignItem[] = data.records || [];
+      const records = data.records || [];
       const allRecords = refresh ? records : [...state.designs, ...records];
 
       set({
@@ -95,11 +92,10 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ myLoading: true });
 
     try {
-      const res: any = await client.get('/designs/my', {
-        params: { page, size: PAGE_SIZE },
-      });
-      const data = res.data;
-      const records: DesignItem[] = data.records || [];
+      await wait(180);
+      const userId = useAuthStore.getState().user?.id;
+      const data = getMockMyDesignPage({ page, size: PAGE_SIZE, userId });
+      const records = data.records || [];
       const all = refresh ? records : [...state.myDesigns, ...records];
 
       set({

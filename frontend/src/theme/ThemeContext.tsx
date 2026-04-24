@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { LightTheme, DarkTheme, ThemeColors } from './colors';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { Appearance } from 'react-native';
+import { Uniwind } from 'uniwind';
+import { DarkTheme, LightTheme, ThemeColors } from './colors';
 
 interface ThemeContextType {
   dark: boolean;
@@ -14,9 +16,13 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [dark, setDark] = useState(false);
-  const toggle = useCallback(() => setDark((d) => !d), []);
+  const [dark, setDark] = useState(() => Appearance.getColorScheme() === 'dark');
+  const toggle = useCallback(() => setDark((value) => !value), []);
   const colors = dark ? DarkTheme : LightTheme;
+
+  useEffect(() => {
+    Uniwind.setTheme(dark ? 'dark' : 'light');
+  }, [dark]);
 
   return (
     <ThemeContext.Provider value={{ dark, colors, toggle }}>

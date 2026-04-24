@@ -1,71 +1,107 @@
-import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { FontSize, useTheme } from '../../theme';
-import { wp, fp } from '../../utils/responsive';
-import { shadow } from '../../utils/shadow';
+import React, { useMemo, useState } from 'react';
+import type { StyleProp, TextInputProps, TextStyle, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../theme';
+import { fp, wp } from '../../utils/responsive';
 
-interface Props {
+interface Props extends Omit<TextInputProps, 'style'> {
   label?: string;
-  placeholder?: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  secureTextEntry?: boolean;
   error?: string;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  containerStyle?: StyleProp<ViewStyle>;
+  style?: StyleProp<TextStyle>;
+  prefix?: React.ReactNode;
+  suffix?: React.ReactNode;
 }
 
 export const Input: React.FC<Props> = ({
-  label, placeholder, value, onChangeText,
-  secureTextEntry = false, error, keyboardType = 'default',
+  label,
+  error,
+  containerStyle,
+  style,
+  prefix,
+  suffix,
+  secureTextEntry = false,
+  autoCapitalize = 'none',
+  ...props
 }) => {
   const { colors } = useTheme();
-  const [focused, setFocused] = useState(false);
-  const [showPwd, setShowPwd] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+
+  const resolvedSuffix = useMemo(() => {
+    if (suffix) return suffix;
+    if (!secureTextEntry) return null;
+
+    return (
+      <TouchableOpacity onPress={() => setRevealed((value) => !value)} activeOpacity={0.7}>
+        <Text style={[styles.toggle, { color: colors.accent }]}>{revealed ? '隐藏' : '显示'}</Text>
+      </TouchableOpacity>
+    );
+  }, [colors.accent, revealed, secureTextEntry, suffix]);
 
   return (
-    <View style={S.wrap}>
-      {label && (
-        <Text style={[S.label, { color: focused ? colors.accent : colors.textSecondary }]}>{label}</Text>
-      )}
-      <View style={[
-        S.box,
-        { backgroundColor: focused ? colors.surface : colors.inputBg },
-        focused && { ...shadow(0, 6, 0.1, colors.accent, 2), borderWidth: 1.5, borderColor: colors.accent + '40' },
-        error && { borderColor: colors.error, borderWidth: 1.5 },
-        Platform.OS === 'web' && { transitionDuration: '0.25s', transitionProperty: 'background-color, box-shadow, border-color' } as any,
-      ]}>
+    <View style={styles.fieldWrap}>
+      {label ? <Text style={[styles.label, { color: colors.text }]}>{label}</Text> : null}
+      <View
+        style={[
+          styles.inputRow,
+          {
+            backgroundColor: colors.inputBg,
+            borderColor: error ? colors.error : colors.border,
+          },
+          containerStyle,
+          style as StyleProp<ViewStyle>,
+        ]}
+      >
+        {prefix ? <View style={styles.decorator}>{prefix}</View> : null}
         <TextInput
-          style={[S.input, { color: colors.text }]}
-          placeholder={placeholder}
+          {...props}
+          autoCapitalize={autoCapitalize}
+          secureTextEntry={secureTextEntry && !revealed}
           placeholderTextColor={colors.textHint}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={secureTextEntry && !showPwd}
-          keyboardType={keyboardType}
-          autoCapitalize="none"
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          selectionColor={colors.accent}
+          style={[styles.input, { color: colors.text }, style]}
         />
-        {secureTextEntry && (
-          <TouchableOpacity onPress={() => setShowPwd(!showPwd)} style={S.eye}>
-            <Text style={[S.eyeT, { color: colors.textHint }]}>{showPwd ? '隐藏' : '显示'}</Text>
-          </TouchableOpacity>
-        )}
+        {resolvedSuffix ? <View style={styles.decorator}>{resolvedSuffix}</View> : null}
       </View>
-      {error && <Text style={[S.err, { color: colors.error }]}>{error}</Text>}
+      {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
     </View>
   );
 };
 
-const S = StyleSheet.create({
-  wrap: { marginBottom: wp(16) },
-  label: { fontSize: fp(13), marginBottom: wp(6), fontWeight: '600' },
-  box: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: wp(12),
+const styles = StyleSheet.create({
+  fieldWrap: {
+    gap: wp(6),
   },
-  input: { flex: 1, height: wp(48), paddingHorizontal: wp(16), fontSize: fp(15) },
-  eye: { paddingHorizontal: wp(14) },
-  eyeT: { fontSize: fp(12), fontWeight: '500' },
-  err: { fontSize: fp(11), marginTop: wp(6), fontWeight: '500' },
+  label: {
+    fontSize: fp(12),
+    fontWeight: '600',
+  },
+  inputRow: {
+    minHeight: wp(48),
+    borderWidth: 1,
+    borderRadius: wp(16),
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  input: {
+    flex: 1,
+    minHeight: wp(48),
+    fontSize: fp(15),
+    paddingVertical: 0,
+    paddingHorizontal: wp(14),
+  },
+  decorator: {
+    paddingHorizontal: wp(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggle: {
+    fontSize: fp(12),
+    fontWeight: '700',
+  },
+  error: {
+    fontSize: fp(11),
+    lineHeight: fp(16),
+  },
 });

@@ -1,179 +1,163 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform,
-  TouchableOpacity, TextInput, ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme, FontSize, candyShadow } from '../../theme';
-import { wp, fp } from '../../utils/responsive';
+import { Button, Input, SurfaceCard } from '../../components/common';
+import { useTheme } from '../../theme';
+import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
-import { BeadBuddy } from '../../components/common/BeadBuddy';
 
-interface Props { onSwitchToLogin: () => void }
+interface Props {
+  onSwitchToLogin: () => void;
+}
 
 export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
+  const register = useAuthStore((state) => state.register);
+
   const [username, setUsername] = useState('');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [focused, setFocused] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const register = useAuthStore((s) => s.register);
+
+  const canSubmit = useMemo(() => {
+    return username.trim().length >= 3 && password.length >= 6 && password === confirmPwd;
+  }, [confirmPwd, password, username]);
 
   const handleRegister = async () => {
-    if (!username.trim() || username.trim().length < 3) { Alert.alert('提示', '用户名至少3个字符'); return; }
-    if (password.length < 6) { Alert.alert('提示', '密码至少6位'); return; }
-    if (password !== confirmPwd) { Alert.alert('提示', '两次密码不一致'); return; }
+    if (!username.trim() || username.trim().length < 3) {
+      Alert.alert('提示', '用户名至少需要 3 个字符');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('提示', '密码至少需要 6 位');
+      return;
+    }
+
+    if (password !== confirmPwd) {
+      Alert.alert('提示', '两次输入的密码不一致');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register({ username: username.trim(), password, nickname: nickname.trim() || undefined });
-    } catch (e: any) { Alert.alert('注册失败', e.message); }
-    finally { setLoading(false); }
+      await register({
+        username: username.trim(),
+        password,
+        nickname: nickname.trim() || undefined,
+      });
+    } catch (error: any) {
+      Alert.alert('注册失败', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  // 国风淡彩：天青→宣纸→朱砂淡粉
-  const gradient = dark
-    ? ['#2A1F1C', '#1A1413', '#3A1F1C'] as const
-    : ['#E5EEF5', '#F5EFE0', '#FBE8E6'] as const;
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: wp(28), paddingVertical: wp(32) }}
+          contentContainerStyle={$.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* 吉祥物 */}
-          <View style={$.buddyWrap}>
-            <BeadBuddy size={wp(96)} color={colors.candy.lavender} mood="sparkle" />
+          <View style={$.hero}>
+            <Text style={[$.title, { color: colors.text }]}>创建本地账号</Text>
+            <Text style={[$.subtitle, { color: colors.textHint }]}>注册后会直接进入当前 mock 测试环境，并沿用新的表单与卡片视觉风格。</Text>
           </View>
 
-          {/* 标题 */}
-          <Text style={[$.title, { color: colors.text }]}>
-            加入 <Text style={{ color: colors.accent }}>BeadForge</Text>
-          </Text>
-          <Text style={[$.sub, { color: colors.textSecondary }]}>
-            创建属于你的<Text style={{ color: colors.candy.mango, fontWeight: '700' }}>拼豆创作小宇宙</Text> 🎨
-          </Text>
-
-          <InputRow
-            icon="user" placeholder="用户名（至少3位）"
-            value={username} onChangeText={setUsername}
-            colors={colors} focused={focused === 'u'} onFocus={() => setFocused('u')} onBlur={() => setFocused(null)}
-          />
-          <InputRow
-            icon="smile" placeholder="昵称（选填）"
-            value={nickname} onChangeText={setNickname}
-            colors={colors} focused={focused === 'n'} onFocus={() => setFocused('n')} onBlur={() => setFocused(null)}
-          />
-
-          {/* 密码 */}
-          <View
-            style={[
-              $.inputBox,
-              { backgroundColor: colors.surface, borderColor: focused === 'p' ? colors.accent : colors.border },
-              focused === 'p' && candyShadow(colors.accent, 'sm'),
-            ]}
-          >
-            <Feather name="lock" size={fp(16)} color={focused === 'p' ? colors.accent : colors.textHint} />
-            <TextInput
-              style={[$.input, { color: colors.text }]}
-              placeholder="密码（至少6位）"
-              placeholderTextColor={colors.textHint}
-              value={password} onChangeText={setPassword}
-              onFocus={() => setFocused('p')} onBlur={() => setFocused(null)}
-              secureTextEntry={!showPwd} autoCapitalize="none"
+          <SurfaceCard title="填写账号信息" description="建议先输入用户名和密码，昵称可以稍后在资料页补充。">
+            <Input
+              label="用户名"
+              placeholder="至少 3 个字符"
+              value={username}
+              onChangeText={setUsername}
+              prefix={<Feather name="user" size={fp(16)} color={colors.textHint} />}
             />
-            <TouchableOpacity onPress={() => setShowPwd(!showPwd)} activeOpacity={0.6} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Feather name={showPwd ? 'eye-off' : 'eye'} size={fp(16)} color={colors.textHint} />
-            </TouchableOpacity>
-          </View>
+            <Input
+              label="昵称"
+              placeholder="选填"
+              value={nickname}
+              onChangeText={setNickname}
+              prefix={<Feather name="edit-3" size={fp(16)} color={colors.textHint} />}
+            />
+            <Input
+              label="密码"
+              placeholder="至少 6 位"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              prefix={<Feather name="lock" size={fp(16)} color={colors.textHint} />}
+            />
+            <Input
+              label="确认密码"
+              placeholder="再次输入密码"
+              value={confirmPwd}
+              onChangeText={setConfirmPwd}
+              secureTextEntry
+              prefix={<Feather name="shield" size={fp(16)} color={colors.textHint} />}
+              error={confirmPwd.length > 0 && password !== confirmPwd ? '两次输入的密码不一致' : undefined}
+            />
 
-          <InputRow
-            icon="shield" placeholder="确认密码"
-            value={confirmPwd} onChangeText={setConfirmPwd}
-            colors={colors} secure={!showPwd}
-            focused={focused === 'c'} onFocus={() => setFocused('c')} onBlur={() => setFocused(null)}
-          />
+            <Button title={loading ? '注册中...' : '注册'} onPress={handleRegister} loading={loading} disabled={!canSubmit} />
 
-          {/* 注册按钮 */}
-          <TouchableOpacity
-            activeOpacity={0.85} onPress={handleRegister} disabled={loading}
-            style={[
-              $.btn,
-              { backgroundColor: colors.accent, opacity: loading ? 0.6 : 1 },
-              candyShadow(colors.accent, 'md'),
-            ]}
-          >
-            <Text style={$.btnT}>{loading ? '注册中...' : '注 册'}</Text>
-          </TouchableOpacity>
-
-          <View style={$.bottomRow}>
-            <Text style={[$.bottomText, { color: colors.textHint }]}>已有账号？</Text>
-            <TouchableOpacity onPress={onSwitchToLogin} activeOpacity={0.6} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={[$.bottomLink, { color: colors.accent }]}>立即登录</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={$.footerRow}>
+              <Text style={[$.footerText, { color: colors.textHint }]}>已经有账号？</Text>
+              <TouchableOpacity onPress={onSwitchToLogin} activeOpacity={0.7}>
+                <Text style={[$.footerLink, { color: colors.accent }]}>返回登录</Text>
+              </TouchableOpacity>
+            </View>
+          </SurfaceCard>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-/* ──── 输入行 ──── */
-
-const InputRow: React.FC<{
-  icon: string; placeholder: string; value: string; onChangeText: (t: string) => void;
-  colors: any; secure?: boolean; focused?: boolean;
-  onFocus?: () => void; onBlur?: () => void;
-}> = ({ icon, placeholder, value, onChangeText, colors, secure, focused, onFocus, onBlur }) => (
-  <View
-    style={[
-      $.inputBox,
-      { backgroundColor: colors.surface, borderColor: focused ? colors.accent : colors.border },
-      focused && candyShadow(colors.accent, 'sm'),
-    ]}
-  >
-    <Feather name={icon as any} size={fp(16)} color={focused ? colors.accent : colors.textHint} />
-    <TextInput
-      style={[$.input, { color: colors.text }]}
-      placeholder={placeholder} placeholderTextColor={colors.textHint}
-      value={value} onChangeText={onChangeText}
-      onFocus={onFocus} onBlur={onBlur}
-      secureTextEntry={secure} autoCapitalize="none"
-    />
-  </View>
-);
-
 const $ = StyleSheet.create({
-  root: { flex: 1 },
-
-  buddyWrap: { alignItems: 'center', marginBottom: wp(16) },
-  title: { fontSize: fp(24), fontWeight: '800', marginBottom: wp(6), textAlign: 'center', letterSpacing: 0.3 },
-  sub: { fontSize: fp(13), marginBottom: wp(28), textAlign: 'center', letterSpacing: 0.2 },
-
-  inputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(52), borderRadius: wp(9999), borderWidth: 1.5,
-    paddingHorizontal: wp(18), marginBottom: wp(14),
+  root: {
+    flex: 1,
   },
-  input: { flex: 1, fontSize: FontSize.lg, marginLeft: wp(10), padding: 0 },
-
-  btn: {
-    height: wp(52), borderRadius: wp(9999),
-    justifyContent: 'center', alignItems: 'center',
-    marginTop: wp(10),
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: wp(24),
+    paddingVertical: wp(24),
   },
-  btnT: { color: '#fff', fontSize: fp(16), fontWeight: '800', letterSpacing: 2 },
-
-  bottomRow: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(24) },
-  bottomText: { fontSize: fp(13) },
-  bottomLink: { fontSize: fp(13), fontWeight: '700', marginLeft: wp(4) },
+  hero: {
+    marginBottom: wp(20),
+  },
+  title: {
+    fontSize: fp(28),
+    fontWeight: '800',
+  },
+  subtitle: {
+    fontSize: fp(13),
+    lineHeight: fp(20),
+    marginTop: wp(8),
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: wp(6),
+  },
+  footerText: {
+    fontSize: fp(13),
+  },
+  footerLink: {
+    fontSize: fp(13),
+    fontWeight: '700',
+    marginLeft: wp(4),
+  },
 });

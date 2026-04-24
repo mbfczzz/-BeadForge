@@ -19,6 +19,11 @@ export interface UserInfo {
   avatar: string | null;
   email: string | null;
   phone: string | null;
+  bio?: string | null;
+  gender?: string | null;
+  birthday?: string | null;
+  education?: string | null;
+  occupation?: string | null;
 }
 
 export interface AuthResponse {

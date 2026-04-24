@@ -1,63 +1,95 @@
-import React, { memo } from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
-import { candyColorFor } from '../../theme';
+import React from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../../theme';
 
 interface Props {
   uri?: string | null;
   name?: string;
   size?: number;
-  /** 糖果光环：传颜色或 true（自动按 name 取一个糖果色） */
-  ring?: string | boolean;
-  ringWidth?: number;
 }
 
-const PLACEHOLDER_BG = '#e6e8ec';
+function renderPresetAvatar(preset: string, size: number, fallback: string) {
+  const inner = Math.max(12, size * 0.34);
 
-const AvatarImpl: React.FC<Props> = ({ uri, name, size = 40, ring, ringWidth }) => {
-  const r = size / 2;
-  const rw = ringWidth ?? Math.max(2, Math.round(size * 0.06));
-  const ringColor = ring === true ? candyColorFor(name || '?') : typeof ring === 'string' ? ring : undefined;
-  const totalSize = ringColor ? size + rw * 2 : size;
+  if (preset === 'github') {
+    return (
+      <LinearGradient
+        colors={['#121212', '#121212', '#F5A623', '#F5A623']}
+        locations={[0, 0.62, 0.62, 1]}
+        style={[styles.presetWrap, { width: size, height: size, borderRadius: size / 2 }]}
+      >
+        <Text style={[styles.githubText, { fontSize: Math.max(10, size * 0.16) }]}>GitHub</Text>
+      </LinearGradient>
+    );
+  }
 
-  const avatarNode = uri ? (
-    <Image
-      source={{ uri }}
-      style={{ width: size, height: size, borderRadius: r, backgroundColor: PLACEHOLDER_BG }}
-    />
-  ) : (
-    <View
-      style={[
-        styles.ph,
-        { width: size, height: size, borderRadius: r, backgroundColor: candyColorFor(name || '?') },
-      ]}
+  const presetMap: Record<string, { colors: [string, string]; text: string; textColor: string }> = {
+    ocean: { colors: ['#4A90FF', '#7BC6FF'], text: fallback, textColor: '#FFFFFF' },
+    violet: { colors: ['#635BFF', '#9B8CFF'], text: fallback, textColor: '#FFFFFF' },
+    coral: { colors: ['#FF7B72', '#FFB36B'], text: fallback, textColor: '#FFFFFF' },
+    moss: { colors: ['#2BBF88', '#79D7A7'], text: fallback, textColor: '#FFFFFF' },
+  };
+
+  const current = presetMap[preset] || presetMap.ocean;
+
+  return (
+    <LinearGradient
+      colors={current.colors}
+      style={[styles.presetWrap, { width: size, height: size, borderRadius: size / 2 }]}
     >
-      <Text style={[styles.t, { fontSize: size * 0.38 }]}>{(name || '?').charAt(0).toUpperCase()}</Text>
-    </View>
+      <Text style={[styles.fallback, { color: current.textColor, fontSize: inner }]}>{current.text}</Text>
+    </LinearGradient>
   );
+}
 
-  if (!ringColor) return avatarNode;
+export const Avatar: React.FC<Props> = ({ uri, name, size = 40 }) => {
+  const { colors } = useTheme();
+  const fallback = (name || '?').trim().slice(0, 2).toUpperCase() || 'BF';
 
-  // 结构：ring 色外圆 + padding(rw) 让出给头像；精确 ring 宽度 = rw
+  if (uri?.startsWith('preset:')) {
+    return renderPresetAvatar(uri.replace('preset:', ''), size, fallback);
+  }
+
   return (
     <View
-      style={{
-        width: totalSize,
-        height: totalSize,
-        borderRadius: totalSize / 2,
-        backgroundColor: ringColor,
-        padding: rw,
-      }}
+      style={[
+        styles.wrap,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: colors.accentLight,
+        },
+      ]}
     >
-      {avatarNode}
+      {uri ? (
+        <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2 }} />
+      ) : (
+        <Text style={[styles.fallback, { color: colors.accent, fontSize: Math.max(12, size * 0.34) }]}>{fallback}</Text>
+      )}
     </View>
   );
 };
 
-export const Avatar = memo(AvatarImpl, (a, b) =>
-  a.uri === b.uri && a.name === b.name && a.size === b.size && a.ring === b.ring && a.ringWidth === b.ringWidth,
-);
-
 const styles = StyleSheet.create({
-  ph: { justifyContent: 'center', alignItems: 'center' },
-  t: { color: '#FFF', fontWeight: '700' },
+  wrap: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presetWrap: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fallback: {
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  githubText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
 });

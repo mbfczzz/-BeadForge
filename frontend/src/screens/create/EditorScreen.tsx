@@ -126,7 +126,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       const result = await doubaoGenerate(prompt, cols, rows, PALETTE);
       if (result) { pushHistory(result); return; }
     } catch (e: any) {
-      // AI 失败，静默 fallback
+      console.warn('豆包 API 失败，使用 mock:', e?.message);
       setGenError(useRealApi ? '生成失败，已使用本地图案' : '');
     }
     // fallback: mock
@@ -271,12 +271,10 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [showPublish, setShowPublish] = useState(false);
   const [pubTitle, setPubTitle] = useState('');
   const [pubDesc, setPubDesc] = useState('');
-  const [pubPrice, setPubPrice] = useState('');
+  const [pubPoints, setPubPoints] = useState('');
   const [pubCat, setPubCat] = useState('抽象');
-  const [publishing, setPublishing] = useState(false);
+  const [pubAccessMode, setPubAccessMode] = useState<'free' | 'points' | 'member'>('free');
   const publishPattern = usePatternStore((s) => s.publish);
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const handleSave = useCallback(() => {
     if (stats.beadCount === 0) { Alert.alert('提示', '画布是空的，先画点什么吧'); return; }
@@ -293,48 +291,43 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           },
         });
       }},
-      { text: '发布到图纸市场', onPress: () => {
+      { text: '发布资源到发现页', onPress: () => {
         setPubTitle(mode === 'ai' ? aiPrompt || '' : '');
         setPubDesc('');
-        setPubPrice('');
+        setPubPoints('');
+        setPubAccessMode('free');
         setShowPublish(true);
       }},
       { text: '取消', style: 'cancel' },
     ]);
   }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
 
-  const handlePublish = useCallback(async () => {
-    if (publishing) return; // 防重复点击
-    if (!pubTitle.trim()) { Alert.alert('提示', '请输入图纸标题'); return; }
-    const price = parseFloat(pubPrice) || 0;
-    setPublishing(true);
-    try {
-      await publishPattern({
-        title: pubTitle.trim(),
-        author: '我',
-        authorId: 1,
-        price,
-        free: price <= 0,
-        patIdx: 0,
-        cat: pubCat,
-        cols,
-        rows,
-        desc: pubDesc.trim() || `${cols}×${rows} 拼豆图纸`,
-        gridData: grid,
-      });
-      if (!mountedRef.current) return;
-      setShowPublish(false);
-      Alert.alert('发布成功', `「${pubTitle.trim()}」已上架图纸市场`, [
-        { text: '查看市场', onPress: () => navigation.navigate('Main' as any, { screen: 'Market' } as any) },
-        { text: '继续创作' },
-      ]);
-    } catch (e: any) {
-      if (!mountedRef.current) return;
-      Alert.alert('发布失败', e?.message || '请稍后重试（可能需要先登录）');
-    } finally {
-      if (mountedRef.current) setPublishing(false);
+  const handlePublish = useCallback(() => {
+    if (!pubTitle.trim()) { Alert.alert('提示', '请输入资源标题'); return; }
+    const pointsCost = pubAccessMode === 'points' ? Math.max(0, parseInt(pubPoints, 10) || 0) : 0;
+    if (pubAccessMode === 'points' && pointsCost <= 0) {
+      Alert.alert('提示', '请输入有效的积分数量');
+      return;
     }
-  }, [publishing, pubTitle, pubDesc, pubPrice, pubCat, cols, rows, grid, publishPattern, navigation]);
+    publishPattern({
+      title: pubTitle.trim(),
+      author: '我',
+      authorId: 1,
+      patIdx: 0,
+      cat: pubCat,
+      cols,
+      rows,
+      desc: pubDesc.trim() || `${cols}×${rows} 拼豆资源`,
+      gridData: grid,
+      accessMode: pubAccessMode,
+      pointsCost,
+    });
+    setShowPublish(false);
+    Alert.alert('发布成功', `「${pubTitle.trim()}」已发布到发现页`, [
+      { text: '去发现查看', onPress: () => navigation.navigate('Main' as any, { screen: 'Home' } as any) },
+      { text: '继续创作' },
+    ]);
+  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, navigation]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -498,20 +491,20 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         </HoverView>
       </View>
 
-      {/* ── 发布到市场弹窗 ── */}
+      {/* ── 发布资源弹窗 ── */}
       <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
         <TouchableOpacity style={$.pubOverlay} activeOpacity={1} onPress={() => setShowPublish(false)}>
           <View style={[$.pubSheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
-            <Text style={[$.pubTitle, { color: colors.text }]}>发布到图纸市场</Text>
+            <Text style={[$.pubTitle, { color: colors.text }]}>发布资源到发现页</Text>
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>标题</Text>
             <TextInput style={[$.pubInput, { backgroundColor: colors.inputBg, color: colors.text }]}
-              placeholder="给你的图纸起个名字" placeholderTextColor={colors.textHint}
+              placeholder="给你的资源起个名字" placeholderTextColor={colors.textHint}
               value={pubTitle} onChangeText={setPubTitle} maxLength={20} />
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>描述</Text>
             <TextInput style={[$.pubInput, $.pubInputMulti, { backgroundColor: colors.inputBg, color: colors.text }]}
-              placeholder="简单描述你的图纸（选填）" placeholderTextColor={colors.textHint}
+              placeholder="简单描述你的资源（选填）" placeholderTextColor={colors.textHint}
               value={pubDesc} onChangeText={setPubDesc} multiline maxLength={100} />
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>分类</Text>
@@ -524,32 +517,50 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
               ))}
             </View>
 
-            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>定价</Text>
-            <View style={$.pubPriceRow}>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => setPubPrice('')}
-                style={[$.pubPriceOpt, { backgroundColor: !pubPrice ? colors.accent : colors.inputBg }]}>
-                <Text style={{ fontSize: fp(12), fontWeight: '600', color: !pubPrice ? '#fff' : colors.textSecondary }}>免费</Text>
-              </TouchableOpacity>
-              <TextInput style={[$.pubPriceInput, { backgroundColor: colors.inputBg, color: colors.text }]}
-                placeholder="输入价格" placeholderTextColor={colors.textHint}
-                value={pubPrice} onChangeText={setPubPrice} keyboardType="numeric" />
-              <Text style={[$.pubPriceUnit, { color: colors.textHint }]}>元</Text>
+            <Text style={[$.pubLabel, { color: colors.textSecondary }]}>获取方式</Text>
+            <View style={$.pubAccessRow}>
+              {[
+                { key: 'free', label: '免费' },
+                { key: 'points', label: '积分获取' },
+                { key: 'member', label: '会员可得' },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.key}
+                  activeOpacity={0.7}
+                  onPress={() => setPubAccessMode(item.key as 'free' | 'points' | 'member')}
+                  style={[$.pubPriceOpt, { backgroundColor: pubAccessMode === item.key ? colors.accent : colors.inputBg }]}
+                >
+                  <Text style={{ fontSize: fp(12), fontWeight: '600', color: pubAccessMode === item.key ? '#fff' : colors.textSecondary }}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
+
+            {pubAccessMode === 'points' && (
+              <>
+                <Text style={[$.pubLabel, { color: colors.textSecondary }]}>积分数量</Text>
+                <View style={$.pubPriceRow}>
+                  <TextInput style={[$.pubPriceInput, { backgroundColor: colors.inputBg, color: colors.text }]}
+                    placeholder="输入积分" placeholderTextColor={colors.textHint}
+                    value={pubPoints} onChangeText={setPubPoints} keyboardType="numeric" />
+                  <Text style={[$.pubPriceUnit, { color: colors.textHint }]}>积分</Text>
+                </View>
+              </>
+            )}
 
             <View style={$.pubInfo}>
               <Feather name="info" size={fp(11)} color={colors.textHint} />
-              <Text style={[$.pubInfoT, { color: colors.textHint }]}>图纸尺寸 {cols}×{rows}，含 {stats.beadCount} 颗珠子，{stats.colorCount} 种颜色</Text>
+              <Text style={[$.pubInfoT, { color: colors.textHint }]}>资源尺寸 {cols}×{rows}，含 {stats.beadCount} 颗珠子，{stats.colorCount} 种颜色</Text>
             </View>
 
             <View style={$.pubBtns}>
-              <TouchableOpacity activeOpacity={0.7} disabled={publishing} onPress={() => setShowPublish(false)} style={[$.pubCancelBtn, { borderColor: colors.border }]}>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => setShowPublish(false)} style={[$.pubCancelBtn, { borderColor: colors.border }]}>
                 <Text style={[$.pubCancelT, { color: colors.textSecondary }]}>取消</Text>
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.8} disabled={publishing} onPress={handlePublish} style={[$.pubSubmitBtn, { backgroundColor: colors.accent, opacity: publishing ? 0.6 : 1 }]}>
-                {publishing
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Feather name="upload" size={fp(14)} color="#fff" />}
-                <Text style={$.pubSubmitT}>{publishing ? '发布中...' : '发布'}</Text>
+              <TouchableOpacity activeOpacity={0.8} onPress={handlePublish} style={[$.pubSubmitBtn, { backgroundColor: colors.accent }]}>
+                <Feather name="upload" size={fp(14)} color="#fff" />
+                <Text style={$.pubSubmitT}>发布</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -712,7 +723,7 @@ const $ = StyleSheet.create({
     paddingHorizontal: wp(40), paddingVertical: wp(30),
     borderRadius: BorderRadius.xl,
     alignItems: 'center', gap: wp(14),
-    ...shadow(4, 16, 0.18, '#5A4A3E', 6),
+    ...shadow(4, 16, 0.15, '#000', 6),
   },
   genText: { fontSize: FontSize.lg, fontWeight: '600' },
   genDots: { flexDirection: 'row', gap: wp(6) },
@@ -739,7 +750,7 @@ const $ = StyleSheet.create({
   canvasWrap: {
     margin: PAD, borderRadius: BorderRadius.lg,
     padding: wp(12), alignItems: 'center', justifyContent: 'center',
-    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
+    ...shadow(2, 8, 0.06, '#000', 2),
   },
 
   // 当前颜色栏
@@ -792,8 +803,8 @@ const $ = StyleSheet.create({
   saveBtn: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: wp(20), paddingVertical: wp(10),
-    borderRadius: wp(9999), gap: wp(6),
-    ...shadow(3, 10, 0.22, '#5A4A3E', 4),
+    borderRadius: BorderRadius.full, gap: wp(6),
+    ...shadow(2, 6, 0.15, '#4b78ff', 3),
   },
   saveBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 
@@ -802,12 +813,13 @@ const $ = StyleSheet.create({
   pubSheet: { borderTopLeftRadius: wp(16), borderTopRightRadius: wp(16), padding: wp(20) },
   pubTitle: { fontSize: fp(17), fontWeight: '700', marginBottom: wp(14) },
   pubLabel: { fontSize: fp(12), fontWeight: '600', marginTop: wp(10), marginBottom: wp(6) },
-  pubInput: { height: wp(44), borderRadius: wp(9999), paddingHorizontal: wp(16), fontSize: fp(14) },
+  pubInput: { height: wp(40), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
   pubInputMulti: { height: wp(70), paddingTop: wp(10), textAlignVertical: 'top' },
   pubCatRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  pubCatChip: { paddingHorizontal: wp(14), paddingVertical: wp(6), borderRadius: wp(9999), marginRight: wp(6), marginBottom: wp(6) },
+  pubAccessRow: { flexDirection: 'row', flexWrap: 'wrap', gap: wp(8) },
+  pubCatChip: { paddingHorizontal: wp(12), paddingVertical: wp(5), borderRadius: wp(12), marginRight: wp(6), marginBottom: wp(6) },
   pubPriceRow: { flexDirection: 'row', alignItems: 'center' },
-  pubPriceOpt: { paddingHorizontal: wp(16), paddingVertical: wp(9), borderRadius: wp(9999), marginRight: wp(8) },
+  pubPriceOpt: { paddingHorizontal: wp(14), paddingVertical: wp(8), borderRadius: wp(10), marginRight: wp(8) },
   pubPriceInput: { flex: 1, height: wp(38), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },
   pubPriceUnit: { fontSize: fp(13), marginLeft: wp(6) },
   pubInfo: { flexDirection: 'row', alignItems: 'center', marginTop: wp(12) },

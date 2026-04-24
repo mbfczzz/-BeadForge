@@ -36,8 +36,8 @@ export function injectWebHoverStyles() {
       transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
     }
     [data-class="search"]:focus-within {
-      border-color: #5B5FFF !important;
-      box-shadow: 0 0 0 3px rgba(91,95,255,0.1) !important;
+      border-color: inherit !important;
+      box-shadow: none !important;
     }
 
     /* ========== 卡片 hover / active ========== */

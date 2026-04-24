@@ -1,7 +1,8 @@
 import { Platform, ViewStyle } from 'react-native';
 
 /**
- * 跨平台阴影 - Web 用 boxShadow，iOS 用 shadow*，Android 用 elevation
+ * 跨平台轻阴影。
+ * Web 使用 boxShadow，iOS 使用 shadow*，Android 使用 elevation。
  */
 export function shadow(
   offsetY: number = 2,
@@ -10,16 +11,21 @@ export function shadow(
   color: string = '#000',
   elevation: number = 2,
 ): ViewStyle {
+  const softOffsetY = Math.max(1, Math.round(offsetY * 0.45));
+  const softRadius = Math.max(2, Math.round(radius * 0.5));
+  const softOpacity = Number(Math.max(0.015, opacity * 0.45).toFixed(3));
+  const softElevation = Math.max(1, Math.round(elevation * 0.45));
+
   if (Platform.OS === 'web') {
-    return { boxShadow: `0 ${offsetY}px ${radius}px rgba(0,0,0,${opacity})` } as any;
+    return { boxShadow: `0 ${softOffsetY}px ${softRadius}px rgba(0,0,0,${softOpacity})` } as any;
   }
   if (Platform.OS === 'android') {
-    return { elevation };
+    return { elevation: softElevation };
   }
   return {
     shadowColor: color,
-    shadowOffset: { width: 0, height: offsetY },
-    shadowOpacity: opacity,
-    shadowRadius: radius,
+    shadowOffset: { width: 0, height: softOffsetY },
+    shadowOpacity: softOpacity,
+    shadowRadius: softRadius,
   };
 }

@@ -1,356 +1,415 @@
-import React, { useEffect, useCallback, useRef, useState, memo, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  RefreshControl, TextInput, Animated,
-  NativeSyntheticEvent, NativeScrollEvent,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { FontSize, BorderRadius, useTheme } from '../../theme';
-import { StateView, PressableScale, CardSkeleton, HoverView, InkSeal } from '../../components/common';
-import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
-import { useDesignStore } from '../../store/useDesignStore';
-import { DesignItem } from '../../api/design';
-import { wp, fp, screenW, getColumnCount, getCardWidth, getBannerWidth, isSmall, BOTTOM_SAFE_H } from '../../utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import {
+  ALL_PATTERNS,
+  BeadGrid,
+  HomeBannerCarousel,
+  Input,
+  StateView,
+} from '../../components/common';
+import {
+  discoveryApi,
+  type DiscoverFilterTabDef,
+  type DiscoverHomeConfig,
+} from '../../api/discovery';
+import { getDiscoverHomeConfig } from '../../mock/discovery';
+import type { RootStackParamList } from '../../navigation/types';
+import { usePatternStore, type MarketPattern } from '../../store/usePatternStore';
+import { useTheme } from '../../theme';
+import { BOTTOM_SAFE_H, fp, getCardWidth, wp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
-import { hapticLight } from '../../hooks/useFeedback';
 
-const COL = getColumnCount();
-const GAP = wp(10);
-const PAD = wp(15);
-const CARD_W = getCardWidth(PAD, GAP, COL);
-const BW = getBannerWidth(PAD);
-const TAB_H = wp(60) + BOTTOM_SAFE_H;
+const PAD = wp(18);
+const CARD_GAP = wp(12);
+const CARD_W = getCardWidth(PAD, CARD_GAP, 2);
+const DEFAULT_DISCOVER_CONFIG = getDiscoverHomeConfig();
 
-const BG_L = ['#fef2f2','#fef9ee','#eef6ff','#f0fdf4','#fdf2f8','#fffbeb','#eef2ff','#fff7ed'];
-const BG_D = ['#352020','#352a18','#1a2535','#1a2a1c','#351a30','#35300a','#1a1a35','#352518'];
+function matchesTab(item: MarketPattern, tab?: DiscoverFilterTabDef) {
+  if (!tab) return true;
+  if (tab.categories?.length && !tab.categories.includes(item.cat)) return false;
+  if (tab.accessModes?.length && !tab.accessModes.includes(item.accessMode)) return false;
+  return true;
+}
 
-const CATS = ['全部','动物','卡通','花卉','美食','风景','抽象','像素','节日','手办','建筑','游戏','国风'];
-const CAT_KEYS = ['','animal','character','flower','food','scenery','abstract','pixel','festival','figure','building','game','chinese'];
-const CAT_FOLD_LIMIT = 10;
+function sortDiscoveryItems(items: MarketPattern[], sort: 'latest' | 'hot' = 'hot') {
+  const sorted = [...items];
+  if (sort === 'latest') {
+    sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return sorted;
+  }
+  sorted.sort((a, b) => b.downloads - a.downloads);
+  return sorted;
+}
 
-// 水墨国风 banner 配色（朱砂 / 柿红 / 竹青 / 天青）
-const BANNERS = [
-  { id: 1, title: '热门精选', sub: '本周最受欢迎的拼豆图案', pi: 0, bg: '#C8302B', sort: 'hot',     cat: '' },
-  { id: 2, title: '可爱萌宠', sub: '人气动物系列合集',     pi: 1, bg: '#CC7B3F', sort: 'popular', cat: 'animal' },
-  { id: 3, title: '像素经典', sub: '游戏角色完美还原',     pi: 2, bg: '#8FB59A', sort: 'popular', cat: 'pixel' },
-  { id: 4, title: '花之物语', sub: '春日花卉图案',         pi: 3, bg: '#7BA4C9', sort: 'latest',  cat: 'flower' },
-];
+function splitIntoMasonryColumns(items: MarketPattern[]) {
+  return items.reduce<{ left: MarketPattern[]; right: MarketPattern[] }>((acc, item, index) => {
+    if (index % 2 === 0) acc.left.push(item);
+    else acc.right.push(item);
+    return acc;
+  }, { left: [], right: [] });
+}
 
 export const HomeScreen: React.FC = () => {
-  const { colors, dark, toggle } = useTheme();
-  const {
-    designs, loading, refreshing, error, hasMore, category, searchKeyword, sortBy,
-    setFilter, setSearchKeyword, fetchDesigns,
-  } = useDesignStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors } = useTheme();
+  const listings = usePatternStore((state) => state.listings);
+  const refreshing = usePatternStore((state) => state.refreshing);
+  const refreshListings = usePatternStore((state) => state.refreshListings);
+  const homeBanners = usePatternStore((state) => state.homeBanners);
+  const setHomeBanners = usePatternStore((state) => state.setHomeBanners);
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showTop, setShowTop] = useState(false);
-  const [bannerIdx, setBannerIdx] = useState(0);
+  const [discoverConfig, setDiscoverConfig] = useState<DiscoverHomeConfig>(DEFAULT_DISCOVER_CONFIG);
+  const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
-  const [catExpanded, setCatExpanded] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
-  const bannerRef = useRef<ScrollView>(null);
-  const fabAnim = useRef(new Animated.Value(0)).current;
-  // 预计算 translateY interpolation，避免每次 render 重建 AnimatedInterpolation 对象
-  const fabTranslateY = useRef(
-    fabAnim.interpolate({ inputRange: [0, 1], outputRange: [wp(20), 0] }),
-  ).current;
-  const activeCat = CAT_KEYS.indexOf(category || '');
+  const [configRefreshing, setConfigRefreshing] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState(DEFAULT_DISCOVER_CONFIG.defaultTabKey);
 
-  useEffect(() => { fetchDesigns(true); }, []);
   useEffect(() => {
-    const t = setInterval(() => {
-      setBannerIdx((p) => { const n=(p+1)%BANNERS.length; bannerRef.current?.scrollTo({ x:n*(BW+wp(10)), animated:true }); return n; });
-    }, 5000);
-    return () => clearInterval(t);
-  }, []);
-  useEffect(() => { Animated.timing(fabAnim, { toValue: showTop?1:0, duration: 200, useNativeDriver: true }).start(); }, [showTop]);
+    let active = true;
 
-  const onRefresh = useCallback(() => fetchDesigns(true), []);
-  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setShowTop(e.nativeEvent.contentOffset.y > 300);
-    const { layoutMeasurement, contentSize, contentOffset } = e.nativeEvent;
-    if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 200 && hasMore && !loading) fetchDesigns(false);
-  }, [hasMore, loading]);
+    void discoveryApi.getHomePayload().then((payload) => {
+      if (!active) {
+        return;
+      }
 
-  const handleSearch = useCallback((t: string) => {
-    setSearchKeyword(t);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => fetchDesigns(true), 500);
-  }, []);
+      setDiscoverConfig(payload.config);
+      setHomeBanners(payload.banners);
+      setActiveTabKey((current) => {
+        const exists = payload.config.tabs.some((item) => item.key === current);
+        return exists ? current : payload.config.defaultTabKey;
+      });
+    });
 
-  const { filtered, cols } = useMemo(() => {
-    const f = searchKeyword.trim()
-      ? designs.filter((d) => d.title.includes(searchKeyword.trim()))
-      : designs;
-    const c: DesignItem[][] = Array.from({ length: COL }, () => []);
-    f.forEach((item, i) => c[i % COL].push(item));
-    return { filtered: f, cols: c };
-  }, [designs, searchKeyword]);
-  const isFirstLoad = loading && designs.length === 0;
+    return () => {
+      active = false;
+    };
+  }, [setHomeBanners]);
 
-  return (
-    <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 导航栏 */}
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <View style={$.brandRow}>
-          <View style={[$.brandDot, { backgroundColor: colors.accent }, shadow(3, 10, 0.25, colors.accent, 4)]}>
-            <Text style={$.brandEmoji}>🧩</Text>
+  const tabs = discoverConfig.tabs;
+  const activeTab = useMemo(
+    () => tabs.find((item) => item.key === activeTabKey) ?? tabs[0],
+    [activeTabKey, tabs],
+  );
+
+  const scopedListings = useMemo(
+    () => listings.filter((item) => matchesTab(item, activeTab)),
+    [activeTab, listings],
+  );
+
+  const scopedBanners = useMemo(
+    () => homeBanners.filter((item) => item.enabled !== false),
+    [homeBanners],
+  );
+
+  const filteredFiles = useMemo(() => {
+    let list = [...scopedListings];
+
+    if (search.trim()) {
+      const keyword = search.trim().toLowerCase();
+      list = list.filter((item) =>
+        item.title.toLowerCase().includes(keyword)
+        || item.author.toLowerCase().includes(keyword)
+        || item.desc.toLowerCase().includes(keyword)
+        || item.cat.toLowerCase().includes(keyword),
+      );
+    }
+
+    return sortDiscoveryItems(list, activeTab?.sort ?? 'hot');
+  }, [activeTab?.sort, scopedListings, search]);
+
+  const masonryColumns = useMemo(() => splitIntoMasonryColumns(filteredFiles), [filteredFiles]);
+
+  const handleRefresh = async () => {
+    setConfigRefreshing(true);
+    try {
+      const [payload] = await Promise.all([
+        discoveryApi.getHomePayload(),
+        refreshListings(),
+      ]);
+      setDiscoverConfig(payload.config);
+      setHomeBanners(payload.banners);
+      setActiveTabKey((current) => {
+        const exists = payload.config.tabs.some((item) => item.key === current);
+        return exists ? current : payload.config.defaultTabKey;
+      });
+    } finally {
+      setConfigRefreshing(false);
+    }
+  };
+
+  const openDetail = (resourceId: number) => {
+    navigation.navigate('ResourceDetail', { resourceId });
+  };
+
+  const renderStatusText = (file: MarketPattern) => {
+    if (file.accessMode === 'free') return '免费';
+    if (file.accessMode === 'points') return `${file.pointsCost} 积分`;
+    return '会员';
+  };
+
+  const renderStatusColor = (file: MarketPattern) => {
+    if (file.accessMode === 'free') return colors.success;
+    if (file.accessMode === 'points') return colors.gold;
+    return colors.accent;
+  };
+
+  const renderCoverHeight = (item: MarketPattern) => wp(152) + (item.id % 3) * wp(18);
+
+  const renderCard = (item: MarketPattern) => {
+    const pixels = item.gridData || ALL_PATTERNS[item.patIdx % ALL_PATTERNS.length];
+    const previewHeight = renderCoverHeight(item);
+
+    return (
+      <View key={item.id} style={styles.cardWrap}>
+        <TouchableOpacity activeOpacity={0.86} onPress={() => openDetail(item.id)}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <LinearGradient
+              colors={[colors.inputBg, colors.surface] as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.preview, { height: previewHeight, borderColor: colors.divider }]}
+            >
+              <View style={[styles.categoryBadge, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.categoryBadgeText, { color: colors.textSecondary }]}>{item.cat}</Text>
+              </View>
+              <BeadGrid pixels={pixels} beadSize={wp(5.6)} gap={0.8} round glossy={false} />
+            </LinearGradient>
+            <View style={styles.cardBody}>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                <View style={styles.likeRow}>
+                  <Feather name="heart" size={fp(12)} color={colors.textHint} />
+                  <Text style={[styles.metaText, { color: colors.textHint }]}>{item.rating.toFixed(1)}</Text>
+                </View>
+              </View>
+              <Text style={[styles.cardDesc, { color: colors.textHint }]} numberOfLines={1}>{item.desc}</Text>
+              <View style={styles.cardFooter}>
+                <Text style={[styles.metaText, { color: colors.textHint }]}>{item.cols}x{item.rows}</Text>
+                <Text style={[styles.statusText, { color: renderStatusColor(item) }]}>{renderStatusText(item)}</Text>
+              </View>
+            </View>
           </View>
-          <View>
-            <Text style={[$.brandName, { color: colors.text }]}>
-              B<Text style={{ color: colors.accent }}>ead</Text>
-              <Text style={{ color: colors.candy.mango }}>Forge</Text>
-            </Text>
-            <Text style={[$.brandSub, { color: colors.textHint }]}>拼出你的创意世界</Text>
-          </View>
-          <InkSeal text="創" size={wp(22)} style={{ marginLeft: wp(8) }} />
-        </View>
-        <View style={{ flex: 1 }} />
-        <HoverView onPress={toggle} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
-          <Feather name={dark ? 'sun' : 'moon'} size={fp(16)} color={colors.textSecondary} />
-        </HoverView>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.searchWrap}>
+        <Input
+          placeholder={activeTab?.searchPlaceholder || discoverConfig.searchPlaceholder || '搜索图纸、作者或分类'}
+          value={search}
+          onChangeText={setSearch}
+          onFocus={() => setSearchFocused(true)}
+          onBlur={() => setSearchFocused(false)}
+          prefix={<Feather name="search" size={fp(14)} color={searchFocused ? colors.accent : colors.textHint} />}
+          suffix={search ? (
+            <TouchableOpacity activeOpacity={0.7} onPress={() => setSearch('')}>
+              <Feather name="x" size={fp(13)} color={colors.textHint} />
+            </TouchableOpacity>
+          ) : undefined}
+          containerStyle={[styles.searchField, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={searchFocused ? { backgroundColor: colors.surface, borderColor: colors.accent } : undefined}
+        />
       </View>
 
-      <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={80}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textHint} />}>
+      {scopedBanners.length > 0 ? <HomeBannerCarousel banners={scopedBanners} /> : null}
 
-        {/* 搜索栏 */}
-        <View style={{ paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(5) }}>
-          <View {...{ dataSet: { class: 'search' } } as any} style={[$.search, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.accent : colors.border }]}>
-            <Feather name="search" size={fp(15)} color={colors.textHint} style={{ marginRight: wp(8) }} />
-            <TextInput style={[$.searchInput, { color: colors.text }]} placeholder="搜索拼豆图案..."
-              placeholderTextColor={colors.textHint} value={searchKeyword} onChangeText={handleSearch}
-              onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
-            {searchKeyword.length > 0 && (
-              <TouchableOpacity onPress={() => handleSearch('')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} style={{ padding: wp(6) }}><Feather name="x-circle" size={fp(16)} color={colors.textHint} /></TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Banner */}
-        <ScrollView ref={bannerRef} horizontal showsHorizontalScrollIndicator={false}
-          snapToInterval={BW + wp(10)} decelerationRate="fast"
-          onMomentumScrollEnd={(e) => setBannerIdx(Math.round(e.nativeEvent.contentOffset.x / (BW + wp(10))))}
-          contentContainerStyle={{ paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) }}>
-          {BANNERS.map((b) => (
-            <HoverView key={b.id} hoverScale={1.015} hoverLift={4} onPress={() => { setFilter(b.sort, b.cat || null); }} style={[$.banner, { width: BW, backgroundColor: b.bg }, shadow(4, 14, 0.28, b.bg, 5)]}>
-              <View style={$.bannerInner}>
-                <Text style={$.bannerT}>{b.title}</Text>
-                <Text style={$.bannerS}>{b.sub}</Text>
-              </View>
-              <View style={$.bannerArt}>
-                <BeadGrid pixels={ALL_PATTERNS[b.pi]} beadSize={isSmall?7:wp(8)} gap={wp(1)} round glossy={false} />
-              </View>
-            </HoverView>
-          ))}
-        </ScrollView>
-        <View style={$.dots}>
-          {BANNERS.map((_,i) => <View key={i} style={[$.dot, { backgroundColor: bannerIdx===i ? colors.text : colors.border }, bannerIdx===i && $.dotOn]} />)}
-        </View>
-
-        {/* 分类标签 - 超过10个折叠 */}
-        <View style={$.catWrap}>
-          {(catExpanded ? CATS : CATS.slice(0, CAT_FOLD_LIMIT)).map((name, idx) => {
-            const on = activeCat === idx;
-            return (
-              <HoverView key={name} onPress={() => setFilter(undefined, CAT_KEYS[idx] || null)}
-                hoverScale={1.05} hoverLift={1}
-                style={[$.cat, { backgroundColor: on ? colors.accent : colors.surface, borderColor: on ? colors.accent : colors.border }]}>
-                <Text style={[$.catT, { color: on ? '#fff' : colors.textSecondary }]}>{name}</Text>
-              </HoverView>
-            );
-          })}
-          {CATS.length > CAT_FOLD_LIMIT && (
-            <HoverView onPress={() => setCatExpanded(!catExpanded)} hoverScale={1.05} hoverLift={1}
-              style={[$.cat, $.catToggle, { borderColor: colors.border }]}>
-              <Text style={[$.catT, { color: colors.textHint }]}>{catExpanded ? '收起' : `展开 +${CATS.length - CAT_FOLD_LIMIT}`}</Text>
-              <Feather name={catExpanded ? 'chevron-up' : 'chevron-down'} size={fp(12)} color={colors.textHint} style={{ marginLeft: wp(3) }} />
-            </HoverView>
-          )}
-        </View>
-
-        {/* 排序 + 标题 */}
-        <View style={$.secRow}>
-          <Text style={[$.secT, { color: colors.text }]}>作品广场</Text>
-          {filtered.length > 0 && <Text style={[$.secN, { color: colors.textHint }]}>{filtered.length} 个作品</Text>}
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, paddingBottom: wp(8) }}>
-          {[
-            { key: 'latest', label: '最新' },
-            { key: 'hot', label: '热度' },
-            { key: 'popular', label: '点赞' },
-            { key: 'views', label: '浏览' },
-          ].map((s) => {
-            const on = sortBy === s.key;
-            return (
-              <TouchableOpacity key={s.key} activeOpacity={0.7} onPress={() => setFilter(s.key)} style={{ marginRight: wp(12) }}>
-                <Text style={{ fontSize: fp(12), fontWeight: on ? '700' : '400', color: on ? colors.accent : colors.textHint }}>{s.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* 骨架屏 */}
-        {isFirstLoad && (
-          <View style={$.grid}>
-            {Array.from({ length: COL }).map((_,ci) => (
-              <View key={ci} style={$.col}>{[0,1,2].map((j) => <CardSkeleton key={j} height={wp(120+j*25)} />)}</View>
-            ))}
-          </View>
-        )}
-        {error && designs.length === 0 && <StateView error={error} onRetry={onRefresh} />}
-        {!loading && !error && filtered.length === 0 && <StateView empty emptyText="暂无相关作品" />}
-
-        {/* 瀑布流 */}
-        {filtered.length > 0 && (
-          <View style={$.grid}>
-            {cols.map((col,ci) => (
-              <View key={ci} style={$.col}>{col.map((item) => <Card key={item.id} item={item} />)}</View>
-            ))}
-          </View>
-        )}
-
-        {loading && designs.length > 0 && <StateView loading />}
-        {!hasMore && designs.length > 0 && <Text style={[$.endT, { color: colors.textHint }]}>— 到底了 —</Text>}
-        <View style={{ height: TAB_H }} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+        {tabs.map((item) => {
+          const active = activeTab?.key === item.key;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              activeOpacity={0.82}
+              onPress={() => setActiveTabKey(item.key)}
+              style={[
+                styles.topicPill,
+                {
+                  backgroundColor: active ? colors.accent : colors.surface,
+                  borderColor: active ? colors.accent : colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.topicPillText, { color: active ? '#FFFFFF' : colors.textSecondary }]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* FAB */}
-      <Animated.View style={[$.fab, { bottom: TAB_H+wp(10), opacity: fabAnim, transform: [{ translateY: fabTranslateY }] }]}>
-        <HoverView style={[$.fabBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => scrollRef.current?.scrollTo({ y:0, animated:true })} hoverScale={1.12} hoverLift={2}>
-          <Feather name="chevron-up" size={fp(18)} color={colors.textSecondary} />
-        </HoverView>
-      </Animated.View>
+      <View style={styles.resultsRow}>
+        <Text style={[styles.resultsText, { color: colors.text }]}>
+          {activeTab?.resultTitle || discoverConfig.resultTitle || '为你推荐'}
+        </Text>
+        <Text style={[styles.resultsHint, { color: colors.textHint }]}>{filteredFiles.length} 个图纸</Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
+      <FlatList
+        data={[0]}
+        keyExtractor={() => 'discover'}
+        renderItem={() => (
+          <View style={styles.masonryRow}>
+            <View style={styles.masonryColumn}>{masonryColumns.left.map(renderCard)}</View>
+            <View style={styles.masonryColumn}>{masonryColumns.right.map(renderCard)}</View>
+          </View>
+        )}
+        refreshControl={(
+          <RefreshControl
+            refreshing={refreshing || configRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.accent}
+          />
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={<StateView empty emptyText={activeTab?.emptyText || discoverConfig.emptyText || '暂无匹配的图纸资源'} />}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   );
 };
 
-/** 画廊卡片 - moely 风格：小圆角+细边框+淡阴影 */
-const Card = memo(({ item }: { item: DesignItem }) => {
-  const { colors, dark } = useTheme();
-  const navigation = useNavigation<any>();
-  const pat = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
-  const h = wp(100) + (item.id * 31) % wp(60);
-  const bg = (dark ? BG_D : BG_L)[item.id % BG_L.length];
-  const bs = Math.min(Math.max(Math.floor(CARD_W / (pat[0]?.length||9)) - 2, wp(3)), wp(8));
-
-  return (
-    <PressableScale
-      style={[$.card, { backgroundColor: colors.cardBg, borderColor: colors.border }]}
-      scale={0.98} dataClass="card"
-      onPress={() => navigation.navigate('DesignDetail', { item })}
-    >
-      <View style={[$.cardCover, { height: h, backgroundColor: bg }]}>
-        <BeadGrid pixels={pat} beadSize={bs} gap={1} round />
-      </View>
-      <View style={$.cardBody}>
-        <Text style={[$.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
-        <View style={$.cardMeta}>
-          <Text style={[$.cardAuthor, { color: colors.textHint }]}>{item.authorName || '创作者'}</Text>
-          <View style={$.likeRow}>
-            <Feather name="heart" size={fp(11)} color={colors.textHint} />
-            <Text style={[$.likeN, { color: colors.textHint }]}>{item.likeCount}</Text>
-          </View>
-        </View>
-      </View>
-    </PressableScale>
-  );
-});
-
-const $ = StyleSheet.create({
+const styles = StyleSheet.create({
   root: { flex: 1 },
-
-  // 导航栏 - 60px高，底部1px边框
-  nav: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(50), paddingHorizontal: PAD,
-    borderBottomWidth: 1,
+  content: {
+    paddingHorizontal: PAD,
+    paddingTop: wp(6),
+    paddingBottom: wp(36) + BOTTOM_SAFE_H,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center' },
-  brandDot: {
-    width: wp(34), height: wp(34), borderRadius: wp(17),
-    justifyContent: 'center', alignItems: 'center', marginRight: wp(10),
+  header: {
+    paddingBottom: wp(16),
   },
-  brandEmoji: { fontSize: fp(16) },
-  brandName: { fontSize: fp(18), fontWeight: '900', letterSpacing: 0.5 },
-  brandSub: { fontSize: fp(9), marginTop: wp(1), letterSpacing: 0.3 },
-  navBtn: {
-    width: wp(34), height: wp(34), borderRadius: wp(17),
-    justifyContent: 'center', alignItems: 'center',
+  searchWrap: {
+    marginBottom: wp(16),
   },
-
-  // 搜索 - 胶囊 + 糖果阴影
-  search: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(44), borderRadius: BorderRadius.bubble, paddingHorizontal: wp(16),
+  searchField: {
     borderWidth: 1,
+    borderRadius: wp(999),
   },
-  searchInput: { flex: 1, fontSize: FontSize.md, padding: 0 },
-
-  // Banner - 大圆角气泡
-  banner: {
-    height: wp(130), borderRadius: BorderRadius.xxl, overflow: 'hidden',
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: wp(22),
+  filterRow: {
+    gap: wp(10),
+    paddingTop: wp(14),
+    paddingBottom: wp(14),
   },
-  bannerInner: { flex: 1, zIndex: 1 },
-  bannerT: { fontSize: fp(21), fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
-  bannerS: { fontSize: fp(12), color: 'rgba(255,255,255,0.85)', marginTop: wp(5) },
-  bannerArt: {
-    backgroundColor: 'rgba(255,255,255,0.22)', padding: wp(10), borderRadius: BorderRadius.lg,
+  topicPill: {
+    minHeight: wp(34),
+    paddingHorizontal: wp(16),
+    borderRadius: wp(999),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  // 指示器
-  dots: { flexDirection: 'row', justifyContent: 'center', marginTop: wp(10), gap: wp(5) },
-  dot: { width: wp(5), height: wp(5), borderRadius: wp(3), transition: 'all 0.3s' } as any,
-  dotOn: { width: wp(15) },
-
-  // 分类 - 胶囊
-  catWrap: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: PAD, paddingTop: wp(15), paddingBottom: wp(10), gap: wp(8),
+  topicPillText: {
+    fontSize: fp(12),
+    fontWeight: '700',
   },
-  cat: { paddingHorizontal: wp(15), paddingVertical: wp(7), borderRadius: BorderRadius.full, borderWidth: 1 },
-  catToggle: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'transparent' },
-  catT: { fontSize: FontSize.sm, fontWeight: '600' },
-
-  // 标题
-  secRow: {
-    flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between',
-    paddingHorizontal: PAD, marginBottom: wp(10),
+  resultsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: wp(2),
   },
-  secT: { fontSize: FontSize.xl, fontWeight: '700' },
-  secN: { fontSize: FontSize.xs },
-
-  // 网格
-  grid: { flexDirection: 'row', paddingHorizontal: PAD, gap: GAP },
-  col: { flex: 1, gap: GAP },
-
-  // 卡片 - 糖果气泡：大圆角 + 粉阴影
+  resultsText: {
+    fontSize: fp(16),
+    fontWeight: '800',
+  },
+  resultsHint: {
+    fontSize: fp(12),
+  },
+  masonryRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: CARD_GAP,
+  },
+  masonryColumn: {
+    width: CARD_W,
+    gap: CARD_GAP,
+  },
+  cardWrap: {
+    width: '100%',
+  },
   card: {
-    borderRadius: BorderRadius.xl, overflow: 'hidden',
+    borderRadius: wp(24),
     borderWidth: 1,
-    ...shadow(3, 10, 0.08, '#5A4A3E', 2),
+    overflow: 'hidden',
+    ...shadow(8, 24, 0.06, '#1D3D6B', 6),
   },
-  cardCover: { justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  cardBody: { padding: wp(10) },
-  cardTitle: { fontSize: FontSize.md, fontWeight: '500', marginBottom: wp(5) },
-  cardMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardAuthor: { fontSize: FontSize.xs },
-  likeRow: { flexDirection: 'row', alignItems: 'center', gap: wp(3) },
-  likeN: { fontSize: FontSize.xs },
-
-  endT: { textAlign: 'center', fontSize: FontSize.xs, paddingVertical: wp(20), letterSpacing: wp(1) },
-
-  // FAB - 糖果圆气泡
-  fab: { position: 'absolute', right: wp(15) },
-  fabBtn: {
-    width: wp(44), height: wp(44), borderRadius: wp(22),
-    justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1,
-    ...shadow(3, 12, 0.2, '#5A4A3E', 4),
+  preview: {
+    borderBottomWidth: 1,
+    paddingHorizontal: wp(12),
+    paddingTop: wp(12),
+    paddingBottom: wp(10),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: wp(12),
+    left: wp(12),
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(5),
+    borderRadius: wp(999),
+  },
+  categoryBadgeText: {
+    fontSize: fp(10),
+    fontWeight: '700',
+  },
+  cardBody: {
+    paddingHorizontal: wp(12),
+    paddingVertical: wp(12),
+    gap: wp(6),
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: wp(8),
+  },
+  cardTitle: {
+    flex: 1,
+    fontSize: fp(14),
+    fontWeight: '800',
+  },
+  likeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(4),
+  },
+  cardDesc: {
+    fontSize: fp(11),
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metaText: {
+    fontSize: fp(10),
+    fontWeight: '600',
+  },
+  statusText: {
+    fontSize: fp(11),
+    fontWeight: '800',
   },
 });

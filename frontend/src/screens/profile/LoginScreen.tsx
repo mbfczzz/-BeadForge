@@ -1,168 +1,138 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, Alert, KeyboardAvoidingView, Platform,
-  TouchableOpacity, TextInput, ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useTheme, FontSize, candyShadow } from '../../theme';
-import { wp, fp } from '../../utils/responsive';
+import { Button, Input, SurfaceCard } from '../../components/common';
+import { useTheme } from '../../theme';
+import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
-import { BeadBuddy } from '../../components/common/BeadBuddy';
-import { InkSeal } from '../../components/common/InkSeal';
+import { TEST_LOGIN_CREDENTIALS } from '../../mock/auth';
 
-interface Props { onSwitchToRegister: () => void }
+interface Props {
+  onSwitchToRegister: () => void;
+}
 
 export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
-  const { colors, dark } = useTheme();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [focused, setFocused] = useState<'u' | 'p' | null>(null);
+  const { colors } = useTheme();
+  const [username, setUsername] = useState(TEST_LOGIN_CREDENTIALS.username);
+  const [password, setPassword] = useState(TEST_LOGIN_CREDENTIALS.password);
   const [loading, setLoading] = useState(false);
-  const login = useAuthStore((s) => s.login);
+  const login = useAuthStore((state) => state.login);
+
+  const canSubmit = useMemo(() => username.trim().length > 0 && password.length >= 6, [password, username]);
 
   const handleLogin = async () => {
-    if (!username.trim()) { Alert.alert('提示', '请输入用户名'); return; }
-    if (password.length < 6) { Alert.alert('提示', '密码至少6位'); return; }
-    setLoading(true);
-    try { await login({ username: username.trim(), password }); }
-    catch (e: any) { Alert.alert('登录失败', e.message); }
-    finally { setLoading(false); }
-  };
+    if (!username.trim()) {
+      Alert.alert('提示', '请输入用户名');
+      return;
+    }
 
-  // 国风淡彩：宣纸白 → 朱砂淡粉 → 藤黄浅
-  const gradient = dark
-    ? ['#3A1F1C', '#2A1F1C', '#1A1413'] as const
-    : ['#FBE8E6', '#F5EFE0', '#FAF2D7'] as const;
+    if (password.length < 6) {
+      Alert.alert('提示', '密码至少需要 6 位');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login({ username: username.trim(), password });
+    } catch (error: any) {
+      Alert.alert('登录失败', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* 背景糖果渐变 */}
-      <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: wp(28), paddingVertical: wp(32) }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* 顶部吉祥物 + 印章 */}
-          <View style={$.buddyWrap}>
-            <BeadBuddy size={wp(110)} color={colors.candy.pink} mood="happy" />
-            <View style={{ position: 'absolute', right: '28%', top: '10%' }}>
-              <InkSeal text="福" size={wp(34)} rotate={-8} />
+      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={$.content}>
+          <View style={$.hero}>
+            <View style={[$.brandIcon, { backgroundColor: colors.accent }]}>
+              <Feather name="grid" size={fp(18)} color="#fff" />
             </View>
+            <Text style={[$.brandName, { color: colors.text }]}>BeadForge</Text>
           </View>
 
-          {/* 欢迎标题 */}
-          <Text style={[$.welcome, { color: colors.text }]}>
-            欢迎回来<Text style={{ color: colors.accent }}>！</Text>
-          </Text>
-          <Text style={[$.welcomeSub, { color: colors.textSecondary }]}>
-            登录就能开始<Text style={{ color: colors.candy.mango, fontWeight: '700' }}>创作</Text>和<Text style={{ color: colors.candy.grape, fontWeight: '700' }}>分享</Text>啦 ✨
-          </Text>
-
-          {/* 用户名 */}
-          <View
-            style={[
-              $.inputBox,
-              { backgroundColor: colors.surface, borderColor: focused === 'u' ? colors.accent : colors.border },
-              focused === 'u' && candyShadow(colors.accent, 'sm'),
-            ]}
-          >
-            <Feather name="user" size={fp(16)} color={focused === 'u' ? colors.accent : colors.textHint} />
-            <TextInput
-              style={[$.input, { color: colors.text }]}
-              placeholder="用户名"
-              placeholderTextColor={colors.textHint}
+          <SurfaceCard style={$.card}>
+            <Input
+              label="用户名"
+              placeholder="请输入用户名"
               value={username}
               onChangeText={setUsername}
-              onFocus={() => setFocused('u')}
-              onBlur={() => setFocused(null)}
-              autoCapitalize="none"
+              prefix={<Feather name="user" size={fp(16)} color={colors.textHint} />}
             />
-          </View>
 
-          {/* 密码 */}
-          <View
-            style={[
-              $.inputBox,
-              { backgroundColor: colors.surface, borderColor: focused === 'p' ? colors.accent : colors.border },
-              focused === 'p' && candyShadow(colors.accent, 'sm'),
-            ]}
-          >
-            <Feather name="lock" size={fp(16)} color={focused === 'p' ? colors.accent : colors.textHint} />
-            <TextInput
-              style={[$.input, { color: colors.text }]}
-              placeholder="密码"
-              placeholderTextColor={colors.textHint}
+            <Input
+              label="密码"
+              placeholder="请输入密码"
               value={password}
               onChangeText={setPassword}
-              onFocus={() => setFocused('p')}
-              onBlur={() => setFocused(null)}
-              secureTextEntry={!showPwd}
-              autoCapitalize="none"
+              secureTextEntry
+              prefix={<Feather name="lock" size={fp(16)} color={colors.textHint} />}
             />
-            <TouchableOpacity onPress={() => setShowPwd(!showPwd)} activeOpacity={0.6} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Feather name={showPwd ? 'eye-off' : 'eye'} size={fp(16)} color={colors.textHint} />
-            </TouchableOpacity>
-          </View>
 
-          {/* 登录按钮 */}
-          <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={handleLogin}
-            disabled={loading}
-            style={[
-              $.loginBtn,
-              { backgroundColor: colors.accent, opacity: loading ? 0.6 : 1 },
-              candyShadow(colors.accent, 'md'),
-            ]}
-          >
-            <Text style={$.loginBtnT}>{loading ? '登录中...' : '登 录'}</Text>
-          </TouchableOpacity>
+            <Button title={loading ? '登录中...' : '登录'} onPress={handleLogin} loading={loading} disabled={!canSubmit} />
 
-          {/* 注册入口 */}
-          <View style={$.bottomRow}>
-            <Text style={[$.bottomText, { color: colors.textHint }]}>还没有账号？</Text>
-            <TouchableOpacity onPress={onSwitchToRegister} activeOpacity={0.6} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={[$.bottomLink, { color: colors.accent }]}>立即注册</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+            <View style={$.footerRow}>
+              <Text style={[$.footerText, { color: colors.textHint }]}>还没有账号？</Text>
+              <TouchableOpacity onPress={onSwitchToRegister} activeOpacity={0.7}>
+                <Text style={[$.footerLink, { color: colors.accent }]}>创建本地账号</Text>
+              </TouchableOpacity>
+            </View>
+          </SurfaceCard>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const $ = StyleSheet.create({
-  root: { flex: 1 },
-
-  buddyWrap: { alignItems: 'center', marginBottom: wp(18) },
-
-  welcome: { fontSize: fp(26), fontWeight: '800', textAlign: 'center', marginBottom: wp(6), letterSpacing: 0.3 },
-  welcomeSub: { fontSize: fp(13), textAlign: 'center', marginBottom: wp(28), lineHeight: fp(20), letterSpacing: 0.2 },
-
-  inputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    height: wp(52), borderRadius: wp(9999), borderWidth: 1.5,
-    paddingHorizontal: wp(18), marginBottom: wp(14),
+  root: {
+    flex: 1,
   },
-  input: { flex: 1, fontSize: FontSize.lg, marginLeft: wp(10), padding: 0 },
-
-  loginBtn: {
-    height: wp(52), borderRadius: wp(9999),
-    justifyContent: 'center', alignItems: 'center',
-    marginTop: wp(10),
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: wp(24),
+    paddingVertical: wp(20),
   },
-  loginBtnT: { color: '#fff', fontSize: fp(16), fontWeight: '800', letterSpacing: 2 },
-
-  bottomRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    marginTop: wp(24),
+  hero: {
+    marginBottom: wp(20),
   },
-  bottomText: { fontSize: fp(13) },
-  bottomLink: { fontSize: fp(13), fontWeight: '700', marginLeft: wp(4) },
+  brandIcon: {
+    width: wp(52),
+    height: wp(52),
+    borderRadius: wp(16),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: wp(14),
+  },
+  brandName: {
+    fontSize: fp(28),
+    fontWeight: '800',
+  },
+  card: {
+    borderRadius: wp(24),
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: wp(6),
+  },
+  footerText: {
+    fontSize: fp(13),
+  },
+  footerLink: {
+    fontSize: fp(13),
+    fontWeight: '700',
+    marginLeft: wp(4),
+  },
 });

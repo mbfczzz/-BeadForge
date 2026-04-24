@@ -20,7 +20,7 @@ export async function doubaoGenerate(
     if (grid && Array.isArray(grid) && grid.length > 0) return grid;
     return null;
   } catch (e) {
-    // AI 失败静默返回 null
+    console.warn('AI生图失败:', e);
     return null;
   }
 }

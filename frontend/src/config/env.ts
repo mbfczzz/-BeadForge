@@ -19,6 +19,10 @@ const API_URLS = {
   prod:  '/api',
 };
 
+export function getAmapWebKey(): string {
+  return process.env.EXPO_PUBLIC_AMAP_WEB_KEY || '';
+}
+
 export function getApiUrl(): string {
   if (__DEV__) return API_URLS.local;
   if (Platform.OS === 'web') return API_URLS.prod;

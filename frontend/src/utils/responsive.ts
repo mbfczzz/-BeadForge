@@ -54,7 +54,7 @@ export const BOTTOM_SAFE_H = Platform.select({
 export function getColumnCount(): number {
   if (SCREEN_W >= 768) return 4;  // 平板
   if (SCREEN_W >= 480) return 3;  // 大屏手机
-  return 2;                        // 普通手机
+  return 2;                       // 普通手机
 }
 
 /** 卡片宽度计算 */

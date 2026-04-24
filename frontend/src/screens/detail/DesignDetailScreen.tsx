@@ -6,8 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { BeadGrid, ALL_PATTERNS } from '../../components/common/BeadGrid';
-import { Avatar, HoverView, DanmakuOverlay, DanmakuInput } from '../../components/common';
+import { AppHeader, BeadGrid, ALL_PATTERNS, Avatar, HoverView, DanmakuOverlay, DanmakuInput } from '../../components/common';
 import { useDanmaku } from '../../hooks/useDanmaku';
 import { useToast } from '../../hooks/useFeedback';
 import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
@@ -81,16 +80,15 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
-      {/* 顶部导航 */}
-      <View style={[$.nav, { backgroundColor: colors.navBg, borderBottomColor: colors.navBorder }]}>
-        <HoverView onPress={() => navigation.goBack()} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
-          <Feather name="arrow-left" size={fp(18)} color={colors.text} />
-        </HoverView>
-        <Text style={[$.navTitle, { color: colors.text }]} numberOfLines={1}>作品详情</Text>
-        <HoverView onPress={() => setShowMore(!showMore)} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
-          <Feather name="more-horizontal" size={fp(18)} color={colors.text} />
-        </HoverView>
-      </View>
+      <AppHeader
+        title="作品详情"
+        onBack={() => navigation.goBack()}
+        right={
+          <HoverView onPress={() => setShowMore(!showMore)} style={[$.navBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.1} hoverLift={0}>
+            <Feather name="more-horizontal" size={fp(18)} color={colors.text} />
+          </HoverView>
+        }
+      />
 
       {/* 更多菜单 */}
       {showMore && (
@@ -349,7 +347,7 @@ const $ = StyleSheet.create({
     position: 'absolute', top: wp(52), right: PAD,
     borderRadius: BorderRadius.md, borderWidth: 1,
     paddingVertical: wp(4), zIndex: 50, minWidth: wp(130),
-    ...shadow(4, 12, 0.18, '#5A4A3E', 6),
+    ...shadow(4, 12, 0.12, '#000', 6),
   },
   moreItem: {
     flexDirection: 'row', alignItems: 'center', gap: wp(10),
@@ -360,11 +358,11 @@ const $ = StyleSheet.create({
   // 预览
   previewWrap: {
     marginHorizontal: PAD, marginTop: wp(15),
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.lg,
     paddingVertical: wp(25),
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
-    ...shadow(3, 10, 0.1, '#5A4A3E', 2),
+    ...shadow(2, 8, 0.06, '#000', 2),
   },
 
   // 弹幕控制
@@ -392,14 +390,14 @@ const $ = StyleSheet.create({
   authorRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: PAD, marginTop: wp(15),
-    padding: wp(14), borderRadius: BorderRadius.xl,
+    padding: wp(12), borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
   authorName: { fontSize: FontSize.lg, fontWeight: '600' },
   authorSub: { fontSize: FontSize.xs, marginTop: wp(2) },
   followBtn: {
-    paddingHorizontal: wp(18), paddingVertical: wp(8),
-    borderRadius: wp(9999),
+    paddingHorizontal: wp(16), paddingVertical: wp(7),
+    borderRadius: BorderRadius.full,
   },
   followText: { color: '#fff', fontSize: FontSize.sm, fontWeight: '600' },
 
@@ -407,7 +405,7 @@ const $ = StyleSheet.create({
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
     marginHorizontal: PAD, marginTop: wp(12),
-    padding: wp(14), borderRadius: BorderRadius.xl,
+    padding: wp(14), borderRadius: BorderRadius.lg,
     borderWidth: 1,
   },
   statItem: { flex: 1, alignItems: 'center', gap: wp(4) },
@@ -418,7 +416,7 @@ const $ = StyleSheet.create({
   // 作品信息
   secTitle: { fontSize: FontSize.xl, fontWeight: '700', marginBottom: wp(10) },
   infoCard: {
-    borderRadius: BorderRadius.xl, borderWidth: 1,
+    borderRadius: BorderRadius.lg, borderWidth: 1,
     paddingHorizontal: wp(14), overflow: 'hidden',
   },
   infoRow: {
@@ -431,22 +429,22 @@ const $ = StyleSheet.create({
 
   // 配色
   paletteCard: {
-    borderRadius: BorderRadius.xl, borderWidth: 1,
+    borderRadius: BorderRadius.lg, borderWidth: 1,
     padding: wp(14), gap: wp(10),
   },
   paletteItem: {
     flexDirection: 'row', alignItems: 'center',
   },
   colorDot: {
-    width: wp(22), height: wp(22), borderRadius: wp(11),
-    ...shadow(0, 2, 0.12, '#5A4A3E', 1),
+    width: wp(20), height: wp(20), borderRadius: wp(4),
+    ...shadow(0, 1, 0.1, '#000', 1),
   },
   colorHex: { fontSize: FontSize.sm, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginLeft: wp(10), width: wp(80) },
   colorCount: { fontSize: FontSize.sm, flex: 1, textAlign: 'right' },
 
   // 提示
   tipCard: {
-    borderRadius: BorderRadius.xl, borderWidth: 1,
+    borderRadius: BorderRadius.lg, borderWidth: 1,
     padding: wp(14), gap: wp(12),
   },
   tipRow: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -454,7 +452,7 @@ const $ = StyleSheet.create({
 
   // 跨模块入口
   crossCard: {
-    borderRadius: BorderRadius.xl, borderWidth: 1, overflow: 'hidden',
+    borderRadius: BorderRadius.lg, borderWidth: 1, overflow: 'hidden',
   },
   crossRow: {
     flexDirection: 'row', alignItems: 'center', gap: wp(10),
@@ -478,9 +476,9 @@ const $ = StyleSheet.create({
 
   makeBtn: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: wp(22), paddingVertical: wp(12),
-    borderRadius: wp(9999), gap: wp(6),
-    ...shadow(3, 10, 0.22, '#5A4A3E', 4),
+    paddingHorizontal: wp(20), paddingVertical: wp(10),
+    borderRadius: BorderRadius.full, gap: wp(6),
+    ...shadow(2, 6, 0.15, '#4b78ff', 3),
   },
   makeBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
 });

@@ -1,39 +1,29 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { FeedItemData } from '../api/community';
+import type { EditorMode } from '../api/create';
 import type { DesignItem } from '../api/design';
+import type { HomeBannerItem } from '../api/discovery';
+import type { ProductData } from '../api/market';
 
-/** 编辑器创作模式 */
-export type EditorMode = 'manual' | 'image' | 'ai';
-
-/** 动态 Feed 项 */
-export interface FeedItemData {
-  id: number;
-  user: { name: string; title: string };
-  content: string;
-  patternIdx: number;
-  likeCount: number;
-  commentCount: number;
-  shareCount: number;
-  timeAgo: string;
-  tags: string[];
-}
-
-/** 根 Stack 路由参数表 */
-/** 商品数据 */
-export interface ProductData {
-  id: number; name: string; description: string; price: number;
-  originalPrice?: number; sales: number; rating: number;
-  tag?: string; color: string; icon: string; category: string; specs?: string;
-}
+export type { EditorMode } from '../api/create';
+export type { FeedItemData } from '../api/community';
+export type { HomeBannerItem } from '../api/discovery';
+export type { ProductData } from '../api/market';
 
 export type RootStackParamList = {
   Main: undefined;
   DesignDetail: { item: DesignItem };
+  ResourceDetail: { resourceId: number };
   Editor: { mode: EditorMode; cols: number; rows: number };
   FeedDetail: { feed: FeedItemData };
   UserProfile: { userName: string };
   ProductDetail: { product: ProductData };
+  Cart: undefined;
+  AddressManage: undefined;
+  Payment:
+    | { source: 'product'; product: ProductData; qty: number; variant: string }
+    | { source: 'cart'; itemIds: string[] };
 };
 
-/** 快捷类型：某个 Screen 的 Props */
 export type RootScreenProps<T extends keyof RootStackParamList> =
   NativeStackScreenProps<RootStackParamList, T>;
