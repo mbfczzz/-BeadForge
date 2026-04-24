@@ -210,3 +210,60 @@ CREATE TABLE IF NOT EXISTS t_order_item (
     price DECIMAL(10,2) NOT NULL,
     INDEX idx_order_id (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 收货地址
+CREATE TABLE IF NOT EXISTS t_address (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    receiver VARCHAR(50) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    region VARCHAR(100) NOT NULL COMMENT '省市区组合文本',
+    detail VARCHAR(500) NOT NULL,
+    tag VARCHAR(20) COMMENT '家 / 公司 等',
+    is_default TINYINT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 反馈工单
+CREATE TABLE IF NOT EXISTS t_feedback (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(20) NOT NULL COMMENT 'FEATURE / ORDER / SUGGESTION',
+    title VARCHAR(100) NOT NULL,
+    content TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'PROCESSING' COMMENT 'PROCESSING / WAITING / COMPLETED',
+    screenshots TEXT COMMENT 'JSON 数组：附图 URL 列表',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 反馈工单回复
+CREATE TABLE IF NOT EXISTS t_feedback_reply (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    feedback_id BIGINT NOT NULL,
+    from_role VARCHAR(10) NOT NULL COMMENT 'USER / STAFF',
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_feedback_id (feedback_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 通知
+CREATE TABLE IF NOT EXISTS t_notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(20) NOT NULL COMMENT 'SYSTEM / ORDER / INTERACT',
+    title VARCHAR(100) NOT NULL,
+    content VARCHAR(500),
+    unread TINYINT DEFAULT 1,
+    action_type VARCHAR(30) COMMENT 'orders / orderDetail / likes / wallet / settings',
+    action_payload VARCHAR(500) COMMENT 'JSON 参数如 { "orderId": "...", "tab": "..." }',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_user_id (user_id),
+    INDEX idx_user_unread (user_id, unread)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

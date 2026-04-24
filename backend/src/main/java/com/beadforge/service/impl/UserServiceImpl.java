@@ -90,6 +90,11 @@ public class UserServiceImpl implements UserService {
         if (userDTO.getAvatar() != null) user.setAvatar(userDTO.getAvatar());
         if (userDTO.getEmail() != null) user.setEmail(userDTO.getEmail());
         if (userDTO.getPhone() != null) user.setPhone(userDTO.getPhone());
+        if (userDTO.getBio() != null) user.setBio(userDTO.getBio());
+        if (userDTO.getGender() != null) user.setGender(userDTO.getGender());
+        if (userDTO.getBirthday() != null) user.setBirthday(userDTO.getBirthday());
+        if (userDTO.getEducation() != null) user.setEducation(userDTO.getEducation());
+        if (userDTO.getOccupation() != null) user.setOccupation(userDTO.getOccupation());
         userRepository.updateById(user);
         return ConvertUtil.toUserDTO(user);
     }

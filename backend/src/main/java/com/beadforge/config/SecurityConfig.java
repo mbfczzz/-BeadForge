@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .antMatchers("/products/**").permitAll()
                 .antMatchers("/patterns/list").permitAll()
                 .antMatchers("/feeds/list").permitAll()
+                .antMatchers("/discovery/**").permitAll()
                 .antMatchers("/admin/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             .and()

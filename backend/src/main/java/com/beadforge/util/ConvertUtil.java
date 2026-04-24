@@ -22,6 +22,11 @@ public final class ConvertUtil {
         dto.setAvatar(user.getAvatar());
         dto.setEmail(user.getEmail());
         dto.setPhone(user.getPhone());
+        dto.setBio(user.getBio());
+        dto.setGender(user.getGender());
+        dto.setBirthday(user.getBirthday());
+        dto.setEducation(user.getEducation());
+        dto.setOccupation(user.getOccupation());
         return dto;
     }
 

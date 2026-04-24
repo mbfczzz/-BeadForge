@@ -29,6 +29,17 @@ public class User {
 
     private String phone;
 
+    /** 个人简介 */
+    private String bio;
+    /** 性别：male / female / other */
+    private String gender;
+    /** 生日 YYYY-MM-DD */
+    private String birthday;
+    /** 学历 / 教育背景 */
+    private String education;
+    /** 职业 */
+    private String occupation;
+
     /** 角色: USER / ADMIN */
     private String role;
 

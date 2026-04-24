@@ -108,5 +108,26 @@ SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_S
 SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_wallet ADD COLUMN version INT DEFAULT 0 COMMENT ''乐观锁版本号''', 'SELECT 1');
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+-- 用户资料扩展字段（bio / gender / birthday / education / occupation）— 前端 EditProfile 需要
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='bio');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN bio VARCHAR(300) COMMENT ''个人简介''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='gender');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN gender VARCHAR(10) COMMENT ''male/female/other''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='birthday');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN birthday VARCHAR(10) COMMENT ''YYYY-MM-DD''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='education');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN education VARCHAR(50) COMMENT ''学历/教育''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @col_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='beadforge' AND TABLE_NAME='t_user' AND COLUMN_NAME='occupation');
+SET @sql = IF(@col_exists = 0, 'ALTER TABLE t_user ADD COLUMN occupation VARCHAR(50) COMMENT ''职业''', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 -- 确保 test1 用户有 ADMIN 角色（方便管理后台登录）
 UPDATE t_user SET role = 'ADMIN' WHERE username = 'test1' AND (role IS NULL OR role != 'ADMIN');
