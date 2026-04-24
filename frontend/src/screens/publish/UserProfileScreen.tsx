@@ -21,11 +21,38 @@ import {
 } from '../../mock/community';
 
 const PAD = wp(15);
+const GRID_GAP = wp(8);
 
 function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
+  if (value >= 10000) return `${(value / 10000).toFixed(1)}万`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
   return String(value);
+}
+
+function getGenderBadgeMeta(gender?: string | null) {
+  const normalized = (gender || '').trim().toLowerCase();
+
+  if (normalized.includes('男') || normalized === 'male') {
+    return { icon: 'gender-male', color: '#2563EB', bg: '#EAF2FF' };
+  }
+
+  if (normalized.includes('女') || normalized === 'female') {
+    return { icon: 'gender-female', color: '#EC4899', bg: '#FFEAF3' };
+  }
+
+  return { icon: 'gender-male-female', color: '#64748B', bg: '#EEF4FF' };
+}
+
+function inferCommunityGender(name: string) {
+  if (name.includes('木木') || name.includes('清晨') || name.includes('饰品')) {
+    return '女';
+  }
+
+  if (name.includes('像素') || name.includes('游戏') || name.includes('拼豆')) {
+    return '男';
+  }
+
+  return '保密';
 }
 
 export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ route }) => {
@@ -35,10 +62,72 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
   const user = useMemo(() => getCommunityUserData(userName), [userName]);
   const works = useMemo(() => getCommunityUserWorks(userName), [userName]);
   const feeds = useMemo(() => getCommunityUserFeeds(userName), [userName]);
+  const profileGender = (user as { gender?: string | null }).gender || inferCommunityGender(user.name);
 
   const [followed, setFollowed] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [tabIndex, setTabIndex] = useState(0);
-  const gridSize = (screenW - PAD * 2 - wp(10)) / 2;
+  const workGridSize = (screenW - PAD * 2 - GRID_GAP * 2) / 3;
+  const mediaGridSize = (screenW - PAD * 2 - GRID_GAP) / 2;
+  const stats = [
+    { label: '作品', value: user.posts, icon: 'view-grid-outline' as const, color: '#4F8DFF' },
+    { label: '粉丝', value: user.followers, icon: 'account-group-outline' as const, color: '#FF6B8A' },
+    { label: '关注', value: user.following, icon: 'account-heart-outline' as const, color: '#F59E0B' },
+    { label: '获赞', value: user.likes, icon: 'heart-outline' as const, color: '#EF4444' },
+  ];
+
+  const submitReport = (reason: string) => {
+    Alert.alert('举报已提交', `已记录「${reason}」，平台会优先检查该用户近期内容。`);
+  };
+
+  const openReportMenu = () => {
+    Alert.alert('举报用户', `请选择举报「${user.name}」的原因。`, [
+      { text: '垃圾营销', onPress: () => submitReport('垃圾营销') },
+      { text: '侵权或盗图', onPress: () => submitReport('侵权或盗图') },
+      { text: '不友善或违规内容', onPress: () => submitReport('不友善或违规内容') },
+      { text: '取消', style: 'cancel' },
+    ]);
+  };
+
+  const toggleBlockUser = () => {
+    if (blocked) {
+      setBlocked(false);
+      Alert.alert('已取消拉黑', `你可以继续查看「${user.name}」的主页和私信。`);
+      return;
+    }
+
+    Alert.alert('拉黑用户', `拉黑后将不再接收「${user.name}」的私信和互动提醒。`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '确认拉黑',
+        style: 'destructive',
+        onPress: () => {
+          setBlocked(true);
+          setFollowed(false);
+          Alert.alert('已拉黑', `已将「${user.name}」加入黑名单。`);
+        },
+      },
+    ]);
+  };
+
+  const openMoreMenu = () => {
+    Alert.alert('更多', `选择对「${user.name}」的操作。`, [
+      {
+        text: '发送私信',
+        onPress: () => {
+          if (blocked) {
+            Alert.alert('无法发送私信', '请先取消拉黑后再发起私信。');
+            return;
+          }
+          navigation.navigate('DirectMessage', { userName: user.name });
+        },
+      },
+      { text: '分享主页', onPress: () => Alert.alert('分享主页', `已生成「${user.name}」的主页分享口令。`) },
+      { text: '举报用户', style: 'destructive', onPress: openReportMenu },
+      { text: blocked ? '取消拉黑' : '拉黑用户', style: blocked ? 'default' : 'destructive', onPress: toggleBlockUser },
+      { text: '取消', style: 'cancel' },
+    ]);
+  };
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -47,7 +136,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
         onBack={() => navigation.goBack()}
         right={
           <HoverView
-            onPress={() => Alert.alert('更多', '当前演示环境不接入举报与拉黑能力。')}
+            onPress={openMoreMenu}
             style={[$.navBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
             hoverScale={1.08}
             hoverLift={0}
@@ -58,41 +147,26 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(30) + BOTTOM_SAFE_H }}>
-        <View style={[$.headerBg, { backgroundColor: colors.accent }]}>
-          <View style={$.headerDecor} />
-        </View>
-
-        <View style={[$.profileCard, { backgroundColor: colors.surface }]}>
-          <View style={$.avatarWrap}>
+        <View style={[$.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={$.profileTop}>
             <View style={[$.avatarRing, { backgroundColor: colors.surface, borderColor: colors.surface }]}>
-              <Avatar name={user.name} size={wp(72)} />
+              <Avatar name={user.name} size={wp(68)} />
             </View>
-          </View>
-
-          <Text style={[$.profileName, { color: colors.text }]}>{user.name}</Text>
-          <View style={[$.titleBadge, { backgroundColor: colors.accentLight }]}>
-            <MCI name="shield-star-outline" size={fp(12)} color={colors.accent} />
-            <Text style={[$.titleBadgeText, { color: colors.accent }]}>{user.title}</Text>
-          </View>
-          <Text style={[$.profileBio, { color: colors.textSecondary }]}>{user.bio}</Text>
-
-          {user.tags.length > 0 && (
-            <View style={$.profileTags}>
-              {user.tags.map((tag) => (
-                <View key={tag} style={[$.profileTag, { backgroundColor: colors.inputBg }]}>
-                  <Text style={[$.profileTagText, { color: colors.textHint }]}>#{tag}</Text>
+            <View style={$.profileIdentity}>
+              <View style={$.nameRow}>
+                <Text style={[$.profileName, { color: colors.text }]} numberOfLines={1}>{user.name}</Text>
+                <GenderBadge gender={profileGender} />
+                <View style={[$.titleBadge, { backgroundColor: colors.accentLight }]}>
+                  <MCI name="shield-star-outline" size={fp(12)} color={colors.accent} />
+                  <Text style={[$.titleBadgeText, { color: colors.accent }]}>{user.title}</Text>
                 </View>
-              ))}
+              </View>
+              <Text style={[$.profileBio, { color: colors.textSecondary }]} numberOfLines={2}>{user.bio}</Text>
             </View>
-          )}
+          </View>
 
-          <View style={[$.statsRow, { borderTopColor: colors.border }]}>
-            {[
-              { label: '作品', value: user.posts, icon: 'view-grid-outline' as const, color: '#5B5FFF' },
-              { label: '粉丝', value: user.followers, icon: 'account-group-outline' as const, color: '#FF6B6B' },
-              { label: '关注', value: user.following, icon: 'account-heart-outline' as const, color: '#F5A623' },
-              { label: '获赞', value: user.likes, icon: 'heart-outline' as const, color: '#EF4444' },
-            ].map((item) => (
+          <View style={[$.statsRow, { backgroundColor: dark ? colors.inputBg : '#F7FAFF' }]}>
+            {stats.map((item) => (
               <Pressable
                 key={item.label}
                 style={$.statItem}
@@ -102,7 +176,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                   }
                 }}
               >
-                <View style={[$.statIconCircle, { backgroundColor: `${item.color}15` }]}>
+                <View style={[$.statIconCircle, { backgroundColor: `${item.color}16` }]}>
                   <MCI name={item.icon} size={fp(14)} color={item.color} />
                 </View>
                 <Text style={[$.statValue, { color: colors.text }]}>{formatCount(item.value)}</Text>
@@ -113,20 +187,32 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
 
           <View style={$.actionRow}>
             <HoverView
-              onPress={() => setFollowed((value) => !value)}
+              onPress={() => {
+                if (blocked) {
+                  Alert.alert('已拉黑用户', '取消拉黑后才可以重新关注。');
+                  return;
+                }
+                setFollowed((value) => !value);
+              }}
               style={[$.followBtn, {
-                backgroundColor: followed ? 'transparent' : colors.accent,
-                borderColor: followed ? colors.border : colors.accent,
+                backgroundColor: blocked ? colors.inputBg : followed ? 'transparent' : colors.accent,
+                borderColor: blocked || followed ? colors.border : colors.accent,
                 flex: 1,
               }]}
               hoverScale={1.03}
               hoverLift={0}
             >
-              <MCI name={followed ? 'check' : 'plus'} size={fp(16)} color={followed ? colors.textHint : '#fff'} />
-              <Text style={[$.followBtnText, { color: followed ? colors.textHint : '#fff' }]}>{followed ? '已关注' : '关注'}</Text>
+              <MCI name={blocked ? 'account-cancel-outline' : followed ? 'check' : 'plus'} size={fp(16)} color={blocked || followed ? colors.textHint : '#fff'} />
+              <Text style={[$.followBtnText, { color: blocked || followed ? colors.textHint : '#fff' }]}>{blocked ? '已拉黑' : followed ? '已关注' : '关注'}</Text>
             </HoverView>
             <HoverView
-              onPress={() => Alert.alert('私信', '当前演示环境不接入私信。')}
+              onPress={() => {
+                if (blocked) {
+                  Alert.alert('无法发送私信', '请先取消拉黑后再发起私信。');
+                  return;
+                }
+                navigation.navigate('DirectMessage', { userName: user.name });
+              }}
               style={[$.iconAction, { borderColor: colors.border }]}
               hoverScale={1.03}
               hoverLift={0}
@@ -143,9 +229,15 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
             </HoverView>
           </View>
 
-          <View style={$.joinInfo}>
-            <MCI name="calendar-outline" size={fp(13)} color={colors.textHint} />
-            <Text style={[$.joinText, { color: colors.textHint }]}>{user.joinDate} 加入</Text>
+          <View style={[$.joinInfo, { borderTopColor: colors.divider }]}>
+            <View style={$.joinTextRow}>
+              <MCI name="calendar-outline" size={fp(13)} color={colors.textHint} />
+              <Text style={[$.joinText, { color: colors.textHint }]}>{user.joinDate} 加入</Text>
+            </View>
+            <View style={$.joinTextRow}>
+              <MCI name="image-multiple-outline" size={fp(13)} color={colors.textHint} />
+              <Text style={[$.joinText, { color: colors.textHint }]}>近期更新 {feeds.length} 条动态</Text>
+            </View>
           </View>
         </View>
 
@@ -172,13 +264,13 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
               <View style={$.worksGrid}>
                 {works.map((work, index) => {
                   const pattern = ALL_PATTERNS[work.patternIdx % ALL_PATTERNS.length];
-                  const beadSize = Math.max(Math.floor((gridSize - wp(18)) / (pattern[0]?.length || 9)) - 1, 6);
+                  const beadSize = Math.max(Math.floor((workGridSize - wp(14)) / (pattern[0]?.length || 9)) - 1, 4);
 
                   return (
                     <PressableScale
                       key={`${user.name}-${index}`}
                       scale={0.97}
-                      style={{ width: gridSize }}
+                      style={{ width: workGridSize }}
                       onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length })}
                     >
                       <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
@@ -215,12 +307,12 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                     <PressableScale
                       key={feed.id}
                       scale={0.985}
-                      style={{ width: gridSize }}
+                      style={{ width: mediaGridSize }}
                       onPress={() => navigation.navigate('FeedDetail', { feed })}
                     >
                       <View style={[$.mediaGridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         <View style={[$.mediaGridThumb, { borderColor: `${media.accent}20` }]}>
-                          <SvgXml xml={media.svg} width={gridSize} height={gridSize / media.aspectRatio} />
+                          <SvgXml xml={media.svg} width={mediaGridSize} height={mediaGridSize / media.aspectRatio} />
                           <View style={$.mediaGridBadgeWrap}>
                             <View style={$.mediaGridBadge}>
                               <Text style={$.mediaGridBadgeText}>{feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>
@@ -257,6 +349,21 @@ const EmptyTab: React.FC<{ icon: string; text: string; hint: string; colors: any
   </View>
 );
 
+function GenderBadge({ gender }: { gender?: string | null }) {
+  const normalized = (gender || '').trim().toLowerCase();
+  if (!normalized || normalized.includes('保密') || normalized === 'secret') {
+    return null;
+  }
+
+  const meta = getGenderBadgeMeta(gender);
+
+  return (
+    <View style={[$.genderBadge, { backgroundColor: meta.bg }]}>
+      <MCI name={meta.icon as any} size={fp(14)} color={meta.color} />
+    </View>
+  );
+}
+
 const $ = StyleSheet.create({
   root: { flex: 1 },
   topBar: {
@@ -274,73 +381,76 @@ const $ = StyleSheet.create({
     alignItems: 'center',
   },
   topBarTitle: { flex: 1, textAlign: 'center', fontSize: fp(16), fontWeight: '700' },
-  headerBg: {
-    height: wp(82),
-    marginHorizontal: PAD,
-    marginTop: wp(12),
-    borderRadius: wp(24),
-    overflow: 'hidden',
-  },
-  headerDecor: {
-    position: 'absolute',
-    right: -wp(24),
-    top: -wp(20),
-    width: wp(120),
-    height: wp(120),
-    borderRadius: wp(60),
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
   profileCard: {
     marginHorizontal: PAD,
-    marginTop: -wp(34),
-    borderRadius: wp(20),
+    marginTop: wp(8),
+    borderRadius: wp(22),
+    borderWidth: 1,
     paddingHorizontal: wp(16),
-    paddingBottom: wp(18),
+    paddingTop: wp(14),
+    paddingBottom: wp(14),
+    ...shadow(1, 8, 0.06, '#1E293B', 2),
   },
-  avatarWrap: { alignItems: 'center', marginTop: -wp(28) },
+  profileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(12),
+  },
   avatarRing: {
     borderWidth: 4,
-    borderRadius: wp(40),
-    padding: wp(4),
+    borderRadius: wp(42),
+    padding: wp(3),
   },
-  profileName: { textAlign: 'center', fontSize: fp(19), fontWeight: '800', marginTop: wp(10) },
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(8),
+  },
+  profileName: { flexShrink: 1, fontSize: fp(20), fontWeight: '900' },
+  genderBadge: {
+    width: wp(21),
+    height: wp(21),
+    borderRadius: wp(10.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titleBadge: {
-    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(5),
-    paddingHorizontal: wp(10),
-    paddingVertical: wp(6),
+    paddingHorizontal: wp(8),
+    paddingVertical: wp(5),
     borderRadius: wp(999),
-    marginTop: wp(8),
   },
   titleBadgeText: { fontSize: fp(11), fontWeight: '700' },
-  profileBio: { marginTop: wp(12), fontSize: fp(13), lineHeight: fp(19), textAlign: 'center' },
-  profileTags: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: wp(8), marginTop: wp(12) },
-  profileTag: { paddingHorizontal: wp(10), paddingVertical: wp(6), borderRadius: wp(12) },
-  profileTagText: { fontSize: fp(11) },
+  profileBio: { marginTop: wp(7), fontSize: fp(12), lineHeight: fp(18) },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: wp(18),
-    paddingTop: wp(16),
-    borderTopWidth: 1,
+    marginTop: wp(14),
+    borderRadius: wp(16),
+    paddingVertical: wp(12),
+    paddingHorizontal: wp(4),
   },
   statItem: { flex: 1, alignItems: 'center' },
   statIconCircle: {
-    width: wp(28),
-    height: wp(28),
-    borderRadius: wp(14),
+    width: wp(26),
+    height: wp(26),
+    borderRadius: wp(13),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: wp(6),
+    marginBottom: wp(5),
   },
-  statValue: { fontSize: fp(15), fontWeight: '800' },
+  statValue: { fontSize: fp(15), fontWeight: '900' },
   statLabel: { marginTop: wp(3), fontSize: fp(11) },
-  actionRow: { flexDirection: 'row', gap: wp(10), marginTop: wp(18) },
+  actionRow: { flexDirection: 'row', gap: wp(10), marginTop: wp(14) },
   followBtn: {
-    height: wp(40),
-    borderRadius: wp(14),
+    height: wp(38),
+    borderRadius: wp(13),
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -349,18 +459,31 @@ const $ = StyleSheet.create({
   },
   followBtnText: { fontSize: fp(13), fontWeight: '700' },
   iconAction: {
-    width: wp(40),
-    height: wp(40),
-    borderRadius: wp(14),
+    width: wp(38),
+    height: wp(38),
+    borderRadius: wp(13),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  joinInfo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: wp(6), marginTop: wp(14) },
+  joinInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: wp(10),
+    marginTop: wp(13),
+    paddingTop: wp(12),
+    borderTopWidth: 1,
+  },
+  joinTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(5),
+  },
   joinText: { fontSize: fp(11) },
   tabBar: {
     flexDirection: 'row',
-    marginTop: wp(14),
+    marginTop: wp(10),
     paddingHorizontal: PAD,
     borderBottomWidth: 1,
   },
@@ -369,22 +492,22 @@ const $ = StyleSheet.create({
   tabText: { fontSize: fp(12) },
   tabLine: { marginTop: wp(8), height: wp(3), width: wp(18), borderRadius: wp(2) },
   worksContainer: { paddingHorizontal: PAD, paddingTop: wp(14) },
-  worksGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: wp(10) },
+  worksGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: GRID_GAP, rowGap: wp(10) },
   workCard: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: wp(14),
     overflow: 'hidden',
   },
   workPreview: {
-    height: wp(148),
+    height: wp(104),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  workInfo: { padding: wp(10) },
-  workTitle: { fontSize: FontSize.md, fontWeight: '600' },
-  workStats: { flexDirection: 'row', alignItems: 'center', gap: wp(5), marginTop: wp(8) },
-  workStatText: { fontSize: fp(11) },
+  workInfo: { paddingHorizontal: wp(8), paddingVertical: wp(8) },
+  workTitle: { fontSize: fp(12), fontWeight: '800' },
+  workStats: { flexDirection: 'row', alignItems: 'center', gap: wp(4), marginTop: wp(6) },
+  workStatText: { fontSize: fp(10) },
   feedGridWrap: { paddingHorizontal: PAD, paddingTop: wp(14) },
-  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: wp(10) },
+  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: GRID_GAP, rowGap: wp(10) },
   mediaGridCard: {
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
