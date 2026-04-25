@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
@@ -22,7 +22,7 @@ const TABS: {
 }[] = [
   { name: 'Home', label: '发现', icon: 'compass' },
   { name: 'Publish', label: '动态', icon: 'activity' },
-  { name: 'Create', label: '创作', icon: 'plus', center: true },
+  { name: 'Create', label: '发布', icon: 'plus', center: true },
   { name: 'Market', label: '商城', icon: 'shopping-bag' },
   { name: 'Profile', label: '我的', icon: 'user' },
 ];
@@ -46,19 +46,16 @@ function CustomTabBar({ state, navigation }: any) {
 
   return (
     <View
-      className="flex-row items-end px-6"
-      style={{
-        paddingTop: 10,
-        paddingBottom: Math.max(insets.bottom, 10),
-        backgroundColor: dark ? colors.navBg : 'rgba(255,255,255,0.98)',
-        borderTopWidth: 1,
-        borderTopColor: colors.navBorder,
-        shadowColor: dark ? '#000000' : '#0f172a',
-        shadowOpacity: dark ? 0.22 : 0.06,
-        shadowRadius: 22,
-        shadowOffset: { width: 0, height: -8 },
-        elevation: 20,
-      }}
+      style={[
+        styles.tabBar,
+        {
+          paddingBottom: Math.max(insets.bottom, 10),
+          backgroundColor: dark ? colors.navBg : 'rgba(255,255,255,0.98)',
+          borderTopColor: colors.navBorder,
+          shadowColor: dark ? '#020617' : '#1E3A8A',
+          shadowOpacity: dark ? 0.26 : 0.08,
+        },
+      ]}
     >
       {state.routes.map((route: any, index: number) => {
         const tab = TABS[index];
@@ -71,39 +68,32 @@ function CustomTabBar({ state, navigation }: any) {
 
         if (tab.center) {
           return (
-            <Pressable
-              key={route.key}
-              onPress={onPress}
-              className="flex-1 items-center"
-              style={{ transform: [{ translateY: -18 }] }}
-            >
+            <Pressable key={route.key} onPress={onPress} style={styles.centerTab}>
               <View
-                className="h-14 w-14 items-center justify-center rounded-full bg-blue-600"
-                style={{
-                  borderWidth: 4,
-                  borderColor: dark ? colors.navBg : '#FFFFFF',
-                  shadowColor: '#2563EB',
-                  shadowOpacity: 0.34,
-                  shadowRadius: 16,
-                  shadowOffset: { width: 0, height: 8 },
-                  elevation: 12,
-                }}
+                style={[
+                  styles.centerButton,
+                  {
+                    borderColor: dark ? colors.navBg : '#FFFFFF',
+                  },
+                ]}
               >
                 <Feather name="plus" size={26} color="#FFFFFF" />
               </View>
+              <Text style={[styles.centerLabel, { color: focused ? '#2563EB' : colors.textHint }]}>
+                {tab.label}
+              </Text>
             </Pressable>
           );
         }
 
         return (
-          <Pressable key={route.key} onPress={onPress} className="flex-1 items-center justify-center pb-1 pt-2">
+          <Pressable key={route.key} onPress={onPress} style={styles.tabButton}>
             <Feather name={tab.icon} size={20} color={focused ? '#2563EB' : colors.textHint} />
             <Text
-              className="mt-1 text-[10px]"
-              style={{
-                color: focused ? '#2563EB' : colors.textHint,
-                fontWeight: focused ? '700' : '500',
-              }}
+              style={[
+                styles.tabLabel,
+                { color: focused ? '#2563EB' : colors.textHint, fontWeight: focused ? '700' : '500' },
+              ]}
             >
               {tab.label}
             </Text>
@@ -121,3 +111,51 @@ export const TabNavigator: React.FC = () => (
     ))}
   </Tab.Navigator>
 );
+
+const styles = StyleSheet.create({
+  tabBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 16,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  tabLabel: {
+    fontSize: 11,
+    marginTop: 6,
+  },
+  centerTab: {
+    flex: 1,
+    alignItems: 'center',
+    transform: [{ translateY: -14 }],
+  },
+  centerButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3B6CFF',
+    borderWidth: 4,
+    shadowColor: '#2563EB',
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  centerLabel: {
+    fontSize: 10,
+    marginTop: 6,
+    fontWeight: '700',
+  },
+});

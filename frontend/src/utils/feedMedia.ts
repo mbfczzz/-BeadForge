@@ -2,6 +2,7 @@ import type { FeedItemData, FeedMediaType } from '../api/community';
 
 export interface FeedMockMedia {
   svg: string;
+  uri?: string;
   aspectRatio: number;
   accent: string;
   type: FeedMediaType;
@@ -16,13 +17,55 @@ const PALETTES = [
   { bgFrom: '#ECFFF4', bgTo: '#D0F7E0', accent: '#35C685', accentSoft: '#A6E8C8', panel: '#FFFFFF', panelSoft: '#F7FFFB' },
 ];
 
-const CACHE = new Map<number, FeedMockMedia>();
+const CACHE = new Map<string, FeedMockMedia>();
+
+export function getFeedMockMediaCacheInfo() {
+  let bytes = 0;
+
+  CACHE.forEach((item) => {
+    bytes += item.svg.length * 2;
+    if (item.uri) {
+      bytes += item.uri.length * 2;
+    }
+  });
+
+  return {
+    entries: CACHE.size,
+    bytes,
+  };
+}
+
+export function clearFeedMockMediaCache() {
+  const entries = CACHE.size;
+  CACHE.clear();
+  return entries;
+}
 
 function getPalette(index: number) {
   return PALETTES[index % PALETTES.length];
 }
 
-function renderImageScene(width: number, height: number, accent: string, accentSoft: string) {
+function renderImageScene(width: number, height: number, accent: string, accentSoft: string, variant = 0) {
+  if (variant % 3 === 1) {
+    return `
+      <rect x="48" y="48" width="${width - 96}" height="${height - 96}" rx="42" fill="rgba(255,255,255,0.92)"/>
+      <circle cx="${Math.round(width * 0.76)}" cy="${Math.round(height * 0.28)}" r="${Math.round(width * 0.12)}" fill="${accentSoft}" opacity="0.8"/>
+      <rect x="96" y="${Math.round(height * 0.2)}" width="${Math.round(width * 0.28)}" height="${Math.round(height * 0.46)}" rx="34" fill="${accent}" opacity="0.24"/>
+      <path d="M${Math.round(width * 0.18)} ${Math.round(height * 0.76)} C ${Math.round(width * 0.34)} ${Math.round(height * 0.5)}, ${Math.round(width * 0.5)} ${Math.round(height * 0.72)}, ${Math.round(width * 0.64)} ${Math.round(height * 0.46)} S ${Math.round(width * 0.84)} ${Math.round(height * 0.54)}, ${width - 96} ${Math.round(height * 0.3)} L ${width - 96} ${height - 96} L 96 ${height - 96} Z" fill="${accent}" opacity="0.72"/>
+      <circle cx="${Math.round(width * 0.34)}" cy="${Math.round(height * 0.34)}" r="${Math.round(width * 0.055)}" fill="#FFFFFF" opacity="0.8"/>
+    `;
+  }
+
+  if (variant % 3 === 2) {
+    return `
+      <rect x="48" y="48" width="${width - 96}" height="${height - 96}" rx="42" fill="rgba(255,255,255,0.92)"/>
+      <path d="M94 ${Math.round(height * 0.32)} C ${Math.round(width * 0.26)} ${Math.round(height * 0.18)}, ${Math.round(width * 0.42)} ${Math.round(height * 0.42)}, ${Math.round(width * 0.56)} ${Math.round(height * 0.28)} S ${Math.round(width * 0.78)} ${Math.round(height * 0.3)}, ${width - 94} ${Math.round(height * 0.16)} L ${width - 94} ${Math.round(height * 0.52)} C ${Math.round(width * 0.7)} ${Math.round(height * 0.66)}, ${Math.round(width * 0.42)} ${Math.round(height * 0.48)}, 94 ${Math.round(height * 0.68)} Z" fill="${accentSoft}" opacity="0.78"/>
+      <circle cx="${Math.round(width * 0.3)}" cy="${Math.round(height * 0.66)}" r="${Math.round(width * 0.14)}" fill="${accent}" opacity="0.5"/>
+      <rect x="${Math.round(width * 0.48)}" y="${Math.round(height * 0.56)}" width="${Math.round(width * 0.32)}" height="${Math.round(height * 0.18)}" rx="38" fill="${accent}" opacity="0.7"/>
+      <circle cx="${Math.round(width * 0.76)}" cy="${Math.round(height * 0.74)}" r="${Math.round(width * 0.05)}" fill="#FFFFFF" opacity="0.78"/>
+    `;
+  }
+
   return `
     <rect x="48" y="48" width="${width - 96}" height="${height - 96}" rx="42" fill="rgba(255,255,255,0.92)"/>
     <circle cx="${Math.round(width * 0.28)}" cy="${Math.round(height * 0.34)}" r="${Math.round(width * 0.11)}" fill="${accentSoft}" opacity="0.9"/>
@@ -60,11 +103,12 @@ function renderGifScene(width: number, height: number, accent: string, accentSof
   `;
 }
 
-export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
-  const cached = CACHE.get(feed.id);
+function buildFeedMockMedia(feed: FeedItemData, variant = 0): FeedMockMedia {
+  const cacheKey = `${feed.id}:${variant}`;
+  const cached = CACHE.get(cacheKey);
   if (cached) return cached;
 
-  const palette = getPalette(feed.id + feed.media.demoAssetId.length);
+  const palette = getPalette(feed.id + feed.media.demoAssetId.length + variant);
   const width = 1200;
   const height = Math.round(width / feed.media.aspectRatio);
 
@@ -74,18 +118,18 @@ export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
   } else if (feed.media.type === 'gif') {
     scene = renderGifScene(width, height, palette.accent, palette.accentSoft);
   } else {
-    scene = renderImageScene(width, height, palette.accent, palette.accentSoft);
+    scene = renderImageScene(width, height, palette.accent, palette.accentSoft, variant);
   }
 
   const svg = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
     <defs>
-      <linearGradient id="bg-${feed.id}" x1="0" y1="0" x2="${width}" y2="${height}" gradientUnits="userSpaceOnUse">
+      <linearGradient id="bg-${feed.id}-${variant}" x1="0" y1="0" x2="${width}" y2="${height}" gradientUnits="userSpaceOnUse">
         <stop offset="0" stop-color="${palette.bgFrom}" />
         <stop offset="1" stop-color="${palette.bgTo}" />
       </linearGradient>
     </defs>
-    <rect width="${width}" height="${height}" rx="44" fill="url(#bg-${feed.id})"/>
+    <rect width="${width}" height="${height}" rx="44" fill="url(#bg-${feed.id}-${variant})"/>
     <circle cx="${Math.round(width * 0.12)}" cy="${Math.round(height * 0.16)}" r="${Math.round(width * 0.14)}" fill="${palette.accent}" opacity="0.08"/>
     <circle cx="${Math.round(width * 0.84)}" cy="${Math.round(height * 0.22)}" r="${Math.round(width * 0.16)}" fill="${palette.accentSoft}" opacity="0.28"/>
     <circle cx="${Math.round(width * 0.84)}" cy="${Math.round(height * 0.84)}" r="${Math.round(width * 0.22)}" fill="${palette.accent}" opacity="0.08"/>
@@ -99,6 +143,29 @@ export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
     type: feed.media.type,
   };
 
-  CACHE.set(feed.id, result);
+  CACHE.set(cacheKey, result);
   return result;
+}
+
+export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
+  return buildFeedMockMedia(feed, 0);
+}
+
+export function getFeedMockGallery(feed: FeedItemData): FeedMockMedia[] {
+  if (feed.media.assetUris?.length) {
+    return feed.media.assetUris.map((uri, index) => ({
+      svg: '',
+      uri,
+      aspectRatio: feed.media.aspectRatio || 1,
+      accent: feed.coverAccent || '#3B82F6',
+      type: feed.media.type,
+    }));
+  }
+
+  if (feed.media.type !== 'image') {
+    return [buildFeedMockMedia(feed, 0)];
+  }
+
+  const count = 2 + (feed.id % 3);
+  return Array.from({ length: count }, (_, index) => buildFeedMockMedia(feed, index));
 }

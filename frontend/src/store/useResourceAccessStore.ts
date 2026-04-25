@@ -8,6 +8,7 @@ export type UnlockSource = 'free' | 'points' | 'member' | 'author';
 interface ResourceAccessState {
   pointsBalance: number;
   pointsLogs: ProfileWalletLog[];
+  lastSignInDate: string | null;
   membershipActive: boolean;
   ownedFileIds: Set<number>;
   downloadedFileIds: Set<number>;
@@ -21,7 +22,7 @@ interface ResourceAccessState {
   markDownloaded: (fileId: number) => void;
   toggleMockMembership: () => void;
   addPoints: (amount: number) => void;
-  signIn: () => void;
+  signIn: () => boolean;
 }
 
 const DEFAULT_POINTS = 860;
@@ -35,9 +36,17 @@ function formatLogTime(date = new Date()) {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
+function formatDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export const useResourceAccessStore = create<ResourceAccessState>((set, get) => ({
   pointsBalance: DEFAULT_POINTS,
   pointsLogs: MOCK_PROFILE_WALLET_LOGS,
+  lastSignInDate: null,
   membershipActive: false,
   ownedFileIds: new Set<number>(),
   downloadedFileIds: new Set<number>(),
@@ -156,9 +165,12 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
 
   signIn: () => {
     const reward = 20;
+    const today = formatDateKey();
+    if (get().lastSignInDate === today) return false;
 
     set((state) => ({
       pointsBalance: state.pointsBalance + reward,
+      lastSignInDate: today,
       pointsLogs: [
         {
           id: Date.now(),
@@ -170,5 +182,7 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
         ...state.pointsLogs,
       ],
     }));
+
+    return true;
   },
 }));

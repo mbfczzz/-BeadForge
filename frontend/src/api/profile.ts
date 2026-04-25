@@ -73,6 +73,14 @@ export interface ProfileOrderItem {
   status: ProfileOrderStatus;
   createdAt: string;
   coverLabel?: string;
+  category?: string;
+  imageText?: string;
+  itemCount?: number;
+  receiver?: string;
+  phone?: string;
+  address?: string;
+  trackingNo?: string;
+  statusNote?: string;
 }
 
 export type ProfileNoticeType = '系统' | '订单' | '互动';

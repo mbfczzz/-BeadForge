@@ -5,7 +5,6 @@ import {
   FlatList,
   PanResponder,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,36 +15,53 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { FilterChip, Input, StateView, SurfaceCard } from '../../components/common';
+import { Input, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
-import type { MaterialProduct } from '../../api/market';
+import { marketApi, productDataToMaterialProduct, type MaterialProduct } from '../../api/market';
 import type { ProductData, RootStackParamList } from '../../navigation/types';
-import { MARKET_MATERIAL_CATEGORIES, MOCK_PRODUCTS } from '../../mock/market';
+import { MOCK_PRODUCTS } from '../../mock/market';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { useCartStore } from '../../store/useCartStore';
 
-const PAD = wp(18);
-const CARD_W = Math.floor((Dimensions.get('window').width - PAD * 2 - wp(12)) / 2);
+const MARKET_RED = '#F2270C';
+const MARKET_ORANGE = '#FF8A00';
+const PAD = wp(12);
+const GAP = wp(8);
+const CARD_W = Math.floor((Dimensions.get('window').width - PAD * 2 - GAP) / 2);
 const FLOAT_SIZE = wp(42);
 
-const MATERIAL_SORT_OPTIONS = [
-  { key: 'default', label: '综合' },
-  { key: 'sales', label: '销量' },
-  { key: 'price', label: '价格' },
-] as const;
+function toProductData(product: MaterialProduct): ProductData {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.desc,
+    price: product.price,
+    originalPrice: product.originalPrice,
+    sales: product.sales,
+    rating: product.rating,
+    tag: product.tag,
+    color: product.color,
+    icon: product.icon,
+    category: product.cat,
+    specs: JSON.stringify(product.specs),
+    imageUrls: product.imageUrls,
+    services: product.services,
+    promotions: product.promotions,
+    detailSections: product.detailSections,
+  };
+}
 
 export const MarketScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const cartCount = useCartStore((state) => state.items.reduce((sum, item) => sum + item.qty, 0));
-  const [catIdx, setCatIdx] = useState(0);
-  const [sortIdx, setSortIdx] = useState(0);
-  const [priceSortOrder, setPriceSortOrder] = useState<'asc' | 'desc'>('asc');
+  const addItem = useCartStore((state) => state.addItem);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [products, setProducts] = useState<MaterialProduct[]>(MOCK_PRODUCTS);
   const [dragEnabled, setDragEnabled] = useState(false);
   const floatingPosition = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const floatingPositionRef = React.useRef({ x: 0, y: 0 });
@@ -54,52 +70,41 @@ export const MarketScreen: React.FC = () => {
   const suppressPressRef = React.useRef(false);
 
   const filtered = useMemo(() => {
-    let list = [...MOCK_PRODUCTS];
-
-    if (catIdx > 0) {
-      list = list.filter((item) => item.cat === MARKET_MATERIAL_CATEGORIES[catIdx]);
-    }
+    let list = [...products];
 
     if (search.trim()) {
       const keyword = search.trim().toLowerCase();
       list = list.filter((item) => item.name.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword));
     }
 
-    if (sortIdx === 1) {
-      list.sort((a, b) => b.sales - a.sales);
-    }
-
-    if (sortIdx === 2) {
-      list.sort((a, b) => (priceSortOrder === 'asc' ? a.price - b.price : b.price - a.price));
-    }
-
     return list;
-  }, [catIdx, priceSortOrder, search, sortIdx]);
+  }, [products, search]);
+
+  const loadProducts = useCallback(async () => {
+    try {
+      const response = await marketApi.getProducts(1, 80);
+      const records = response.data?.records || [];
+      if (records.length > 0) {
+        setProducts(records.map(productDataToMaterialProduct));
+      }
+    } catch {
+      setProducts(MOCK_PRODUCTS);
+    }
+  }, []);
 
   const onRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await loadProducts();
     setRefreshing(false);
-  }, [refreshing]);
+  }, [loadProducts, refreshing]);
+
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
 
   const openDetail = useCallback((product: MaterialProduct) => {
-    const routeProduct: ProductData = {
-      id: product.id,
-      name: product.name,
-      description: product.desc,
-      price: product.price,
-      originalPrice: product.originalPrice,
-      sales: product.sales,
-      rating: product.rating,
-      tag: product.tag,
-      color: product.color,
-      icon: product.icon,
-      category: product.cat,
-      specs: JSON.stringify(product.specs),
-    };
-
-    navigation.navigate('ProductDetail', { product: routeProduct });
+    navigation.navigate('ProductDetail', { product: toProductData(product) });
   }, [navigation]);
 
   const minX = PAD;
@@ -163,6 +168,9 @@ export const MarketScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
+        <View style={styles.headerTitleRow}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>材料商城</Text>
+        </View>
         <Input
           placeholder="搜索材料、工具或配件"
           value={search}
@@ -170,8 +178,14 @@ export const MarketScreen: React.FC = () => {
           onFocus={() => setSearchFocused(true)}
           onBlur={() => setSearchFocused(false)}
           prefix={<Feather name="search" size={fp(14)} color={searchFocused ? colors.accent : colors.textHint} />}
-          containerStyle={[styles.searchField, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          style={searchFocused ? { borderColor: colors.accent, backgroundColor: colors.surface } : undefined}
+          containerStyle={[
+            styles.searchField,
+            {
+              backgroundColor: colors.surface,
+              borderColor: searchFocused ? MARKET_RED : colors.border,
+            },
+          ]}
+          style={searchFocused ? { borderColor: MARKET_RED, backgroundColor: colors.surface } : undefined}
         />
       </View>
 
@@ -183,73 +197,16 @@ export const MarketScreen: React.FC = () => {
         columnWrapperStyle={styles.columnRow}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={MARKET_RED} colors={[MARKET_RED]} />
         }
-        ListHeaderComponent={(
-          <View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              {MARKET_MATERIAL_CATEGORIES.map((item, index) => (
-                <FilterChip key={item} label={item} active={index === catIdx} onPress={() => setCatIdx(index)} size="md" />
-              ))}
-            </ScrollView>
-
-            <View style={styles.sortRow}>
-              {MATERIAL_SORT_OPTIONS.map((item, index) => {
-                const active = index === sortIdx;
-                const isPrice = item.key === 'price';
-
-                return (
-                  <TouchableOpacity
-                    key={item.key}
-                    activeOpacity={0.75}
-                    onPress={() => {
-                      if (isPrice) {
-                        if (sortIdx === index) {
-                          setPriceSortOrder((current) => (current === 'asc' ? 'desc' : 'asc'));
-                        } else {
-                          setSortIdx(index);
-                          setPriceSortOrder('asc');
-                        }
-                        return;
-                      }
-
-                      setSortIdx(index);
-                    }}
-                    style={styles.sortItem}
-                  >
-                    <View style={styles.sortTextRow}>
-                      <Text
-                        style={[
-                          styles.sortText,
-                          {
-                            color: active ? colors.accent : colors.textHint,
-                            fontWeight: active ? '800' : '600',
-                          },
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                      {isPrice ? (
-                        <Feather
-                          name={priceSortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
-                          size={fp(11)}
-                          color={active ? colors.accent : colors.textHint}
-                        />
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <View style={{ flex: 1 }} />
-              <Text style={[styles.countText, { color: colors.textHint }]}>{filtered.length} 件</Text>
-            </View>
-          </View>
-        )}
         ListEmptyComponent={<StateView empty emptyText="没有找到匹配的材料" />}
         renderItem={({ item }) => (
-          <View style={{ width: CARD_W, marginBottom: wp(12) }}>
-            <MaterialCard product={item} onOpen={() => openDetail(item)} />
+          <View style={{ width: CARD_W, marginBottom: wp(8) }}>
+            <MaterialCard
+              product={item}
+              onOpen={() => openDetail(item)}
+              onAdd={() => addItem(toProductData(item), { qty: 1, variant: item.specs[0] || '默认规格' })}
+            />
           </View>
         )}
       />
@@ -278,11 +235,11 @@ export const MarketScreen: React.FC = () => {
             }
             navigation.navigate('Cart');
           }}
-          style={[styles.floatingCartButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.floatingCartButton, { backgroundColor: MARKET_RED, borderColor: MARKET_RED }]}
         >
-          <Feather name="shopping-cart" size={fp(18)} color={colors.textSecondary} />
+          <Feather name="shopping-cart" size={fp(18)} color="#FFFFFF" />
           {cartCount > 0 ? (
-            <View style={[styles.badge, { backgroundColor: colors.accent }]}>
+            <View style={[styles.badge, { backgroundColor: MARKET_ORANGE }]}>
               <Text style={styles.badgeText}>{cartCount}</Text>
             </View>
           ) : null}
@@ -295,26 +252,53 @@ export const MarketScreen: React.FC = () => {
 const MaterialCard: React.FC<{
   product: MaterialProduct;
   onOpen: () => void;
-}> = memo(({ product, onOpen }) => {
+  onAdd: () => void;
+}> = memo(({ product, onOpen, onAdd }) => {
   const { colors } = useTheme();
+  const salesText = product.sales > 10000 ? `${(product.sales / 10000).toFixed(1)}万` : `${product.sales}`;
 
   return (
-    <SurfaceCard style={styles.card} bodyStyle={styles.cardBody}>
-      <TouchableOpacity activeOpacity={0.85} onPress={onOpen}>
-        <View style={[styles.cardCover, { backgroundColor: `${product.color}10` }]}>
-          <View style={[styles.cardIconCircle, { backgroundColor: `${product.color}18` }]}>
-            <Feather name={product.icon as any} size={fp(18)} color={product.color} />
+    <TouchableOpacity
+      activeOpacity={0.86}
+      onPress={onOpen}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
+      <View style={[styles.cardCover, { backgroundColor: `${product.color}10` }]}>
+        {product.tag ? (
+          <View style={styles.hotTag}>
+            <Text style={styles.hotTagText}>{product.tag}</Text>
           </View>
+        ) : null}
+        <View style={[styles.cardIconCircle, { backgroundColor: `${product.color}18` }]}>
+          <Feather name={product.icon as any} size={fp(20)} color={product.color} />
         </View>
-      </TouchableOpacity>
-      <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>
+      </View>
+      <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={2}>
         {product.name}
       </Text>
-      <View style={styles.priceRow}>
-        <Text style={[styles.priceText, { color: colors.error }]}>¥ {product.price.toFixed(1)}</Text>
-        <Text style={[styles.salesText, { color: colors.textHint }]}>销量 {product.sales}</Text>
+      <View style={styles.cardMetaRow}>
+        <Text style={styles.ratingText}>{product.rating.toFixed(1)}分</Text>
+        <Text style={[styles.salesText, { color: colors.textHint }]}>{salesText}人买过</Text>
       </View>
-    </SurfaceCard>
+      <View style={styles.priceRow}>
+        <View style={styles.priceStack}>
+          <Text style={styles.priceText}>¥{product.price.toFixed(1)}</Text>
+          {product.originalPrice ? (
+            <Text style={[styles.oldPrice, { color: colors.textHint }]}>¥{product.originalPrice.toFixed(1)}</Text>
+          ) : null}
+        </View>
+        <TouchableOpacity
+          activeOpacity={0.82}
+          onPress={(event) => {
+            event.stopPropagation();
+            onAdd();
+          }}
+          style={styles.addButton}
+        >
+          <Feather name="plus" size={fp(14)} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 });
 
@@ -323,8 +307,18 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: PAD,
     paddingTop: wp(8),
-    paddingBottom: wp(14),
+    paddingBottom: wp(8),
+    gap: wp(12),
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: wp(10),
+  },
+  headerTitle: {
+    fontSize: fp(19),
+    fontWeight: '900',
   },
   floatingCartWrap: {
     position: 'absolute',
@@ -337,7 +331,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow(10, 22, 0.12, '#1D3D6B', 8),
+    ...shadow(8, 18, 0.14, MARKET_RED, 8),
   },
   badge: {
     position: 'absolute',
@@ -356,77 +350,105 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   searchField: {
-    minHeight: wp(34),
+    minHeight: wp(42),
     borderWidth: 1,
-    borderRadius: wp(999),
+    borderRadius: wp(16),
   },
   listContent: {
     paddingHorizontal: PAD,
+    paddingTop: wp(4),
     paddingBottom: wp(40) + BOTTOM_SAFE_H,
   },
   columnRow: {
     justifyContent: 'space-between',
-    gap: wp(12),
-  },
-  chipRow: {
-    gap: wp(10),
-    paddingBottom: wp(14),
-  },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: wp(14),
-  },
-  sortItem: {
-    marginRight: wp(14),
-  },
-  sortTextRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(4),
-  },
-  sortText: {
-    fontSize: fp(12),
-  },
-  countText: {
-    fontSize: fp(11),
+    gap: GAP,
   },
   card: {
-    borderRadius: wp(24),
-    ...shadow(10, 24, 0.06, '#1D3D6B', 6),
-  },
-  cardBody: {
-    gap: wp(8),
+    borderRadius: wp(10),
+    borderWidth: 1,
+    padding: wp(6),
+    ...shadow(1, 4, 0.02, '#0F172A', 0),
   },
   cardCover: {
     aspectRatio: 1,
-    borderRadius: wp(18),
+    borderRadius: wp(9),
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    position: 'relative',
+  },
+  hotTag: {
+    position: 'absolute',
+    left: wp(6),
+    top: wp(6),
+    minHeight: wp(18),
+    borderRadius: wp(9),
+    backgroundColor: MARKET_RED,
+    paddingHorizontal: wp(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  hotTagText: {
+    color: '#FFFFFF',
+    fontSize: fp(9),
+    fontWeight: '800',
   },
   cardIconCircle: {
-    width: wp(48),
-    height: wp(48),
-    borderRadius: wp(24),
+    width: wp(50),
+    height: wp(50),
+    borderRadius: wp(25),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
-    fontSize: fp(13),
+    fontSize: fp(12),
+    fontWeight: '800',
+    lineHeight: fp(16),
+    minHeight: fp(32),
+    marginTop: wp(6),
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(6),
+    marginTop: wp(5),
+  },
+  ratingText: {
+    color: MARKET_ORANGE,
+    fontSize: fp(9),
     fontWeight: '800',
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    marginTop: wp(5),
+    gap: wp(6),
+  },
+  priceStack: {
+    flex: 1,
+    minWidth: 0,
   },
   priceText: {
-    fontSize: fp(15),
-    fontWeight: '800',
+    color: MARKET_RED,
+    fontSize: fp(14),
+    fontWeight: '900',
+  },
+  oldPrice: {
+    fontSize: fp(9),
+    textDecorationLine: 'line-through',
+    marginTop: wp(1),
   },
   salesText: {
-    fontSize: fp(11),
+    fontSize: fp(9),
     fontWeight: '600',
+  },
+  addButton: {
+    width: wp(27),
+    height: wp(27),
+    borderRadius: wp(14),
+    backgroundColor: MARKET_RED,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

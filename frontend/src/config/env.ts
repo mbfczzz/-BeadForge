@@ -23,10 +23,18 @@ export function getAmapWebKey(): string {
   return process.env.EXPO_PUBLIC_AMAP_WEB_KEY || '';
 }
 
+export function getAddressRegionProvider(): string {
+  return process.env.EXPO_PUBLIC_ADDRESS_REGION_PROVIDER || 'local';
+}
+
 export function getApiUrl(): string {
   if (__DEV__) return API_URLS.local;
   if (Platform.OS === 'web') return API_URLS.prod;
   return API_URLS.test;
+}
+
+export function getAddressRegionApiUrl(): string {
+  return process.env.EXPO_PUBLIC_ADDRESS_REGION_API_URL || `${getApiUrl()}/regions/tree`;
 }
 
 export function getEnvName(): string {

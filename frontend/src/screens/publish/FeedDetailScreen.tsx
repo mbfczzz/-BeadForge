@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
@@ -21,8 +22,9 @@ import type { ThemeColors } from '../../theme';
 import { Avatar, HoverView, AppHeader } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
-import { getFeedMockMedia } from '../../utils/feedMedia';
+import { getFeedMockGallery } from '../../utils/feedMedia';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
+import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
 
 const PAD = wp(15);
 
@@ -53,8 +55,11 @@ function buildComments(feedId: number): CommentItemData[] {
 }
 
 function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (value >= 10000) {
+    const next = value / 10000;
+    return `${Number.isInteger(next) ? next.toFixed(0) : next.toFixed(1)}万`;
+  }
+
   return String(value);
 }
 
@@ -70,12 +75,16 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [comments, setComments] = useState<CommentItemData[]>(() => buildComments(feed.id));
   const [showMore, setShowMore] = useState(false);
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
   const likeAnim = useRef(new Animated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
 
-  const media = useMemo(() => getFeedMockMedia(feed), [feed]);
+  const gallery = useMemo(() => getFeedMockGallery(feed), [feed]);
+  const media = gallery[Math.min(activeMediaIndex, gallery.length - 1)];
   const previewW = screenW - PAD * 2 - wp(20);
-  const previewH = previewW / media.aspectRatio;
+  const previewH = previewW / gallery[0].aspectRatio;
+  const hasGallery = gallery.length > 1;
 
   const handleLike = () => {
     setLiked((value) => !value);
@@ -183,18 +192,67 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
             </View>
 
             <View style={[$.previewWrap, { backgroundColor: dark ? '#1E2027' : '#F8FAFC', height: previewH }]}>
-              <SvgXml xml={media.svg} width={previewW} height={previewH} />
+              <ScrollView
+                horizontal
+                pagingEnabled
+                nestedScrollEnabled
+                bounces={false}
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                onMomentumScrollEnd={(event) => {
+                  const nextIndex = Math.round(event.nativeEvent.contentOffset.x / previewW);
+                  setActiveMediaIndex(Math.max(0, Math.min(gallery.length - 1, nextIndex)));
+                }}
+              >
+                {gallery.map((item, index) => (
+                  <Pressable
+                    key={`${feed.id}-detail-media-${index}`}
+                    style={{ width: previewW, height: previewH }}
+                    onPress={() => {
+                      setActiveMediaIndex(index);
+                      setViewerVisible(true);
+                    }}
+                  >
+                    {item.uri ? (
+                      <Image source={{ uri: item.uri }} style={{ width: previewW, height: previewH }} resizeMode="cover" />
+                    ) : (
+                      <SvgXml xml={item.svg} width={previewW} height={previewH} />
+                    )}
+                  </Pressable>
+                ))}
+              </ScrollView>
               <View style={$.mediaTopBadges}>
                 <View style={$.mediaTypeBadge}>
                   <Text style={$.mediaTypeBadgeText}>{feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>
                 </View>
-                {feed.media.type === 'video' && feed.media.durationSec ? (
+                {hasGallery ? (
+                  <View style={$.mediaTypeBadge}>
+                    <MCI name="image-multiple-outline" size={fp(10)} color="#FFFFFF" />
+                    <Text style={$.mediaTypeBadgeText}>{activeMediaIndex + 1}/{gallery.length}</Text>
+                  </View>
+                ) : feed.media.type === 'video' && feed.media.durationSec ? (
                   <View style={$.mediaTypeBadge}>
                     <MCI name="play" size={fp(10)} color="#FFFFFF" />
                     <Text style={$.mediaTypeBadgeText}>{`0:${`${feed.media.durationSec}`.padStart(2, '0')}`}</Text>
                   </View>
                 ) : null}
               </View>
+              {hasGallery ? (
+                <View style={$.mediaDots}>
+                  {gallery.map((item, index) => (
+                    <View
+                      key={`${feed.id}-detail-dot-${index}`}
+                      style={[
+                        $.mediaDot,
+                        {
+                          width: index === activeMediaIndex ? wp(14) : wp(5),
+                          backgroundColor: index === activeMediaIndex ? '#FFFFFF' : 'rgba(255,255,255,0.58)',
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              ) : null}
             </View>
 
             <View style={[$.actionBar, { borderBottomColor: colors.border }]}>
@@ -256,6 +314,13 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
           </HoverView>
         </View>
       </KeyboardAvoidingView>
+
+      <FeedMediaViewer
+        visible={viewerVisible}
+        gallery={gallery}
+        initialIndex={activeMediaIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -365,6 +430,20 @@ const $ = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: fp(10),
     fontWeight: '700',
+  },
+  mediaDots: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: wp(12),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(5),
+  },
+  mediaDot: {
+    height: wp(5),
+    borderRadius: wp(999),
   },
   actionBar: {
     flexDirection: 'row',

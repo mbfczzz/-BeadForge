@@ -15,7 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { addressRegionApi, buildRegionSelection } from '../../api/address';
 import type { ProfileAddressItem } from '../../api/profile';
 import type { AddressRegionNode } from '../../mock/address';
-import { AppHeader, SurfaceCard, Toggle } from '../../components/common';
+import { AppHeader, Toggle } from '../../components/common';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 
@@ -36,6 +36,8 @@ type DraftAddress = {
   tag: string;
   isDefault: boolean;
 };
+
+type DraftErrors = Partial<Record<keyof Pick<DraftAddress, 'receiver' | 'phone' | 'region' | 'detail'>, string>>;
 
 const EMPTY_DRAFT: DraftAddress = {
   receiver: '',
@@ -90,6 +92,7 @@ export const AddressScreen: React.FC<Props> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftAddress>(EMPTY_DRAFT);
   const [initialDraft, setInitialDraft] = useState<DraftAddress>(EMPTY_DRAFT);
+  const [draftErrors, setDraftErrors] = useState<DraftErrors>({});
   const [toastMessage, setToastMessage] = useState('');
   const [regionTree, setRegionTree] = useState<AddressRegionNode[]>(addressRegionApi.getFallbackRegionTree());
   const fallbackTree = addressRegionApi.getFallbackRegionTree();
@@ -143,6 +146,7 @@ export const AddressScreen: React.FC<Props> = ({
     setEditingId(null);
     setDraft(EMPTY_DRAFT);
     setInitialDraft(EMPTY_DRAFT);
+    setDraftErrors({});
   };
 
   const requestCloseEditor = () => {
@@ -167,6 +171,7 @@ export const AddressScreen: React.FC<Props> = ({
     setEditingId(null);
     setDraft(nextDraft);
     setInitialDraft(nextDraft);
+    setDraftErrors({});
     setEditorVisible(true);
   };
 
@@ -182,6 +187,7 @@ export const AddressScreen: React.FC<Props> = ({
     setEditingId(item.id);
     setDraft(nextDraft);
     setInitialDraft(nextDraft);
+    setDraftErrors({});
     setEditorVisible(true);
   };
 
@@ -217,13 +223,18 @@ export const AddressScreen: React.FC<Props> = ({
       isDefault: draft.isDefault,
     };
 
-    if (!payload.receiver || !payload.phone || !payload.region || !payload.detail) {
-      Alert.alert('信息不完整', '请补全收件人、手机号、地区和详细地址。');
-      return;
+    const nextErrors: DraftErrors = {};
+    if (!payload.receiver) nextErrors.receiver = '请输入收件人姓名';
+    if (!payload.phone) nextErrors.phone = '请输入手机号';
+    if (!payload.region) nextErrors.region = '请选择省 / 市 / 区';
+    if (!payload.detail) nextErrors.detail = '请输入详细地址';
+    if (payload.phone && !/^1\d{10}$/.test(payload.phone)) {
+      nextErrors.phone = '请输入正确的 11 位手机号';
     }
 
-    if (!/^1\\d{10}$/.test(payload.phone)) {
-      Alert.alert('手机号格式错误', '请输入正确的 11 位手机号。');
+    setDraftErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
 
@@ -278,7 +289,7 @@ export const AddressScreen: React.FC<Props> = ({
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {sortedAddresses.length === 0 ? (
-          <SurfaceCard style={styles.emptyCard}>
+          <View style={[styles.emptyCard, { borderColor: colors.divider }]}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.accentLight }]}>
               <Feather name="map-pin" size={18} color={colors.accent} />
             </View>
@@ -289,60 +300,70 @@ export const AddressScreen: React.FC<Props> = ({
             <TouchableOpacity activeOpacity={0.88} onPress={openCreate} style={[styles.emptyButton, { backgroundColor: colors.accent }]}>
               <Text style={styles.emptyButtonText}>新增地址</Text>
             </TouchableOpacity>
-          </SurfaceCard>
+          </View>
         ) : null}
 
-        {sortedAddresses.map((item) => (
-          <SurfaceCard key={item.id} style={styles.card}>
-            <View style={styles.cardTop}>
-              <View style={styles.userRow}>
-                <Text style={[styles.receiver, { color: colors.text }]}>{item.receiver}</Text>
-                <Text style={[styles.phone, { color: colors.textSecondary }]}>{item.phone}</Text>
-              </View>
-              {!item.isDefault ? (
-                <TouchableOpacity
-                  activeOpacity={0.82}
-                  onPress={() => handleSetDefault(item.id)}
-                  style={[styles.defaultActionBtn, { backgroundColor: colors.accentLight }]}
-                >
-                  <Text style={[styles.defaultActionText, { color: colors.accent }]}>设为默认</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-
-            <View style={styles.addressRow}>
-              {item.tag ? (
-                <View style={[styles.tagBadge, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                  <Text style={[styles.tagText, { color: colors.textSecondary }]}>{item.tag}</Text>
+        {sortedAddresses.length > 0 ? (
+          <View style={[styles.listWrap, { borderColor: colors.border }]}>
+            {sortedAddresses.map((item, index) => (
+              <View
+                key={item.id}
+                style={[
+                  styles.card,
+                  index > 0 && { borderTopColor: colors.border, borderTopWidth: 1 },
+                ]}
+              >
+                <View style={styles.cardTop}>
+                  <View style={styles.userRow}>
+                    <Text style={[styles.receiver, { color: colors.text }]}>{item.receiver}</Text>
+                    <Text style={[styles.phone, { color: colors.textSecondary }]}>{item.phone}</Text>
+                  </View>
+                  {!item.isDefault ? (
+                    <TouchableOpacity
+                      activeOpacity={0.82}
+                      onPress={() => handleSetDefault(item.id)}
+                      style={[styles.defaultActionBtn, { backgroundColor: colors.accentLight }]}
+                    >
+                      <Text style={[styles.defaultActionText, { color: colors.accent }]}>设为默认</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
-              ) : null}
-              <Text style={[styles.addressText, { color: colors.textSecondary }]}>
-                {item.region} {item.detail}
-              </Text>
-            </View>
 
-            <View style={[styles.actionRow, { borderTopColor: colors.divider }]}>
-              {item.isDefault ? (
-                <View style={[styles.defaultBadge, { backgroundColor: colors.accentLight }]}>
-                  <Text style={[styles.defaultText, { color: colors.accent }]}>默认</Text>
+                <View style={styles.addressRow}>
+                  {item.tag ? (
+                    <View style={[styles.tagBadge, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                      <Text style={[styles.tagText, { color: colors.textSecondary }]}>{item.tag}</Text>
+                    </View>
+                  ) : null}
+                  <Text style={[styles.addressText, { color: colors.textSecondary }]}>
+                    {item.region} {item.detail}
+                  </Text>
                 </View>
-              ) : (
-                <View />
-              )}
 
-              <View style={styles.actionGroup}>
-                <TouchableOpacity activeOpacity={0.82} onPress={() => openEdit(item)} style={styles.actionBtn}>
-                  <Feather name="edit-3" size={15} color={colors.textSecondary} />
-                  <Text style={[styles.actionText, { color: colors.textSecondary }]}>编辑</Text>
-                </TouchableOpacity>
-                <TouchableOpacity activeOpacity={0.82} onPress={() => confirmDelete(item.id)} style={styles.actionBtn}>
-                  <Feather name="trash-2" size={15} color={colors.error} />
-                  <Text style={[styles.actionText, { color: colors.error }]}>删除</Text>
-                </TouchableOpacity>
+                <View style={styles.actionRow}>
+                  {item.isDefault ? (
+                    <View style={[styles.defaultBadge, { backgroundColor: colors.accentLight }]}>
+                      <Text style={[styles.defaultText, { color: colors.accent }]}>默认</Text>
+                    </View>
+                  ) : (
+                    <View />
+                  )}
+
+                  <View style={styles.actionGroup}>
+                    <TouchableOpacity activeOpacity={0.82} onPress={() => openEdit(item)} style={styles.actionBtn}>
+                      <Feather name="edit-3" size={15} color={colors.textSecondary} />
+                      <Text style={[styles.actionText, { color: colors.textSecondary }]}>编辑</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity activeOpacity={0.82} onPress={() => confirmDelete(item.id)} style={styles.actionBtn}>
+                      <Feather name="trash-2" size={15} color={colors.error} />
+                      <Text style={[styles.actionText, { color: colors.error }]}>删除</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-            </View>
-          </SurfaceCard>
-        ))}
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
 
       <Modal visible={editorVisible} animationType="slide" transparent onRequestClose={requestCloseEditor}>
@@ -356,62 +377,75 @@ export const AddressScreen: React.FC<Props> = ({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>收件人</Text>
-                <TextInput
-                  value={draft.receiver}
-                  onChangeText={(receiver) => setDraft((current) => ({ ...current, receiver }))}
-                  placeholder="请输入收件人姓名"
-                  placeholderTextColor={colors.textHint}
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                />
-              </View>
+              <View style={styles.formGroup}>
+                <View style={[styles.formRow, { backgroundColor: colors.inputBg, borderColor: draftErrors.receiver ? colors.error : colors.border }]}>
+                  <Text style={[styles.fieldLabel, { color: colors.text }]}>收件人</Text>
+                  <TextInput
+                    value={draft.receiver}
+                    onChangeText={(receiver) => {
+                      setDraft((current) => ({ ...current, receiver }));
+                      setDraftErrors((current) => ({ ...current, receiver: undefined }));
+                    }}
+                    placeholder="请输入收件人姓名"
+                    placeholderTextColor={colors.textHint}
+                    style={[styles.input, { color: colors.text }]}
+                  />
+                </View>
+                {draftErrors.receiver ? <Text style={styles.errorText}>{draftErrors.receiver}</Text> : null}
 
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>手机号</Text>
-                <TextInput
-                  value={draft.phone}
-                  onChangeText={(phone) => setDraft((current) => ({ ...current, phone }))}
-                  keyboardType="phone-pad"
-                  maxLength={11}
-                  placeholder="请输入 11 位手机号"
-                  placeholderTextColor={colors.textHint}
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                />
-              </View>
+                <View style={[styles.formRow, { backgroundColor: colors.inputBg, borderColor: draftErrors.phone ? colors.error : colors.border }]}>
+                  <Text style={[styles.fieldLabel, { color: colors.text }]}>手机号</Text>
+                  <TextInput
+                    value={draft.phone}
+                    onChangeText={(phone) => {
+                      setDraft((current) => ({ ...current, phone }));
+                      setDraftErrors((current) => ({ ...current, phone: undefined }));
+                    }}
+                    keyboardType="phone-pad"
+                    maxLength={11}
+                    placeholder="请输入 11 位手机号"
+                    placeholderTextColor={colors.textHint}
+                    style={[styles.input, { color: colors.text }]}
+                  />
+                </View>
+                {draftErrors.phone ? <Text style={styles.errorText}>{draftErrors.phone}</Text> : null}
 
-              <View style={styles.field}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>地区</Text>
-                <TouchableOpacity activeOpacity={0.82} onPress={openRegionPicker} style={[styles.selector, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                <TouchableOpacity
+                  activeOpacity={0.82}
+                  onPress={() => {
+                    setDraftErrors((current) => ({ ...current, region: undefined }));
+                    openRegionPicker();
+                  }}
+                  style={[styles.formRow, { backgroundColor: colors.inputBg, borderColor: draftErrors.region ? colors.error : colors.border }]}
+                >
+                  <Text style={[styles.fieldLabel, { color: colors.text }]}>地区</Text>
                   <Text style={[styles.selectorText, { color: draft.region ? colors.text : colors.textHint }]}>
                     {draft.region || '请选择省 / 市 / 区'}
                   </Text>
                   <Feather name="chevron-right" size={16} color={colors.textHint} />
                 </TouchableOpacity>
+                {draftErrors.region ? <Text style={styles.errorText}>{draftErrors.region}</Text> : null}
               </View>
 
-              <View style={styles.field}>
+              <View style={[styles.field, styles.detailField]}>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>详细地址</Text>
                 <TextInput
                   value={draft.detail}
-                  onChangeText={(detail) => setDraft((current) => ({ ...current, detail }))}
+                  onChangeText={(detail) => {
+                    setDraft((current) => ({ ...current, detail }));
+                    setDraftErrors((current) => ({ ...current, detail: undefined }));
+                  }}
                   placeholder="街道门牌、楼栋房号等"
                   placeholderTextColor={colors.textHint}
                   multiline
                   textAlignVertical="top"
-                  style={[styles.textarea, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  style={[styles.textarea, { backgroundColor: colors.inputBg, borderColor: draftErrors.detail ? colors.error : colors.border, color: colors.text }]}
                 />
+                {draftErrors.detail ? <Text style={styles.errorText}>{draftErrors.detail}</Text> : null}
               </View>
 
-              <View style={styles.field}>
+              <View style={styles.tagBlock}>
                 <Text style={[styles.fieldLabel, { color: colors.text }]}>地址标签</Text>
-                <TextInput
-                  value={draft.tag}
-                  onChangeText={(tag) => setDraft((current) => ({ ...current, tag }))}
-                  placeholder="例如：家 / 公司"
-                  placeholderTextColor={colors.textHint}
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                />
                 <View style={styles.tagOptionRow}>
                   {TAG_OPTIONS.map((item) => {
                     const active = draft.tag === item;
@@ -537,15 +571,16 @@ export const AddressScreen: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { paddingHorizontal: wp(16), paddingTop: wp(12), paddingBottom: wp(40) },
+  content: { paddingTop: wp(8), paddingBottom: wp(40) },
   headerAction: { fontSize: fp(14), fontWeight: '700' },
-  emptyCard: { alignItems: 'center', marginBottom: wp(12) },
+  emptyCard: { alignItems: 'center', marginTop: wp(18), paddingHorizontal: wp(24), paddingVertical: wp(40), borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
   emptyIcon: { width: wp(44), height: wp(44), borderRadius: wp(22), alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { marginTop: wp(12), fontSize: fp(15), fontWeight: '700' },
   emptyDesc: { marginTop: wp(8), fontSize: fp(12), lineHeight: fp(18), textAlign: 'center' },
   emptyButton: { marginTop: wp(16), minWidth: wp(108), height: wp(40), borderRadius: wp(14), alignItems: 'center', justifyContent: 'center' },
   emptyButtonText: { color: '#FFFFFF', fontSize: fp(13), fontWeight: '800' },
-  card: { marginBottom: wp(12) },
+  listWrap: { borderTopWidth: 1, borderBottomWidth: 1 },
+  card: { paddingHorizontal: wp(16), paddingVertical: wp(16) },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: wp(10) },
   userRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: wp(10) },
   receiver: { fontSize: fp(15), fontWeight: '700' },
@@ -558,26 +593,48 @@ const styles = StyleSheet.create({
   tagBadge: { marginRight: wp(8), paddingHorizontal: wp(8), paddingVertical: wp(4), borderRadius: wp(999), borderWidth: 1 },
   tagText: { fontSize: fp(10), fontWeight: '700' },
   addressText: { flex: 1, fontSize: fp(13), lineHeight: fp(20) },
-  actionRow: { marginTop: wp(14), paddingTop: wp(12), borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  actionRow: { marginTop: wp(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   actionGroup: { flexDirection: 'row', alignItems: 'center', gap: wp(14) },
   actionBtn: { flexDirection: 'row', alignItems: 'center' },
   actionText: { marginLeft: wp(5), fontSize: fp(12), fontWeight: '600' },
   overlay: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { maxHeight: '88%', borderTopLeftRadius: wp(24), borderTopRightRadius: wp(24), paddingHorizontal: wp(16), paddingTop: wp(16), paddingBottom: wp(20) },
+  sheet: { maxHeight: '90%', borderTopLeftRadius: wp(24), borderTopRightRadius: wp(24), paddingHorizontal: wp(16), paddingTop: wp(18), paddingBottom: wp(18) },
   regionSheet: { borderTopLeftRadius: wp(24), borderTopRightRadius: wp(24), paddingHorizontal: wp(16), paddingTop: wp(16), paddingBottom: wp(20) },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: wp(10) },
   sheetTitle: { fontSize: fp(16), fontWeight: '800' },
   sheetClose: { fontSize: fp(13), fontWeight: '600' },
-  field: { marginTop: wp(12) },
-  fieldLabel: { marginBottom: wp(8), fontSize: fp(13), fontWeight: '700' },
-  input: { height: wp(44), borderRadius: wp(14), borderWidth: 1, paddingHorizontal: wp(14), fontSize: fp(14) },
-  selector: { height: wp(44), borderRadius: wp(14), borderWidth: 1, paddingHorizontal: wp(14), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  selectorText: { fontSize: fp(14) },
+  formGroup: { marginTop: wp(12), gap: wp(10) },
+  formRow: {
+    minHeight: wp(50),
+    borderWidth: 1,
+    borderRadius: wp(15),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(12),
+    paddingHorizontal: wp(14),
+  },
+  field: { marginTop: wp(14) },
+  detailField: { paddingBottom: wp(2) },
+  fieldLabel: { width: wp(72), fontSize: fp(13), fontWeight: '800' },
+  input: { flex: 1, minHeight: wp(48), paddingVertical: 0, fontSize: fp(14), textAlign: 'right' },
+  selectorText: { flex: 1, fontSize: fp(14), textAlign: 'right' },
   textarea: { minHeight: wp(96), borderRadius: wp(16), borderWidth: 1, paddingHorizontal: wp(14), paddingVertical: wp(12), fontSize: fp(14) },
-  tagOptionRow: { marginTop: wp(10), flexDirection: 'row', flexWrap: 'wrap', gap: wp(8) },
-  tagOption: { paddingHorizontal: wp(12), paddingVertical: wp(7), borderRadius: wp(999), borderWidth: 1 },
+  tagOptionRow: { marginTop: wp(2), flexDirection: 'row', flexWrap: 'wrap', gap: wp(8) },
+  tagBlock: { marginTop: wp(14) },
+  tagOption: { minWidth: wp(58), height: wp(34), paddingHorizontal: wp(14), borderRadius: wp(12), borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   tagOptionText: { fontSize: fp(12), fontWeight: '600' },
-  defaultRow: { marginTop: wp(14), borderRadius: wp(16), borderWidth: 1, paddingHorizontal: wp(14), paddingVertical: wp(12), flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: wp(12) },
+  errorText: { marginTop: -wp(4), marginLeft: wp(6), color: '#EF4444', fontSize: fp(11), fontWeight: '700' },
+  defaultRow: {
+    marginTop: wp(14),
+    borderWidth: 1,
+    borderRadius: wp(16),
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(13),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: wp(12),
+  },
   defaultTextWrap: { flex: 1 },
   defaultRowTitle: { fontSize: fp(14), fontWeight: '700' },
   defaultRowDesc: { marginTop: wp(4), fontSize: fp(12) },
@@ -587,7 +644,7 @@ const styles = StyleSheet.create({
   regionColumn: { flex: 1, maxHeight: wp(220), borderRadius: wp(16), borderWidth: 1 },
   regionOption: { minHeight: wp(44), alignItems: 'center', justifyContent: 'center', paddingHorizontal: wp(10) },
   regionOptionText: { fontSize: fp(12), fontWeight: '600', textAlign: 'center' },
-  saveButton: { marginTop: wp(18), height: wp(44), borderRadius: wp(14), alignItems: 'center', justifyContent: 'center' },
+  saveButton: { marginTop: wp(18), height: wp(42), borderRadius: wp(11), alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch' },
   saveText: { color: '#FFFFFF', fontSize: fp(14), fontWeight: '800' },
   toastWrap: { position: 'absolute', left: 0, right: 0, bottom: wp(32), alignItems: 'center' },
   toast: { borderRadius: wp(999), paddingHorizontal: wp(16), paddingVertical: wp(10) },

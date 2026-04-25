@@ -5,6 +5,7 @@ export interface FeedMediaData {
   demoAssetId: string;
   aspectRatio: number;
   durationSec?: number;
+  assetUris?: string[];
 }
 
 export interface FeedAuthorData {

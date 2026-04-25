@@ -16,7 +16,9 @@ export type RootStackParamList = {
   ResourceDetail: { resourceId: number };
   Editor: { mode: EditorMode; cols: number; rows: number };
   FeedDetail: { feed: FeedItemData };
+  PublishComposer: undefined;
   UserProfile: { userName: string };
+  DirectMessage: { userName: string };
   ProductDetail: { product: ProductData };
   Cart: undefined;
   AddressManage: undefined;

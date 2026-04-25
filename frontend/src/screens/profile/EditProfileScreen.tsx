@@ -15,14 +15,44 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { Avatar } from '../../components/common';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(14);
+const PROFILE_BLUE = '#3B82F6';
 const GENDER_OPTIONS = ['男', '女', '保密'] as const;
+
+function getGenderBadgeMeta(gender?: string | null) {
+  const normalized = (gender || '').trim().toLowerCase();
+
+  if (normalized.includes('男') || normalized === 'male') {
+    return { icon: 'gender-male', color: '#2563EB', bg: '#EAF2FF' };
+  }
+
+  if (normalized.includes('女') || normalized === 'female') {
+    return { icon: 'gender-female', color: '#EC4899', bg: '#FFEAF3' };
+  }
+
+  return { icon: 'gender-male-female', color: '#64748B', bg: '#EEF4FF' };
+}
+
+function GenderBadge({ gender }: { gender?: string | null }) {
+  const normalized = (gender || '').trim().toLowerCase();
+  if (!normalized || normalized.includes('保密') || normalized === 'secret') {
+    return null;
+  }
+
+  const meta = getGenderBadgeMeta(gender);
+
+  return (
+    <View style={[styles.genderBadge, { backgroundColor: meta.bg }]}>
+      <MCI name={meta.icon as any} size={fp(15)} color={meta.color} />
+    </View>
+  );
+}
 
 interface Props {
   onBack: () => void;
@@ -34,6 +64,7 @@ interface InputRowProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   accentPlaceholder?: boolean;
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface SelectRowProps {
@@ -41,6 +72,7 @@ interface SelectRowProps {
   value: string;
   placeholder?: string;
   onPress: () => void;
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface BottomSheetPickerProps {
@@ -52,8 +84,17 @@ interface BottomSheetPickerProps {
   onClose: () => void;
 }
 
-function SectionCard({ children }: { children: React.ReactNode }) {
-  return <View style={styles.sectionCard}>{children}</View>;
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.sectionBlock}>
+      <Text style={[styles.sectionTitle, { color: colors.textHint }]}>{title}</Text>
+      <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {children}
+      </View>
+    </View>
+  );
 }
 
 function InputRow({
@@ -62,6 +103,7 @@ function InputRow({
   onChangeText,
   placeholder,
   accentPlaceholder = false,
+  icon,
 }: InputRowProps) {
   const { colors } = useTheme();
   const displayColor = value
@@ -72,7 +114,12 @@ function InputRow({
 
   return (
     <View style={styles.row}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <View style={styles.labelWrap}>
+        <View style={[styles.rowIcon, { backgroundColor: colors.inputBg }]}>
+          <Feather name={icon} size={fp(15)} color={colors.textSecondary} />
+        </View>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      </View>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -85,13 +132,18 @@ function InputRow({
   );
 }
 
-function SelectRow({ label, value, placeholder, onPress }: SelectRowProps) {
+function SelectRow({ label, value, placeholder, onPress, icon }: SelectRowProps) {
   const { colors } = useTheme();
   const resolvedValue = value || placeholder || '';
 
   return (
     <TouchableOpacity activeOpacity={0.8} onPress={onPress} style={styles.row}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      <View style={styles.labelWrap}>
+        <View style={[styles.rowIcon, { backgroundColor: colors.inputBg }]}>
+          <Feather name={icon} size={fp(15)} color={colors.textSecondary} />
+        </View>
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      </View>
       <View style={styles.selectValueWrap}>
         <Text
           style={[
@@ -364,6 +416,8 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
     [avatar, bio, birthday, gender, nickname, user],
   );
 
+  const displayName = nickname.trim() || user?.nickname?.trim() || user?.username || 'BF';
+
   const handleBack = useCallback(() => {
     if (!changed || loading) {
       onBack();
@@ -434,7 +488,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: '#F4F6FA' }]} edges={['top']}>
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.root}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -449,11 +503,19 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
             <Feather name="arrow-left" size={fp(20)} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.navTitle, { color: colors.text }]}>个人信息</Text>
-          <TouchableOpacity onPress={handleSave} disabled={!changed || loading} activeOpacity={0.75}>
+          <TouchableOpacity
+            onPress={handleSave}
+            disabled={!changed || loading}
+            activeOpacity={0.75}
+            style={[
+              styles.saveButton,
+              { backgroundColor: !changed || loading ? colors.inputBg : PROFILE_BLUE },
+            ]}
+          >
             <Text
               style={[
                 styles.saveText,
-                { color: !changed || loading ? colors.textHint : colors.text },
+                { color: !changed || loading ? colors.textHint : '#FFFFFF' },
               ]}
             >
               {loading ? '保存中' : '保存'}
@@ -462,19 +524,30 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          <SectionCard>
-            <TouchableOpacity
-              activeOpacity={0.82}
-              onPress={handlePickAvatar}
-              style={[styles.row, styles.avatarRow]}
-            >
-              <Text style={[styles.label, { color: colors.text }]}>我的头像</Text>
-              <Avatar uri={avatar} name={nickname || user?.username || 'BF'} size={wp(48)} />
-            </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.84}
+            onPress={handlePickAvatar}
+            style={[styles.profileHero, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <View style={styles.avatarStack}>
+              <Avatar uri={avatar} name={displayName} size={wp(72)} />
+              <View style={styles.cameraBadge}>
+                <Feather name="camera" size={fp(13)} color="#FFFFFF" />
+              </View>
+            </View>
+            <View style={styles.heroCopy}>
+              <View style={styles.heroTitleRow}>
+                <Text style={[styles.heroTitle, { color: colors.text }]} numberOfLines={1}>{displayName}</Text>
+                <GenderBadge gender={gender} />
+              </View>
+              <Text style={[styles.heroDesc, { color: colors.textHint }]}>点击更换头像，建议使用清晰的成品或个人标识。</Text>
+            </View>
+            <Feather name="chevron-right" size={fp(18)} color={colors.textHint} />
+          </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
+          <SectionCard title="基础资料">
             <InputRow
+              icon="user"
               label="昵称"
               value={nickname}
               onChangeText={setNickname}
@@ -484,6 +557,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
             <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
             <InputRow
+              icon="edit-3"
               label="个性签名"
               value={bio}
               onChangeText={setBio}
@@ -492,10 +566,11 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
             />
           </SectionCard>
 
-          <SectionCard>
-            <SelectRow label="性别" value={gender} onPress={() => setGenderVisible(true)} />
+          <SectionCard title="个人资料">
+            <SelectRow icon="users" label="性别" value={gender} onPress={() => setGenderVisible(true)} />
             <View style={[styles.divider, { backgroundColor: colors.divider }]} />
             <SelectRow
+              icon="calendar"
               label="生日"
               value={birthday}
               placeholder="点击添加"
@@ -571,7 +646,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nav: {
-    height: wp(54),
+    height: wp(56),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -586,43 +661,119 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     fontSize: fp(17),
-    fontWeight: '700',
+    fontWeight: '900',
+  },
+  saveButton: {
+    minWidth: wp(58),
+    height: wp(32),
+    borderRadius: wp(16),
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: wp(12),
   },
   saveText: {
-    minWidth: wp(36),
     textAlign: 'right',
-    fontSize: fp(16),
-    fontWeight: '700',
+    fontSize: fp(13),
+    fontWeight: '900',
   },
   content: {
+    paddingHorizontal: PAD,
+    paddingTop: wp(16),
+    paddingBottom: wp(44),
+    gap: wp(16),
+  },
+  profileHero: {
+    minHeight: wp(112),
+    borderRadius: wp(18),
+    borderWidth: 1,
     paddingHorizontal: wp(14),
-    paddingTop: wp(14),
-    paddingBottom: wp(40),
-    gap: wp(10),
+    paddingVertical: wp(14),
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarStack: {
+    position: 'relative',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    right: -wp(2),
+    bottom: -wp(2),
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: PROFILE_BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  heroCopy: {
+    flex: 1,
+    marginLeft: wp(14),
+    marginRight: wp(8),
+  },
+  heroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(7),
+  },
+  heroTitle: {
+    flexShrink: 1,
+    fontSize: fp(16),
+    fontWeight: '900',
+  },
+  genderBadge: {
+    width: wp(22),
+    height: wp(22),
+    borderRadius: wp(11),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroDesc: {
+    fontSize: fp(11),
+    lineHeight: fp(17),
+    marginTop: wp(5),
+  },
+  sectionBlock: {
+    gap: wp(7),
+  },
+  sectionTitle: {
+    paddingHorizontal: wp(3),
+    fontSize: fp(12),
+    fontWeight: '900',
   },
   sectionCard: {
     overflow: 'hidden',
-    borderRadius: wp(18),
-    backgroundColor: '#FFFFFF',
+    borderRadius: wp(16),
+    borderWidth: 1,
   },
   row: {
-    minHeight: wp(60),
+    minHeight: wp(58),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: PAD,
-  },
-  avatarRow: {
-    minHeight: wp(78),
+    paddingHorizontal: wp(12),
   },
   label: {
-    fontSize: fp(15),
-    fontWeight: '600',
+    fontSize: fp(14),
+    fontWeight: '800',
+  },
+  labelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(9),
+  },
+  rowIcon: {
+    width: wp(32),
+    height: wp(32),
+    borderRadius: wp(10),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   valueInput: {
     flex: 1,
-    marginLeft: wp(20),
-    fontSize: fp(15),
+    marginLeft: wp(14),
+    fontSize: fp(14),
     paddingVertical: 0,
   },
   selectValueWrap: {
@@ -632,11 +783,12 @@ const styles = StyleSheet.create({
     marginLeft: wp(18),
   },
   selectValue: {
-    fontSize: fp(15),
+    fontSize: fp(14),
+    fontWeight: '600',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: PAD,
+    marginLeft: wp(56),
   },
   overlay: {
     flex: 1,

@@ -1,4 +1,5 @@
 import type { HomeBannerItem } from './discovery';
+import client from './client';
 
 export type ResourceAccessMode = 'free' | 'points' | 'member';
 
@@ -15,6 +16,10 @@ export interface MaterialProduct {
   icon: string;
   cat: string;
   specs: string[];
+  imageUrls?: string;
+  services?: string;
+  promotions?: string;
+  detailSections?: string;
 }
 
 export interface ProductData {
@@ -30,7 +35,79 @@ export interface ProductData {
   icon: string;
   category: string;
   specs?: string;
+  imageUrls?: string;
+  services?: string;
+  promotions?: string;
+  detailSections?: string;
 }
+
+interface PageData<T> {
+  records: T[];
+  total: number;
+  current: number;
+  size: number;
+}
+
+interface ApiRes<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+function stringifyArray(value: unknown): string | undefined {
+  return Array.isArray(value) && value.length > 0 ? JSON.stringify(value) : undefined;
+}
+
+export function productDataToMaterialProduct(product: ProductData): MaterialProduct {
+  let specs: string[] = [];
+  let embeddedImageUrls: string | undefined;
+  let embeddedServices: string | undefined;
+  let embeddedPromotions: string | undefined;
+  let embeddedDetailSections: string | undefined;
+
+  if (product.specs) {
+    try {
+      const parsed = JSON.parse(product.specs);
+      if (Array.isArray(parsed)) {
+        specs = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        specs = Array.isArray(parsed.items) ? parsed.items : Array.isArray(parsed.specs) ? parsed.specs : [];
+        embeddedImageUrls = stringifyArray(parsed.imageUrls);
+        embeddedServices = stringifyArray(parsed.services);
+        embeddedPromotions = stringifyArray(parsed.promotions);
+        embeddedDetailSections = stringifyArray(parsed.detailSections);
+      }
+    } catch {
+      specs = product.specs.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
+    }
+  }
+
+  return {
+    id: product.id,
+    name: product.name,
+    desc: product.description,
+    price: Number(product.price),
+    originalPrice: product.originalPrice ? Number(product.originalPrice) : undefined,
+    sales: Number(product.sales || 0),
+    rating: Number(product.rating || 5),
+    tag: product.tag,
+    color: product.color || '#EF4444',
+    icon: product.icon || 'box',
+    cat: product.category || '珠子',
+    specs,
+    imageUrls: product.imageUrls || embeddedImageUrls,
+    services: product.services || embeddedServices,
+    promotions: product.promotions || embeddedPromotions,
+    detailSections: product.detailSections || embeddedDetailSections,
+  };
+}
+
+export const marketApi = {
+  getProducts: (page = 1, size = 50) =>
+    client.get<any, ApiRes<PageData<ProductData>>>('/products/list', {
+      params: { page, size },
+    }),
+};
 
 export interface PatternListingSeed {
   id: number;

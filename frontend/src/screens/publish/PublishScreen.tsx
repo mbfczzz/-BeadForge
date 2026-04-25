@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
   Animated,
+  Image,
   NativeSyntheticEvent,
   NativeScrollEvent,
   TouchableOpacity,
@@ -23,16 +24,23 @@ import { Avatar, FilterChip, HoverView, Input, PressableScale } from '../../comp
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import type { RootStackParamList, FeedItemData } from '../../navigation/types';
 import { ALL_FEEDS, COMMUNITY_TABS } from '../../mock/community';
-import { getFeedMockMedia } from '../../utils/feedMedia';
+import { getFeedMockGallery } from '../../utils/feedMedia';
 import { shadow } from '../../utils/shadow';
+import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
+import { useCommunityFeedStore } from '../../store/useCommunityFeedStore';
 
-const PAD = wp(18);
-const PREVIEW_WIDTH = screenW - PAD * 2 - wp(28);
+const COMMUNITY_BLUE = '#3B82F6';
+const COMMUNITY_ROSE = '#E11D48';
+const PAD = wp(14);
+const PREVIEW_WIDTH = screenW - PAD * 2;
 const TAG_COLORS = ['accent', 'default', 'success', 'warning'] as const;
 
 function formatCount(value: number) {
-  if (value >= 10000) return `${(value / 10000).toFixed(1)}w`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  if (value >= 10000) {
+    const next = value / 10000;
+    return `${Number.isInteger(next) ? next.toFixed(0) : next.toFixed(1)}万`;
+  }
+
   return String(value);
 }
 
@@ -53,11 +61,12 @@ export const PublishScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshRound, setRefreshRound] = useState(0);
   const [showTop, setShowTop] = useState(false);
+  const localFeeds = useCommunityFeedStore((state) => state.localFeeds);
   const scrollRef = useRef<ScrollView>(null);
   const topAnim = useRef(new Animated.Value(0)).current;
 
   const baseFeeds = useMemo(() => {
-    const rotated = rotateFeeds(ALL_FEEDS, refreshRound);
+    const rotated = rotateFeeds([...localFeeds, ...ALL_FEEDS], refreshRound);
     return rotated.map((feed, index) => ({
       ...feed,
       likeCount: feed.likeCount + ((refreshRound + index) % 3 === 0 ? refreshRound % 4 : 0),
@@ -65,7 +74,7 @@ export const PublishScreen: React.FC = () => {
       shareCount: feed.shareCount + ((refreshRound + index) % 4 === 0 ? 1 : 0),
       timeAgo: refreshRound > 0 && index < 2 ? '刚刚' : feed.timeAgo,
     }));
-  }, [refreshRound]);
+  }, [localFeeds, refreshRound]);
 
   const filteredFeeds = useMemo(() => {
     let feeds = [...baseFeeds];
@@ -114,10 +123,6 @@ export const PublishScreen: React.FC = () => {
     setSearchText(tag);
   }, []);
 
-  const handlePublish = useCallback(() => {
-    Alert.alert('发布动态', '当前演示环境只展示 mock 数据，暂不接入真实发布能力。');
-  }, []);
-
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <View style={styles.header}>
@@ -131,8 +136,8 @@ export const PublishScreen: React.FC = () => {
                 style={[
                   styles.tabPill,
                   {
-                    backgroundColor: index === tabIdx ? colors.accent : colors.surface,
-                    borderColor: index === tabIdx ? colors.accent : colors.border,
+                    backgroundColor: index === tabIdx ? colors.text : colors.surface,
+                    borderColor: index === tabIdx ? colors.text : colors.border,
                   },
                 ]}
               >
@@ -151,7 +156,7 @@ export const PublishScreen: React.FC = () => {
             }}
             style={[styles.iconButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
-            <MCI name={showSearch ? 'close' : 'account-plus-outline'} size={fp(18)} color={colors.textSecondary} />
+            <MCI name={showSearch ? 'close' : 'magnify'} size={fp(18)} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -164,10 +169,10 @@ export const PublishScreen: React.FC = () => {
             onChangeText={setSearchText}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
-            prefix={<MCI name="magnify" size={fp(16)} color={searchFocused ? colors.accent : colors.textHint} />}
+            prefix={<MCI name="magnify" size={fp(16)} color={searchFocused ? COMMUNITY_BLUE : colors.textHint} />}
             autoFocus
             containerStyle={[styles.searchField, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            style={searchFocused ? { borderColor: colors.accent, backgroundColor: colors.surface } : undefined}
+            style={searchFocused ? { borderColor: COMMUNITY_BLUE, backgroundColor: colors.surface } : undefined}
           />
         </View>
       ) : null}
@@ -176,7 +181,7 @@ export const PublishScreen: React.FC = () => {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} colors={[colors.accent]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COMMUNITY_BLUE} colors={[COMMUNITY_BLUE]} />}
         onScroll={onScroll}
         scrollEventThrottle={64}
       >
@@ -203,8 +208,8 @@ export const PublishScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      <HoverView onPress={handlePublish} style={[styles.fab, { backgroundColor: colors.accent }]} hoverScale={1.06} hoverLift={3}>
-        <MCI name="pencil-plus-outline" size={fp(22)} color="#FFFFFF" />
+      <HoverView onPress={() => navigation.navigate('PublishComposer')} style={[styles.fab, { backgroundColor: COMMUNITY_BLUE }]} hoverScale={1.06} hoverLift={3}>
+        <MCI name="plus" size={fp(25)} color="#FFFFFF" />
       </HoverView>
 
       {showTop ? (
@@ -224,6 +229,7 @@ export const PublishScreen: React.FC = () => {
           </HoverView>
         </Animated.View>
       ) : null}
+
     </SafeAreaView>
   );
 };
@@ -238,30 +244,182 @@ const FeedCard: React.FC<{
 }> = memo(({ feed, colors, navigation, onTagPress, isFirst, isFresh }) => {
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
-  const media = useMemo(() => getFeedMockMedia(feed), [feed]);
-  const previewHeight = PREVIEW_WIDTH / media.aspectRatio;
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const mediaSwipingRef = useRef(false);
+  const gallery = useMemo(() => getFeedMockGallery(feed), [feed]);
+  const media = gallery[Math.min(activeMediaIndex, gallery.length - 1)];
+  const previewHeight = PREVIEW_WIDTH / gallery[0].aspectRatio;
+  const mediaLabel = feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO';
+  const hasGallery = gallery.length > 1;
 
   return (
     <PressableScale
       scale={0.99}
-      style={{ marginHorizontal: PAD, marginTop: isFirst ? wp(12) : wp(10) }}
-      onPress={() => navigation.navigate('FeedDetail', { feed })}
+      style={{ marginHorizontal: PAD, marginTop: isFirst ? wp(10) : wp(14) }}
+      onPress={() => {
+        if (mediaSwipingRef.current) {
+          mediaSwipingRef.current = false;
+          return;
+        }
+
+        navigation.navigate('FeedDetail', { feed });
+      }}
       dataClass="card"
     >
-      <View style={[styles.feedCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[styles.feedCard, { backgroundColor: colors.surface, borderColor: colors.divider }]}>
         <View style={styles.feedHeader}>
           <Pressable style={styles.feedUserRow} onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })}>
-            <Avatar name={feed.user.name} size={wp(42)} />
+            <View style={[styles.avatarRing, { borderColor: media.accent }]}>
+              <Avatar name={feed.user.name} size={wp(34)} />
+            </View>
             <View style={styles.feedUserInfo}>
               <Text style={[styles.feedUserName, { color: colors.text }]}>{feed.user.name}</Text>
-              <Text style={[styles.feedUserTitle, { color: colors.textHint }]}>{feed.timeAgo}</Text>
+              <Text style={[styles.feedUserTitle, { color: colors.textHint }]}>
+                {feed.user.title} · {feed.timeAgo}
+              </Text>
             </View>
           </Pressable>
-          <MCI name="dots-horizontal" size={fp(20)} color={colors.textHint} />
+          <TouchableOpacity
+            activeOpacity={0.78}
+            hitSlop={wp(10)}
+            style={styles.moreButton}
+            onPress={(event) => {
+              event.stopPropagation();
+              Alert.alert('更多操作', `关于「${feed.user.name}」的这条动态`, [
+                {
+                  text: '查看作者主页',
+                  onPress: () => navigation.navigate('UserProfile', { userName: feed.user.name }),
+                },
+                {
+                  text: '不感兴趣',
+                  onPress: () => Alert.alert('已减少推荐', '后续会减少类似动态展示。'),
+                },
+                {
+                  text: '举报内容',
+                  style: 'destructive',
+                  onPress: () => Alert.alert('举报', '当前演示环境不会提交举报。'),
+                },
+                { text: '取消', style: 'cancel' },
+              ]);
+            }}
+          >
+            <MCI name="dots-horizontal" size={fp(20)} color={colors.textHint} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.mediaWrap, { height: previewHeight, backgroundColor: colors.inputBg, borderColor: colors.divider }]}>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            nestedScrollEnabled
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            onScrollBeginDrag={() => {
+              mediaSwipingRef.current = true;
+            }}
+            onScrollEndDrag={() => {
+              setTimeout(() => {
+                mediaSwipingRef.current = false;
+              }, 160);
+            }}
+            onMomentumScrollEnd={(event) => {
+              const nextIndex = Math.round(event.nativeEvent.contentOffset.x / PREVIEW_WIDTH);
+              setActiveMediaIndex(Math.max(0, Math.min(gallery.length - 1, nextIndex)));
+              setTimeout(() => {
+                mediaSwipingRef.current = false;
+              }, 160);
+            }}
+          >
+            {gallery.map((item, index) => (
+              <Pressable
+                key={`${feed.id}-media-${index}`}
+                style={{ width: PREVIEW_WIDTH, height: previewHeight }}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  if (mediaSwipingRef.current) return;
+                  setActiveMediaIndex(index);
+                  setViewerVisible(true);
+                }}
+              >
+                {item.uri ? (
+                  <Image source={{ uri: item.uri }} style={{ width: PREVIEW_WIDTH, height: previewHeight }} resizeMode="cover" />
+                ) : (
+                  <SvgXml xml={item.svg} width={PREVIEW_WIDTH} height={previewHeight} />
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={styles.mediaOverlayTop}>
+            <View style={[styles.mediaTypeBadge, { backgroundColor: `${media.accent}E6` }]}>
+              {feed.media.type === 'video' ? <MCI name="play" size={fp(11)} color="#FFFFFF" /> : null}
+              <Text style={styles.mediaTypeText}>{mediaLabel}</Text>
+            </View>
+            {hasGallery ? (
+              <View style={styles.mediaCountBadge}>
+                <MCI name="image-multiple-outline" size={fp(12)} color="#FFFFFF" />
+                <Text style={styles.mediaCountText}>{activeMediaIndex + 1}/{gallery.length}</Text>
+              </View>
+            ) : isFresh ? (
+              <View style={styles.freshBadge}>
+                <Text style={styles.freshBadgeText}>刚刚更新</Text>
+              </View>
+            ) : null}
+          </View>
+          {hasGallery ? (
+            <View style={styles.mediaDots}>
+              {gallery.map((item, index) => (
+                <View
+                  key={`${feed.id}-dot-${index}`}
+                  style={[
+                    styles.mediaDot,
+                    {
+                      width: index === activeMediaIndex ? wp(14) : wp(5),
+                      backgroundColor: index === activeMediaIndex ? '#FFFFFF' : 'rgba(255,255,255,0.58)',
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.socialActionRow}>
+          <View style={styles.socialActionLeft}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => setLiked((value) => !value)} style={styles.iconAction}>
+              <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(23)} color={liked ? COMMUNITY_ROSE : colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.countAction}
+              onPress={() => navigation.navigate('FeedDetail', { feed })}
+            >
+              <MCI name="message-outline" size={fp(23)} color={colors.text} />
+              <Text style={[styles.iconCountText, { color: colors.textSecondary }]}>
+                {formatCount(feed.commentCount)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.8} style={styles.countAction}>
+              <MCI name="send-outline" size={fp(22)} color={colors.text} />
+              <Text style={[styles.iconCountText, { color: colors.textSecondary }]}>
+                {formatCount(feed.shareCount)}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => setSaved((value) => !value)} style={styles.iconAction}>
+            <MCI name={saved ? 'bookmark' : 'bookmark-outline'} size={fp(23)} color={saved ? COMMUNITY_BLUE : colors.text} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.feedBody}>
-          <Text style={[styles.feedContent, { color: colors.textSecondary }]}>{feed.content}</Text>
+          <Text style={[styles.likeLine, { color: colors.text }]}>
+            {formatCount(feed.likeCount + (liked ? 1 : 0))} 次喜欢
+          </Text>
+          <Text style={[styles.feedContent, { color: colors.textSecondary }]}>
+            <Text style={{ color: colors.text, fontWeight: '800' }}>{feed.user.name} </Text>
+            {feed.content}
+          </Text>
           {feed.caption ? <Text style={[styles.feedCaption, { color: colors.textHint }]}>{feed.caption}</Text> : null}
 
           <View style={styles.tagWrap}>
@@ -276,36 +434,15 @@ const FeedCard: React.FC<{
               />
             ))}
           </View>
-
-          <View style={[styles.mediaWrap, { height: previewHeight, borderColor: colors.divider }]}>
-            <SvgXml xml={media.svg} width={PREVIEW_WIDTH} height={previewHeight} />
-            <View style={styles.mediaOverlayTop}>
-              <View style={styles.mediaBadgeGroup}>
-                {isFresh ? <FilterChip label="刚刚更新" active color="accent" /> : null}
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View style={[styles.actionRow, { borderTopColor: colors.divider }]}>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setLiked((value) => !value)} style={styles.actionItem}>
-            <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(18)} color={liked ? '#FF5E73' : colors.textHint} />
-            <Text style={[styles.actionText, { color: colors.textHint }]}>{formatCount(feed.likeCount + (liked ? 1 : 0))}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} style={styles.actionItem}>
-            <MCI name="message-outline" size={fp(18)} color={colors.textHint} />
-            <Text style={[styles.actionText, { color: colors.textHint }]}>{formatCount(feed.commentCount)}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => setSaved((value) => !value)} style={styles.actionItem}>
-            <MCI name={saved ? 'bookmark' : 'bookmark-outline'} size={fp(18)} color={saved ? colors.accent : colors.textHint} />
-            <Text style={[styles.actionText, { color: colors.textHint }]}>收藏</Text>
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.8} style={styles.actionItem}>
-            <MCI name="share-outline" size={fp(18)} color={colors.textHint} />
-            <Text style={[styles.actionText, { color: colors.textHint }]}>分享</Text>
-          </TouchableOpacity>
         </View>
       </View>
+
+      <FeedMediaViewer
+        visible={viewerVisible}
+        gallery={gallery}
+        initialIndex={activeMediaIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </PressableScale>
   );
 });
@@ -315,7 +452,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: PAD,
     paddingTop: wp(8),
-    paddingBottom: wp(12),
+    paddingBottom: wp(8),
   },
   headerRow: {
     flexDirection: 'row',
@@ -324,20 +461,20 @@ const styles = StyleSheet.create({
     gap: wp(12),
   },
   iconButton: {
-    width: wp(42),
-    height: wp(42),
-    borderRadius: wp(21),
+    width: wp(38),
+    height: wp(38),
+    borderRadius: wp(19),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabRow: {
-    gap: wp(10),
+    gap: wp(8),
     paddingRight: wp(6),
   },
   tabPill: {
-    minHeight: wp(34),
-    paddingHorizontal: wp(16),
+    minHeight: wp(32),
+    paddingHorizontal: wp(15),
     borderRadius: wp(999),
     borderWidth: 1,
     alignItems: 'center',
@@ -345,7 +482,7 @@ const styles = StyleSheet.create({
   },
   tabPillText: {
     fontSize: fp(12),
-    fontWeight: '700',
+    fontWeight: '800',
   },
   searchBar: {
     paddingHorizontal: PAD,
@@ -356,7 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: wp(999),
   },
   content: {
-    paddingBottom: wp(90) + BOTTOM_SAFE_H,
+    paddingBottom: wp(96) + BOTTOM_SAFE_H,
   },
   emptyState: {
     alignItems: 'center',
@@ -382,16 +519,17 @@ const styles = StyleSheet.create({
   },
   feedCard: {
     borderWidth: 1,
-    borderRadius: wp(24),
+    borderRadius: wp(22),
     overflow: 'hidden',
-    ...shadow(10, 26, 0.06, '#1D3D6B', 6),
+    ...shadow(3, 8, 0.025, '#0F172A', 1),
   },
   feedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: wp(16),
-    paddingTop: wp(16),
+    paddingHorizontal: wp(12),
+    paddingTop: wp(12),
+    paddingBottom: wp(10),
   },
   feedUserRow: {
     flexDirection: 'row',
@@ -399,42 +537,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feedUserInfo: {
-    marginLeft: wp(12),
+    marginLeft: wp(9),
     flex: 1,
   },
   feedUserName: {
-    fontSize: fp(14),
-    fontWeight: '800',
+    fontSize: fp(13),
+    fontWeight: '900',
   },
   feedUserTitle: {
-    marginTop: wp(3),
-    fontSize: fp(11),
+    marginTop: wp(2),
+    fontSize: fp(10),
+  },
+  avatarRing: {
+    width: wp(40),
+    height: wp(40),
+    borderRadius: wp(20),
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moreButton: {
+    width: wp(32),
+    height: wp(30),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   feedBody: {
-    paddingHorizontal: wp(16),
-    paddingTop: wp(12),
-    paddingBottom: wp(14),
-    gap: wp(12),
+    paddingHorizontal: wp(12),
+    paddingTop: wp(2),
+    paddingBottom: wp(13),
+    gap: wp(7),
+  },
+  likeLine: {
+    fontSize: fp(12),
+    fontWeight: '900',
   },
   feedContent: {
-    fontSize: fp(14),
-    lineHeight: fp(22),
-  },
-  feedCaption: {
     fontSize: fp(12),
     lineHeight: fp(18),
+  },
+  feedCaption: {
+    fontSize: fp(11),
+    lineHeight: fp(16),
   },
   tagWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: wp(8),
+    gap: wp(6),
   },
   tagChip: {
     marginRight: 0,
   },
   mediaWrap: {
     overflow: 'hidden',
-    borderRadius: wp(20),
+    borderRadius: 0,
     borderWidth: 1,
     position: 'relative',
   },
@@ -447,39 +603,102 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  mediaBadgeGroup: {
-    flexDirection: 'row',
-    gap: wp(6),
-  },
-  actionRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
+  mediaTypeBadge: {
+    minHeight: wp(25),
+    borderRadius: wp(13),
+    paddingHorizontal: wp(9),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: wp(10),
-    paddingVertical: wp(10),
+    gap: wp(4),
   },
-  actionItem: {
-    minWidth: wp(58),
+  mediaTypeText: {
+    color: '#FFFFFF',
+    fontSize: fp(9),
+    fontWeight: '900',
+  },
+  mediaCountBadge: {
+    minHeight: wp(25),
+    borderRadius: wp(13),
+    paddingHorizontal: wp(9),
+    backgroundColor: 'rgba(15,23,42,0.62)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(4),
+  },
+  mediaCountText: {
+    color: '#FFFFFF',
+    fontSize: fp(10),
+    fontWeight: '900',
+  },
+  freshBadge: {
+    minHeight: wp(25),
+    borderRadius: wp(13),
+    paddingHorizontal: wp(9),
+    backgroundColor: 'rgba(225,29,72,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  freshBadgeText: {
+    color: '#FFFFFF',
+    fontSize: fp(9),
+    fontWeight: '900',
+  },
+  mediaDots: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: wp(11),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: wp(5),
   },
-  actionText: {
-    fontSize: fp(11),
-    fontWeight: '600',
+  mediaDot: {
+    height: wp(5),
+    borderRadius: wp(999),
+  },
+  socialActionRow: {
+    minHeight: wp(42),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(9),
+    paddingTop: wp(7),
+  },
+  socialActionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(8),
+  },
+  iconAction: {
+    width: wp(34),
+    height: wp(30),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countAction: {
+    minWidth: wp(42),
+    height: wp(30),
+    paddingHorizontal: wp(3),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(4),
+  },
+  iconCountText: {
+    fontSize: fp(10),
+    fontWeight: '800',
   },
   fab: {
     position: 'absolute',
     right: PAD,
-    bottom: wp(104),
-    width: wp(56),
-    height: wp(56),
-    borderRadius: wp(28),
+    bottom: wp(106),
+    width: wp(52),
+    height: wp(52),
+    borderRadius: wp(26),
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow(12, 24, 0.18, '#4A90FF', 10),
+    ...shadow(10, 22, 0.18, COMMUNITY_BLUE, 9),
   },
   topFab: {
     position: 'absolute',
