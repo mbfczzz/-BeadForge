@@ -98,10 +98,13 @@ export const HomeScreen: React.FC = () => {
       });
     });
 
+    // 首次进入拉一次图纸列表（store 不再用 mock 自动填充）
+    void refreshListings();
+
     return () => {
       active = false;
     };
-  }, [setHomeBanners]);
+  }, [refreshListings, setHomeBanners]);
 
   const tabs = discoverConfig.tabs;
   const activeTab = useMemo(
