@@ -177,4 +177,5 @@ INSERT IGNORE INTO t_dict (dict_type, dict_key, label, sort_order) VALUES
 ('WALLET_LOG_TYPE', 'CHARGE',       '账户充值', 1),
 ('WALLET_LOG_TYPE', 'BUY_PATTERN',  '购买图纸', 2),
 ('WALLET_LOG_TYPE', 'BUY_PRODUCT',  '购买商品', 3),
-('WALLET_LOG_TYPE', 'REWARD',       '奖励到账', 4);
+('WALLET_LOG_TYPE', 'REWARD',       '奖励到账', 4),
+('WALLET_LOG_TYPE', 'SIGN_IN',      '每日签到', 5);

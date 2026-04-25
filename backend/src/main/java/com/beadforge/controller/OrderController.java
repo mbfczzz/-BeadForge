@@ -134,6 +134,34 @@ public class OrderController {
         return ApiResponse.success(result);
     }
 
+    /**
+     * 各状态订单数量聚合 — 供"我的"页面订单卡片红点使用。
+     * 返回结构永远包含全部状态键，新用户全为 0。
+     */
+    @GetMapping("/stat-counts")
+    public ApiResponse<Map<String, Long>> statCounts(HttpServletRequest request) {
+        Long userId = requireUser(request);
+
+        QueryWrapper<Order> qw = new QueryWrapper<>();
+        qw.select("status", "COUNT(*) AS cnt").eq("user_id", userId).groupBy("status");
+        List<Map<String, Object>> rows = orderRepo.selectMaps(qw);
+
+        Map<String, Long> result = new LinkedHashMap<>();
+        for (OrderStatus s : OrderStatus.values()) {
+            result.put(s.name().toLowerCase(), 0L);
+        }
+        for (Map<String, Object> row : rows) {
+            Object statusObj = row.get("status");
+            Object cntObj = row.get("cnt");
+            if (statusObj == null || cntObj == null) continue;
+            String key = statusObj.toString().toLowerCase();
+            if (result.containsKey(key)) {
+                result.put(key, ((Number) cntObj).longValue());
+            }
+        }
+        return ApiResponse.success(result);
+    }
+
     /** 详情 */
     @GetMapping("/{id}")
     public ApiResponse<OrderDTO> detail(@PathVariable Long id, HttpServletRequest request) {

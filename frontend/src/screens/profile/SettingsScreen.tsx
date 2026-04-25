@@ -15,6 +15,7 @@ import { AppHeader, Avatar, Toggle } from '../../components/common';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
+import { authApi } from '../../api/auth';
 import { shadow } from '../../utils/shadow';
 import { clearAppCache, formatCacheBytes, getAppCacheSummary, type CacheSummary } from '../../utils/cacheManager';
 
@@ -131,7 +132,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   const displayName = user?.nickname || user?.username || 'demo';
   const initials = useMemo(() => displayName.slice(0, 2).toUpperCase(), [displayName]);
@@ -167,27 +168,62 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
 
   const closePanel = () => setActivePanel(null);
 
-  const handleSavePassword = () => {
-    if (!oldPassword || !newPassword || !confirmPassword) {
+  const handleSavePassword = async () => {
+    if (passwordSaving) return;
+
+    const oldP = oldPassword.trim();
+    const newP = newPassword.trim();
+    const confirmP = confirmPassword.trim();
+
+    if (!oldP || !newP || !confirmP) {
       Alert.alert('请补全信息', '请输入当前密码、新密码和确认密码。');
       return;
     }
-
-    if (newPassword.length < 6) {
-      Alert.alert('密码过短', '新密码至少需要 6 位。');
+    if (newP.length < 8 || newP.length > 32) {
+      Alert.alert('密码长度不符', '新密码长度需 8-32 位。');
       return;
     }
-
-    if (newPassword !== confirmPassword) {
+    if (!/^(?=.*[A-Za-z])(?=.*\d).+$/.test(newP)) {
+      Alert.alert('密码强度不足', '新密码需同时包含字母和数字。');
+      return;
+    }
+    if (/\s/.test(newP)) {
+      Alert.alert('格式错误', '新密码不能包含空格。');
+      return;
+    }
+    if (newP === oldP) {
+      Alert.alert('密码未变更', '新密码不能与当前密码相同。');
+      return;
+    }
+    if (newP !== confirmP) {
       Alert.alert('两次密码不一致', '请重新确认新密码。');
       return;
     }
 
-    setPasswordUpdated(true);
-    setOldPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    Alert.alert('已保存', '演示环境已模拟更新登录密码。');
+    setPasswordSaving(true);
+    try {
+      await authApi.changePassword({ oldPassword: oldP, newPassword: newP });
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      Alert.alert(
+        '密码修改成功',
+        '请使用新密码重新登录。',
+        [
+          {
+            text: '重新登录',
+            onPress: () => {
+              void logout();
+            },
+          },
+        ],
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '修改失败，请稍后重试。';
+      Alert.alert('修改失败', msg);
+    } finally {
+      setPasswordSaving(false);
+    }
   };
 
   const removeDevice = (id: string) => {
@@ -218,38 +254,48 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
         <AppHeader title="登录密码" onBack={closePanel} />
         <ScrollView contentContainerStyle={$.panelContent} showsVerticalScrollIndicator={false}>
           <View style={[$.panelCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            {passwordUpdated ? (
-              <View style={[$.successBanner, { backgroundColor: colors.accentLight }]}>
-                <Feather name="check-circle" size={fp(16)} color={colors.accent} />
-                <Text style={[$.successText, { color: colors.accent }]}>密码已在本地演示状态中更新</Text>
-              </View>
-            ) : null}
             <TextInput
               value={oldPassword}
               onChangeText={setOldPassword}
               secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
               placeholder="当前密码"
               placeholderTextColor={colors.textHint}
+              editable={!passwordSaving}
               style={[$.input, { color: colors.text, backgroundColor: colors.inputBg }]}
             />
             <TextInput
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
-              placeholder="新密码，至少 6 位"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="newPassword"
+              placeholder="新密码，8-32 位且包含字母和数字"
               placeholderTextColor={colors.textHint}
+              editable={!passwordSaving}
               style={[$.input, { color: colors.text, backgroundColor: colors.inputBg }]}
             />
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="newPassword"
               placeholder="再次输入新密码"
               placeholderTextColor={colors.textHint}
+              editable={!passwordSaving}
               style={[$.input, { color: colors.text, backgroundColor: colors.inputBg }]}
             />
-            <Pressable onPress={handleSavePassword} style={[$.primaryButton, { backgroundColor: colors.accent }]}>
-              <Text style={$.primaryButtonText}>保存新密码</Text>
+            <Pressable
+              onPress={handleSavePassword}
+              disabled={passwordSaving}
+              style={[$.primaryButton, { backgroundColor: colors.accent, opacity: passwordSaving ? 0.6 : 1 }]}
+            >
+              <Text style={$.primaryButtonText}>{passwordSaving ? '保存中...' : '保存新密码'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -697,19 +743,6 @@ const $ = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: fp(13),
     fontWeight: '900',
-  },
-  successBanner: {
-    minHeight: wp(38),
-    borderRadius: wp(13),
-    paddingHorizontal: wp(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(8),
-  },
-  successText: {
-    flex: 1,
-    fontSize: fp(11),
-    fontWeight: '800',
   },
   deviceCard: {
     minHeight: wp(68),

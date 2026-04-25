@@ -13,13 +13,19 @@ import { getFeedMockMedia } from '../../utils/feedMedia';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
+import { PROFILE_TABS } from '../../mock/community';
 import {
-  PROFILE_TABS,
-  getCommunityUserFeeds,
-  getCommunityUserWorks,
-} from '../../mock/community';
-import type { CommunityUserData } from '../../api/community';
+  designApi,
+  feedApi,
+  followApi,
+  likeApi,
+  type CommunityUserData,
+  type FeedItemData,
+  type PublicDesignItem,
+  type UserLikedItem,
+} from '../../api/community';
 import { userApi } from '../../api/user';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const PAD = wp(15);
 const GRID_GAP = wp(8);
@@ -61,6 +67,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
   const { colors, dark } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [user, setUser] = useState<CommunityUserData>(() => ({
+    id: null,
     name: userName,
     title: '创作者',
     bio: '',
@@ -71,6 +78,12 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
     joinDate: '',
     tags: [],
   }));
+  const [works, setWorks] = useState<PublicDesignItem[]>([]);
+  const [feeds, setFeeds] = useState<FeedItemData[]>([]);
+  const [likedItems, setLikedItems] = useState<UserLikedItem[]>([]);
+  const [tabLoading, setTabLoading] = useState(false);
+  const [tabIndex, setTabIndex] = useState(0);
+
   useEffect(() => {
     userApi
       .getCommunityProfile(userName)
@@ -79,13 +92,84 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
       })
       .catch(() => undefined);
   }, [userName]);
-  const works = useMemo(() => getCommunityUserWorks(userName), [userName]);
-  const feeds = useMemo(() => getCommunityUserFeeds(userName), [userName]);
-  const profileGender = (user as { gender?: string | null }).gender || inferCommunityGender(user.name);
+
+  // tab 切换 → 按需拉数据（已有的就不重复拉）
+  useEffect(() => {
+    if (!user.id) return;
+    if (tabIndex === 0 && works.length === 0) {
+      setTabLoading(true);
+      designApi.byUser(user.id)
+        .then((res) => setWorks(res.data?.records || []))
+        .catch(() => setWorks([]))
+        .finally(() => setTabLoading(false));
+    } else if (tabIndex === 1 && feeds.length === 0) {
+      setTabLoading(true);
+      feedApi.byUser(user.id)
+        .then((res) => setFeeds(res.data?.records || []))
+        .catch(() => setFeeds([]))
+        .finally(() => setTabLoading(false));
+    } else if (tabIndex === 2 && likedItems.length === 0) {
+      setTabLoading(true);
+      likeApi.byUser(user.id)
+        .then((res) => setLikedItems(res.data || []))
+        .catch(() => setLikedItems([]))
+        .finally(() => setTabLoading(false));
+    }
+  }, [tabIndex, user.id]);
+
+  const profileGender = user.gender || inferCommunityGender(user.name);
 
   const [followed, setFollowed] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [blocked, setBlocked] = useState(false);
-  const [tabIndex, setTabIndex] = useState(0);
+  const currentUser = useAuthStore((state) => state.user);
+  const isSelf = currentUser?.id != null && currentUser.id === user.id;
+
+  // 进入页面回填关注状态
+  useEffect(() => {
+    let alive = true;
+    if (user.id && currentUser && !isSelf) {
+      followApi.check(user.id)
+        .then((res) => { if (alive) setFollowed(!!res.data); })
+        .catch(() => undefined);
+    } else {
+      setFollowed(false);
+    }
+    return () => { alive = false; };
+  }, [user.id, currentUser?.id, isSelf]);
+
+  const handleToggleFollow = async () => {
+    if (followBusy) return;
+    if (blocked) {
+      Alert.alert('已拉黑用户', '取消拉黑后才可以重新关注。');
+      return;
+    }
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再关注。');
+      return;
+    }
+    if (!user.id) {
+      Alert.alert('无法关注', '该用户尚未注册或信息缺失。');
+      return;
+    }
+    if (isSelf) {
+      Alert.alert('提示', '不能关注自己。');
+      return;
+    }
+    const next = !followed;
+    setFollowed(next);
+    setFollowBusy(true);
+    try {
+      if (next) await followApi.follow(user.id);
+      else await followApi.unfollow(user.id);
+    } catch (err: any) {
+      setFollowed(!next);
+      Alert.alert('操作失败', err?.message || '请稍后重试');
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
   const workGridSize = (screenW - PAD * 2 - GRID_GAP * 2) / 3;
   const mediaGridSize = (screenW - PAD * 2 - GRID_GAP) / 2;
   const stats = [
@@ -120,8 +204,15 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
       {
         text: '确认拉黑',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
           setBlocked(true);
+          if (followed && user.id) {
+            try {
+              await followApi.unfollow(user.id);
+            } catch {
+              // 拉黑成功但取消关注失败，前端先标 false，下次进入会重新校准
+            }
+          }
           setFollowed(false);
           Alert.alert('已拉黑', `已将「${user.name}」加入黑名单。`);
         },
@@ -205,25 +296,22 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
           </View>
 
           <View style={$.actionRow}>
-            <HoverView
-              onPress={() => {
-                if (blocked) {
-                  Alert.alert('已拉黑用户', '取消拉黑后才可以重新关注。');
-                  return;
-                }
-                setFollowed((value) => !value);
-              }}
-              style={[$.followBtn, {
-                backgroundColor: blocked ? colors.inputBg : followed ? 'transparent' : colors.accent,
-                borderColor: blocked || followed ? colors.border : colors.accent,
-                flex: 1,
-              }]}
-              hoverScale={1.03}
-              hoverLift={0}
-            >
-              <MCI name={blocked ? 'account-cancel-outline' : followed ? 'check' : 'plus'} size={fp(16)} color={blocked || followed ? colors.textHint : '#fff'} />
-              <Text style={[$.followBtnText, { color: blocked || followed ? colors.textHint : '#fff' }]}>{blocked ? '已拉黑' : followed ? '已关注' : '关注'}</Text>
-            </HoverView>
+            {isSelf ? null : (
+              <HoverView
+                onPress={handleToggleFollow}
+                style={[$.followBtn, {
+                  backgroundColor: blocked ? colors.inputBg : followed ? 'transparent' : colors.accent,
+                  borderColor: blocked || followed ? colors.border : colors.accent,
+                  flex: 1,
+                  opacity: followBusy ? 0.6 : 1,
+                }]}
+                hoverScale={1.03}
+                hoverLift={0}
+              >
+                <MCI name={blocked ? 'account-cancel-outline' : followed ? 'check' : 'plus'} size={fp(16)} color={blocked || followed ? colors.textHint : '#fff'} />
+                <Text style={[$.followBtnText, { color: blocked || followed ? colors.textHint : '#fff' }]}>{blocked ? '已拉黑' : followed ? '已关注' : '关注'}</Text>
+              </HoverView>
+            )}
             <HoverView
               onPress={() => {
                 if (blocked) {
@@ -277,17 +365,19 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
 
         {tabIndex === 0 && (
           <View style={$.worksContainer}>
-            {works.length === 0 ? (
+            {tabLoading && works.length === 0 ? (
+              <EmptyTab icon="view-grid-outline" text="加载中..." hint="" colors={colors} />
+            ) : works.length === 0 ? (
               <EmptyTab icon="view-grid-outline" text="还没有作品" hint="作品会在这里集中展示" colors={colors} />
             ) : (
               <View style={$.worksGrid}>
-                {works.map((work, index) => {
-                  const pattern = ALL_PATTERNS[work.patternIdx % ALL_PATTERNS.length];
+                {works.map((work) => {
+                  const pattern = ALL_PATTERNS[work.id % ALL_PATTERNS.length];
                   const beadSize = Math.max(Math.floor((workGridSize - wp(14)) / (pattern[0]?.length || 9)) - 1, 4);
 
                   return (
                     <PressableScale
-                      key={`${user.name}-${index}`}
+                      key={work.id}
                       scale={0.97}
                       style={{ width: workGridSize }}
                       onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length })}
@@ -301,8 +391,8 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                           <View style={$.workStats}>
                             <MCI name="heart-outline" size={fp(12)} color={colors.textHint} />
                             <Text style={[$.workStatText, { color: colors.textHint }]}>{work.likeCount}</Text>
-                            <MCI name="comment-outline" size={fp(12)} color={colors.textHint} />
-                            <Text style={[$.workStatText, { color: colors.textHint }]}>{work.commentCount}</Text>
+                            <MCI name="eye-outline" size={fp(12)} color={colors.textHint} />
+                            <Text style={[$.workStatText, { color: colors.textHint }]}>{work.viewCount}</Text>
                           </View>
                         </View>
                       </View>
@@ -316,7 +406,9 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
 
         {tabIndex === 1 && (
           <View style={$.feedGridWrap}>
-            {feeds.length === 0 ? (
+            {tabLoading && feeds.length === 0 ? (
+              <EmptyTab icon="text-box-outline" text="加载中..." hint="" colors={colors} />
+            ) : feeds.length === 0 ? (
               <EmptyTab icon="text-box-outline" text="还没有动态" hint="作者发布的动态会出现在这里" colors={colors} />
             ) : (
               <View style={$.feedGrid}>
@@ -351,7 +443,31 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
         )}
 
         {tabIndex === 2 && (
-          <EmptyTab icon="heart-outline" text="还没有公开喜欢内容" hint="这里通常会展示作者收藏或点赞的作品" colors={colors} />
+          tabLoading && likedItems.length === 0 ? (
+            <EmptyTab icon="heart-outline" text="加载中..." hint="" colors={colors} />
+          ) : likedItems.length === 0 ? (
+            <EmptyTab icon="heart-outline" text="还没有点赞内容" hint="ta 给过赞的作品/动态会出现在这里" colors={colors} />
+          ) : (
+            <View style={$.likedList}>
+              {likedItems.map((item) => (
+                <View key={item.id} style={[$.likedRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={[$.likedTypeBadge, { backgroundColor: item.targetType === '动态' ? '#FFE4EB' : '#E8F0FF' }]}>
+                    <Text style={[$.likedTypeText, { color: item.targetType === '动态' ? '#E5486D' : '#2563EB' }]}>{item.targetType}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[$.likedTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                    <Text style={[$.likedMeta, { color: colors.textHint }]} numberOfLines={1}>
+                      {item.author ? `${item.author} · ` : ''}{item.timeAgo}
+                    </Text>
+                  </View>
+                  <View style={$.likedStat}>
+                    <MCI name="heart" size={fp(13)} color="#EF4444" />
+                    <Text style={[$.likedStatText, { color: colors.textHint }]}>{item.likeCount}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )
         )}
       </ScrollView>
     </SafeAreaView>
@@ -565,4 +681,23 @@ const $ = StyleSheet.create({
   },
   emptyTitle: { fontSize: fp(15), fontWeight: '700' },
   emptyHint: { marginTop: wp(6), fontSize: fp(12), textAlign: 'center' },
+  likedList: { paddingHorizontal: PAD, paddingTop: wp(12), gap: wp(10) },
+  likedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(12),
+    padding: wp(12),
+    borderRadius: wp(12),
+    borderWidth: 1,
+  },
+  likedTypeBadge: {
+    paddingHorizontal: wp(8),
+    paddingVertical: wp(3),
+    borderRadius: wp(999),
+  },
+  likedTypeText: { fontSize: fp(10), fontWeight: '800' },
+  likedTitle: { fontSize: fp(13), fontWeight: '700' },
+  likedMeta: { marginTop: wp(2), fontSize: fp(11) },
+  likedStat: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
+  likedStatText: { fontSize: fp(11), fontWeight: '600' },
 });

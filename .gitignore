@@ -4,6 +4,10 @@ backend/target/
 *.jar
 *.war
 
+# 用户上传文件（运行时生成）
+backend/uploads/
+uploads/
+
 # IDE
 .idea/
 *.iml
@@ -25,3 +29,5 @@ admin/dist/
 
 # Claude Code
 .claude/worktrees/
+# 误生成在 Java 包路径下的 Claude 配置
+backend/src/**/.claude/

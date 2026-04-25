@@ -2,6 +2,7 @@ package com.beadforge.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.beadforge.model.dto.ApiResponse;
+import com.beadforge.model.dto.ChangePasswordRequest;
 import com.beadforge.model.dto.UserDTO;
 import com.beadforge.model.dto.UserStatsDTO;
 import com.beadforge.model.entity.Design;
@@ -16,6 +17,7 @@ import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
 import com.beadforge.service.UserService;
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,6 +54,15 @@ public class UserController {
         return ApiResponse.success(userService.getUserStats(userId));
     }
 
+    /** 修改登录密码 */
+    @PostMapping("/change-password")
+    public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req,
+                                            HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        userService.changePassword(userId, req.getOldPassword(), req.getNewPassword());
+        return ApiResponse.success("密码修改成功", null);
+    }
+
     /**
      * 社区用户档案 — 通过 nickname 或 username 查找，用于他人主页 / 私信页面。
      * 字段对齐前端 CommunityUserData：name, title, bio, followers, following, posts, likes, joinDate, tags
@@ -65,6 +76,7 @@ public class UserController {
         if (u == null) {
             // 未注册的展示名，返回缺省骨架（保持 UI 可渲染）
             Map<String, Object> empty = new LinkedHashMap<>();
+            empty.put("id", null);
             empty.put("name", name);
             empty.put("title", "创作者");
             empty.put("bio", "");
@@ -95,6 +107,7 @@ public class UserController {
         }
 
         Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", u.getId());
         m.put("name", u.getNickname() != null ? u.getNickname() : u.getUsername());
         m.put("title", "创作者");
         m.put("bio", "");

@@ -117,6 +117,44 @@ public class UserServiceImpl implements UserService {
         long followingCount = followRepository.selectCount(
                 new QueryWrapper<Follow>().eq("follower_id", userId));
 
-        return new UserStatsDTO(designCount, totalLikes, followerCount, followingCount);
+        int level = calculateLevel(designCount, totalLikes, followerCount);
+
+        return new UserStatsDTO(designCount, totalLikes, followerCount, followingCount, level);
+    }
+
+    @Override
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException("当前密码不正确");
+        }
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new BusinessException("新密码不能与当前密码相同");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.updateById(user);
+    }
+
+    /**
+     * 创作者等级：经验值 = 作品数×10 + 收赞×1 + 粉丝×5
+     * 阈值表：[0, 10, 30, 60, 100, 200, 500, 1000, 2000, 5000]
+     * 新号经验=0 → Lv.1
+     */
+    private static final long[] LEVEL_THRESHOLDS = {0, 10, 30, 60, 100, 200, 500, 1000, 2000, 5000};
+
+    private int calculateLevel(long designCount, long likeCount, long followerCount) {
+        long exp = designCount * 10L + likeCount + followerCount * 5L;
+        int level = 1;
+        for (int i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+            if (exp >= LEVEL_THRESHOLDS[i]) {
+                level = i + 1;
+            } else {
+                break;
+            }
+        }
+        return level;
     }
 }

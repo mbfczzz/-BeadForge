@@ -24,7 +24,8 @@ import { Avatar, FilterChip, HoverView, Input, PressableScale } from '../../comp
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { COMMUNITY_TABS } from '../../mock/community';
-import { feedApi, type FeedItemData } from '../../api/community';
+import { feedApi, likeApi, type FeedItemData } from '../../api/community';
+import { useAuthStore } from '../../store/useAuthStore';
 import { getFeedMockGallery } from '../../utils/feedMedia';
 import { shadow } from '../../utils/shadow';
 import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
@@ -45,13 +46,6 @@ function formatCount(value: number) {
   return String(value);
 }
 
-function rotateFeeds(feeds: FeedItemData[], step: number) {
-  if (feeds.length <= 1) return feeds;
-  const offset = step % feeds.length;
-  if (offset === 0) return feeds;
-  return [...feeds.slice(offset), ...feeds.slice(0, offset)];
-}
-
 export const PublishScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -68,32 +62,27 @@ export const PublishScreen: React.FC = () => {
   const topAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const tab = tabIdx === 2 ? 'latest' : 'recommend';
-    feedApi
-      .list(tab)
-      .then((res) => setRemoteFeeds(res.data?.records || []))
-      .catch(() => setRemoteFeeds([]));
+    let alive = true;
+    const fetchFeeds = () => {
+      if (tabIdx === 1) {
+        return feedApi.following();
+      }
+      const tab = tabIdx === 2 ? 'latest' : 'recommend';
+      return feedApi.list(tab);
+    };
+    fetchFeeds()
+      .then((res) => { if (alive) setRemoteFeeds(res.data?.records || []); })
+      .catch(() => { if (alive) setRemoteFeeds([]); });
+    return () => { alive = false; };
   }, [tabIdx, refreshRound]);
 
-  const baseFeeds = useMemo(() => {
-    const rotated = rotateFeeds([...localFeeds, ...remoteFeeds], refreshRound);
-    return rotated.map((feed, index) => ({
-      ...feed,
-      likeCount: feed.likeCount + ((refreshRound + index) % 3 === 0 ? refreshRound % 4 : 0),
-      commentCount: feed.commentCount + ((refreshRound + index) % 5 === 0 ? 1 : 0),
-      shareCount: feed.shareCount + ((refreshRound + index) % 4 === 0 ? 1 : 0),
-      timeAgo: refreshRound > 0 && index < 2 ? '刚刚' : feed.timeAgo,
-    }));
-  }, [localFeeds, remoteFeeds, refreshRound]);
+  const baseFeeds = useMemo(
+    () => [...localFeeds, ...remoteFeeds],
+    [localFeeds, remoteFeeds],
+  );
 
   const filteredFeeds = useMemo(() => {
     let feeds = [...baseFeeds];
-
-    if (tabIdx === 1) {
-      feeds = feeds.filter((feed) => ['木木手作', '饰品工作室', '拼豆小屋'].includes(feed.user.name));
-    } else if (tabIdx === 2) {
-      feeds.sort((a, b) => b.id - a.id);
-    }
 
     if (searchText.trim()) {
       const keyword = searchText.trim().toLowerCase();
@@ -105,7 +94,7 @@ export const PublishScreen: React.FC = () => {
     }
 
     return feeds;
-  }, [baseFeeds, searchText, tabIdx]);
+  }, [baseFeeds, searchText]);
 
   const onRefresh = useCallback(async () => {
     if (refreshing) return;
@@ -252,7 +241,10 @@ const FeedCard: React.FC<{
   isFirst: boolean;
   isFresh: boolean;
 }> = memo(({ feed, colors, navigation, onTagPress, isFirst, isFresh }) => {
-  const [liked, setLiked] = useState(false);
+  const currentUser = useAuthStore((state) => state.user);
+  const [liked, setLiked] = useState(!!feed.liked);
+  const [likeCount, setLikeCount] = useState(feed.likeCount);
+  const [likeBusy, setLikeBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
@@ -397,7 +389,32 @@ const FeedCard: React.FC<{
 
         <View style={styles.socialActionRow}>
           <View style={styles.socialActionLeft}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => setLiked((value) => !value)} style={styles.iconAction}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              disabled={likeBusy}
+              onPress={async (event) => {
+                event.stopPropagation?.();
+                if (likeBusy) return;
+                if (!currentUser) {
+                  Alert.alert('需要登录', '请先登录后再点赞。');
+                  return;
+                }
+                const next = !liked;
+                setLiked(next);
+                setLikeCount((value) => Math.max(0, value + (next ? 1 : -1)));
+                setLikeBusy(true);
+                try {
+                  if (next) await likeApi.like('feed', feed.id);
+                  else await likeApi.unlike('feed', feed.id);
+                } catch {
+                  setLiked(!next);
+                  setLikeCount((value) => Math.max(0, value + (next ? -1 : 1)));
+                } finally {
+                  setLikeBusy(false);
+                }
+              }}
+              style={styles.iconAction}
+            >
               <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(23)} color={liked ? COMMUNITY_ROSE : colors.text} />
             </TouchableOpacity>
             <TouchableOpacity
@@ -424,7 +441,7 @@ const FeedCard: React.FC<{
 
         <View style={styles.feedBody}>
           <Text style={[styles.likeLine, { color: colors.text }]}>
-            {formatCount(feed.likeCount + (liked ? 1 : 0))} 次喜欢
+            {formatCount(likeCount)} 次喜欢
           </Text>
           <Text style={[styles.feedContent, { color: colors.textSecondary }]}>
             <Text style={{ color: colors.text, fontWeight: '800' }}>{feed.user.name} </Text>

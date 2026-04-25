@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useRef, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -25,34 +25,10 @@ import { shadow } from '../../utils/shadow';
 import { getFeedMockGallery } from '../../utils/feedMedia';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
+import { likeApi, favoriteApi, followApi, commentApi, type CommentItem } from '../../api/community';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const PAD = wp(15);
-
-interface CommentItemData {
-  id: number;
-  user: string;
-  title: string;
-  content: string;
-  timeAgo: string;
-  likeCount: number;
-}
-
-const MOCK_COMMENTS: Record<number, CommentItemData[]> = {
-  1: [
-    { id: 101, user: '新手练习生', title: '入门创作者', content: '这组猫咪挂件的边缘压得很干净，暖灰背景也很适合展示。', timeAgo: '1小时前', likeCount: 5 },
-    { id: 102, user: '木木手作', title: '原作者', content: '主体用了两种橙色，最后又补了一层浅米色高光。', timeAgo: '50分钟前', likeCount: 8 },
-  ],
-  2: [
-    { id: 201, user: '像素观察者', title: '拼豆爱好者', content: 'AI 起稿后再微调边缘，效率确实会高很多。', timeAgo: '2小时前', likeCount: 12 },
-    { id: 202, user: '工具记录员', title: '流程整理', content: '如果把提示词和色号一起记下来，后面复用会更方便。', timeAgo: '1小时前', likeCount: 6 },
-  ],
-};
-
-function buildComments(feedId: number): CommentItemData[] {
-  return MOCK_COMMENTS[feedId] || [
-    { id: feedId * 100 + 1, user: '路人甲', title: '拼豆爱好者', content: '整体结构很稳，适合继续扩展成完整系列。', timeAgo: '刚刚', likeCount: 3 },
-  ];
-}
 
 function formatCount(value: number) {
   if (value >= 10000) {
@@ -68,17 +44,54 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
   const { colors, dark } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const currentUser = useAuthStore((state) => state.user);
+  const isOwnFeed = currentUser?.id === feed.user.id;
+
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(feed.likeCount);
+  const [likeBusy, setLikeBusy] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [followed, setFollowed] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [commentText, setCommentText] = useState('');
-  const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [comments, setComments] = useState<CommentItemData[]>(() => buildComments(feed.id));
+  const [replyTo, setReplyTo] = useState<{ commentId: number; userName: string } | null>(null);
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSending, setCommentSending] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [viewerVisible, setViewerVisible] = useState(false);
   const likeAnim = useRef(new Animated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
+
+  // 进入页面回填三个互动状态
+  useEffect(() => {
+    let alive = true;
+    likeApi.check('feed', feed.id)
+      .then((res) => { if (alive) setLiked(!!res.data?.liked); })
+      .catch(() => undefined);
+    favoriteApi.check('design', feed.id)
+      .then((res) => { if (alive) setBookmarked(!!res.data?.favorited); })
+      .catch(() => undefined);
+    if (feed.user.id && !isOwnFeed) {
+      followApi.check(feed.user.id)
+        .then((res) => { if (alive) setFollowed(!!res.data); })
+        .catch(() => undefined);
+    }
+    return () => { alive = false; };
+  }, [feed.id, feed.user.id, isOwnFeed]);
+
+  // 拉取真实评论
+  useEffect(() => {
+    let alive = true;
+    setCommentsLoading(true);
+    commentApi.list('feed', feed.id)
+      .then((res) => { if (alive) setComments(res.data || []); })
+      .catch(() => { if (alive) setComments([]); })
+      .finally(() => { if (alive) setCommentsLoading(false); });
+    return () => { alive = false; };
+  }, [feed.id]);
 
   const gallery = useMemo(() => getFeedMockGallery(feed), [feed]);
   const media = gallery[Math.min(activeMediaIndex, gallery.length - 1)];
@@ -86,35 +99,171 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
   const previewH = previewW / gallery[0].aspectRatio;
   const hasGallery = gallery.length > 1;
 
-  const handleLike = () => {
-    setLiked((value) => !value);
+  const handleLike = async () => {
+    if (likeBusy) return;
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再点赞。');
+      return;
+    }
+    const next = !liked;
+    // 乐观更新 + 动画
+    setLiked(next);
+    setLikeCount((value) => Math.max(0, value + (next ? 1 : -1)));
     Animated.sequence([
       Animated.timing(likeAnim, { toValue: 1.18, duration: 100, useNativeDriver: true }),
       Animated.timing(likeAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
     ]).start();
+
+    setLikeBusy(true);
+    try {
+      if (next) {
+        await likeApi.like('feed', feed.id);
+      } else {
+        await likeApi.unlike('feed', feed.id);
+      }
+    } catch (err: any) {
+      // 失败回滚
+      setLiked(!next);
+      setLikeCount((value) => Math.max(0, value + (next ? -1 : 1)));
+      Alert.alert('操作失败', err?.response?.data?.message || '请稍后重试');
+    } finally {
+      setLikeBusy(false);
+    }
   };
 
-  const handleSend = () => {
-    if (!commentText.trim()) return;
-
-    const nextContent = replyTo ? `回复 ${replyTo}：${commentText.trim()}` : commentText.trim();
-    const newComment: CommentItemData = {
-      id: Date.now(),
-      user: '测试用户',
-      title: '本地账号',
-      content: nextContent,
-      timeAgo: '刚刚',
-      likeCount: 0,
-    };
-
-    setComments((prev) => [newComment, ...prev]);
-    setCommentText('');
-    setReplyTo(null);
+  const handleBookmark = async () => {
+    if (bookmarkBusy) return;
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再收藏。');
+      return;
+    }
+    const next = !bookmarked;
+    setBookmarked(next);
+    setBookmarkBusy(true);
+    try {
+      if (next) {
+        await favoriteApi.add('design', feed.id);
+      } else {
+        await favoriteApi.remove('design', feed.id);
+      }
+    } catch (err: any) {
+      setBookmarked(!next);
+      Alert.alert('操作失败', err?.response?.data?.message || '请稍后重试');
+    } finally {
+      setBookmarkBusy(false);
+    }
   };
 
-  const handleReply = (userName: string) => {
-    setReplyTo(userName);
+  const handleFollow = async () => {
+    if (followBusy) return;
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再关注。');
+      return;
+    }
+    if (!feed.user.id) {
+      Alert.alert('无法关注', '作者信息缺失。');
+      return;
+    }
+    if (isOwnFeed) {
+      Alert.alert('提示', '不能关注自己。');
+      return;
+    }
+    const next = !followed;
+    setFollowed(next);
+    setFollowBusy(true);
+    try {
+      if (next) {
+        await followApi.follow(feed.user.id);
+      } else {
+        await followApi.unfollow(feed.user.id);
+      }
+    } catch (err: any) {
+      setFollowed(!next);
+      Alert.alert('操作失败', err?.response?.data?.message || '请稍后重试');
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (commentSending) return;
+    const content = commentText.trim();
+    if (!content) return;
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再评论。');
+      return;
+    }
+
+    setCommentSending(true);
+    try {
+      const res = await commentApi.create('feed', feed.id, content, replyTo?.commentId);
+      if (res.data) {
+        setComments((prev) => [res.data, ...prev]);
+      }
+      setCommentText('');
+      setReplyTo(null);
+    } catch (err: any) {
+      Alert.alert('发送失败', err?.response?.data?.message || '请稍后重试');
+    } finally {
+      setCommentSending(false);
+    }
+  };
+
+  const handleReply = (commentId: number, userName: string) => {
+    setReplyTo({ commentId, userName });
     inputRef.current?.focus();
+  };
+
+  // 把扁平 comments 分组：root + 该 root 下所有回复（包括"回复的回复"）
+  const grouped = useMemo(() => {
+    const roots: CommentItem[] = [];
+    const repliesById: Record<number, CommentItem[]> = {};
+    const parentToRoot: Record<number, number> = {};
+
+    // 先标记 root
+    for (const c of comments) {
+      if (c.parentId == null) {
+        roots.push(c);
+        parentToRoot[c.id] = c.id;
+      }
+    }
+    // 再遍历回复，沿 parentId 找到所属 root
+    for (const c of comments) {
+      if (c.parentId == null) continue;
+      let rootId = parentToRoot[c.parentId];
+      if (rootId == null) {
+        // parent 也是回复，需要再追溯一层（朴素查找；评论数不大）
+        const parent = comments.find((x) => x.id === c.parentId);
+        if (parent) rootId = parentToRoot[parent.parentId ?? parent.id] ?? parent.id;
+      }
+      if (rootId == null) continue;
+      parentToRoot[c.id] = rootId;
+      (repliesById[rootId] ||= []).push(c);
+    }
+    // 回复按时间升序（root 列表自身已是 created_at 倒序）
+    Object.values(repliesById).forEach((list) => list.sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+    return { roots, repliesById };
+  }, [comments]);
+
+  const handleDeleteComment = (commentId: number) => {
+    Alert.alert('删除评论', '确定删除这条评论吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除',
+        style: 'destructive',
+        onPress: async () => {
+          // 乐观删除
+          const snapshot = comments;
+          setComments((prev) => prev.filter((item) => item.id !== commentId));
+          try {
+            await commentApi.remove(commentId);
+          } catch (err: any) {
+            setComments(snapshot);
+            Alert.alert('删除失败', err?.response?.data?.message || '请稍后重试');
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -164,20 +313,23 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
                 <Text style={[$.userName, { color: colors.text }]}>{feed.user.name}</Text>
                 <Text style={[$.userMeta, { color: colors.textHint }]}>{feed.user.title} · {feed.timeAgo}</Text>
               </View>
-              <HoverView
-                onPress={() => setFollowed((value) => !value)}
-                style={[
-                  $.followBtn,
-                  {
-                    backgroundColor: followed ? 'transparent' : colors.accent,
-                    borderColor: followed ? colors.border : colors.accent,
-                  },
-                ]}
-                hoverScale={1.03}
-                hoverLift={0}
-              >
-                <Text style={[$.followBtnText, { color: followed ? colors.textHint : '#fff' }]}>{followed ? '已关注' : '关注'}</Text>
-              </HoverView>
+              {isOwnFeed ? null : (
+                <HoverView
+                  onPress={handleFollow}
+                  style={[
+                    $.followBtn,
+                    {
+                      backgroundColor: followed ? 'transparent' : colors.accent,
+                      borderColor: followed ? colors.border : colors.accent,
+                      opacity: followBusy ? 0.6 : 1,
+                    },
+                  ]}
+                  hoverScale={1.03}
+                  hoverLift={0}
+                >
+                  <Text style={[$.followBtnText, { color: followed ? colors.textHint : '#fff' }]}>{followed ? '已关注' : '关注'}</Text>
+                </HoverView>
+              )}
             </Pressable>
 
             <Text style={[$.contentText, { color: colors.textSecondary }]}>{feed.content}</Text>
@@ -260,13 +412,13 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
                 <Animated.View style={{ transform: [{ scale: likeAnim }] }}>
                   <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(20)} color={liked ? '#EF4444' : colors.textHint} />
                 </Animated.View>
-                <Text style={[$.actionText, { color: liked ? '#EF4444' : colors.textHint }]}>{formatCount(feed.likeCount + (liked ? 1 : 0))}</Text>
+                <Text style={[$.actionText, { color: liked ? '#EF4444' : colors.textHint }]}>{formatCount(likeCount)}</Text>
               </HoverView>
               <View style={$.actionItem}>
                 <MCI name="comment-outline" size={fp(20)} color={colors.textHint} />
                 <Text style={[$.actionText, { color: colors.textHint }]}>{formatCount(comments.length)}</Text>
               </View>
-              <HoverView onPress={() => setBookmarked((value) => !value)} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <HoverView onPress={handleBookmark} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
                 <MCI name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={fp(20)} color={bookmarked ? colors.accent : colors.textHint} />
                 <Text style={[$.actionText, { color: bookmarked ? colors.accent : colors.textHint }]}>{bookmarked ? '已收藏' : '收藏'}</Text>
               </HoverView>
@@ -281,8 +433,34 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
             </View>
 
             <View style={$.commentList}>
-              {comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} colors={colors} onReply={handleReply} />
+              {commentsLoading && comments.length === 0 ? (
+                <Text style={[$.commentEmptyText, { color: colors.textHint }]}>加载中...</Text>
+              ) : comments.length === 0 ? (
+                <Text style={[$.commentEmptyText, { color: colors.textHint }]}>还没有评论，来说两句吧</Text>
+              ) : null}
+              {grouped.roots.map((root) => (
+                <View key={root.id}>
+                  <CommentRow
+                    comment={root}
+                    colors={colors}
+                    canDelete={currentUser?.id === root.user.id}
+                    currentUser={currentUser ? { id: currentUser.id } : null}
+                    onReply={handleReply}
+                    onDelete={handleDeleteComment}
+                  />
+                  {(grouped.repliesById[root.id] || []).map((reply) => (
+                    <View key={reply.id} style={$.replyIndent}>
+                      <CommentRow
+                        comment={reply}
+                        colors={colors}
+                        canDelete={currentUser?.id === reply.user.id}
+                        currentUser={currentUser ? { id: currentUser.id } : null}
+                        onReply={handleReply}
+                        onDelete={handleDeleteComment}
+                      />
+                    </View>
+                  ))}
+                </View>
               ))}
             </View>
           </View>
@@ -293,7 +471,8 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
             <TextInput
               ref={inputRef}
               style={[$.input, { color: colors.text }]}
-              placeholder={replyTo ? `回复 ${replyTo}` : '写下你的评论...'}
+              placeholder={replyTo ? `回复 ${replyTo.userName}` : '写下你的评论...'}
+              editable={!commentSending}
               placeholderTextColor={colors.textHint}
               value={commentText}
               onChangeText={setCommentText}
@@ -306,11 +485,11 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
           </View>
           <HoverView
             onPress={handleSend}
-            style={[$.sendBtn, { backgroundColor: colors.accent, opacity: commentText.trim() ? 1 : 0.45 }]}
+            style={[$.sendBtn, { backgroundColor: colors.accent, opacity: commentText.trim() && !commentSending ? 1 : 0.45 }]}
             hoverScale={1.03}
             hoverLift={0}
           >
-            <Text style={$.sendBtnText}>发送</Text>
+            <Text style={$.sendBtnText}>{commentSending ? '发送中' : '发送'}</Text>
           </HoverView>
         </View>
       </KeyboardAvoidingView>
@@ -325,27 +504,71 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
   );
 };
 
-const CommentItem: React.FC<{ comment: CommentItemData; colors: ThemeColors; onReply: (user: string) => void }> = memo(({ comment, colors, onReply }) => {
-  const [liked, setLiked] = useState(false);
+const CommentRow: React.FC<{
+  comment: CommentItem;
+  colors: ThemeColors;
+  canDelete: boolean;
+  currentUser: { id: number } | null;
+  onReply: (commentId: number, userName: string) => void;
+  onDelete: (commentId: number) => void;
+}> = memo(({ comment, colors, canDelete, currentUser, onReply, onDelete }) => {
+  const [liked, setLiked] = useState(!!comment.liked);
+  const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
+  const [busy, setBusy] = useState(false);
+
+  const handleLike = async () => {
+    if (busy) return;
+    if (!currentUser) {
+      Alert.alert('需要登录', '请先登录后再点赞。');
+      return;
+    }
+    const next = !liked;
+    setLiked(next);
+    setLikeCount((value) => Math.max(0, value + (next ? 1 : -1)));
+    setBusy(true);
+    try {
+      if (next) await likeApi.like('comment', comment.id);
+      else await likeApi.unlike('comment', comment.id);
+    } catch {
+      setLiked(!next);
+      setLikeCount((value) => Math.max(0, value + (next ? -1 : 1)));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <View style={$.commentItem}>
-      <Avatar name={comment.user} size={wp(34)} />
+      <Avatar name={comment.user.name} size={wp(34)} />
       <View style={$.commentBody}>
         <View style={$.commentTop}>
-          <View>
-            <Text style={[$.commentUser, { color: colors.text }]}>{comment.user}</Text>
-            <Text style={[$.commentMeta, { color: colors.textHint }]}>{comment.title} · {comment.timeAgo}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[$.commentUser, { color: colors.text }]}>{comment.user.name}</Text>
+            <Text style={[$.commentMeta, { color: colors.textHint }]}>{comment.user.title} · {comment.timeAgo}</Text>
           </View>
-          <HoverView onPress={() => setLiked((value) => !value)} style={$.commentLike} hoverScale={1.05} hoverLift={0}>
-            <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(16)} color={liked ? '#EF4444' : colors.textHint} />
-            <Text style={[$.commentLikeText, { color: liked ? '#EF4444' : colors.textHint }]}>{comment.likeCount + (liked ? 1 : 0)}</Text>
-          </HoverView>
+          <Pressable style={$.commentLikeBtn} onPress={handleLike} hitSlop={6}>
+            <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(15)} color={liked ? '#EF4444' : colors.textHint} />
+            {likeCount > 0 ? (
+              <Text style={[$.commentLikeText, { color: liked ? '#EF4444' : colors.textHint }]}>{likeCount}</Text>
+            ) : null}
+          </Pressable>
         </View>
-        <Text style={[$.commentContent, { color: colors.textSecondary }]}>{comment.content}</Text>
-        <Pressable style={$.replyBtn} onPress={() => onReply(comment.user)}>
-          <Text style={[$.replyText, { color: colors.accent }]}>回复</Text>
-        </Pressable>
+        <Text style={[$.commentContent, { color: colors.textSecondary }]}>
+          {comment.replyToUserName ? (
+            <Text style={{ color: colors.accent }}>@{comment.replyToUserName} </Text>
+          ) : null}
+          {comment.content}
+        </Text>
+        <View style={$.commentActions}>
+          <Pressable style={$.replyBtn} onPress={() => onReply(comment.id, comment.user.name)}>
+            <Text style={[$.replyText, { color: colors.accent }]}>回复</Text>
+          </Pressable>
+          {canDelete ? (
+            <Pressable style={$.replyBtn} onPress={() => onDelete(comment.id)}>
+              <Text style={[$.replyText, { color: colors.textHint }]}>删除</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </View>
   );
@@ -469,10 +692,13 @@ const $ = StyleSheet.create({
   commentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   commentUser: { fontSize: fp(13), fontWeight: '700' },
   commentMeta: { fontSize: fp(11), marginTop: wp(2) },
-  commentLike: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
-  commentLikeText: { fontSize: fp(11) },
   commentContent: { marginTop: wp(8), fontSize: fp(13), lineHeight: fp(18) },
-  replyBtn: { marginTop: wp(8), alignSelf: 'flex-start' },
+  commentActions: { flexDirection: 'row', gap: wp(16), marginTop: wp(8) },
+  commentEmptyText: { fontSize: fp(12), textAlign: 'center', paddingVertical: wp(20) },
+  replyIndent: { marginLeft: wp(46) },
+  commentLikeBtn: { flexDirection: 'row', alignItems: 'center', gap: wp(3), paddingHorizontal: wp(4), paddingVertical: wp(2) },
+  commentLikeText: { fontSize: fp(11), fontWeight: '600' },
+  replyBtn: { alignSelf: 'flex-start' },
   replyText: { fontSize: fp(11), fontWeight: '700' },
   inputBar: {
     position: 'absolute',

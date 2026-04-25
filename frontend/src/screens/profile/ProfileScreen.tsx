@@ -16,6 +16,7 @@ import { feedbackApi, type FeedbackTicketItem } from '../../api/feedback';
 import type { UserInfo } from '../../api/auth';
 import { profileApi, type ProfileNoticeAction, type ProfileNoticeItem, type ProfileOrderFilterTab } from '../../api/profile';
 import { notificationApi } from '../../api/notification';
+import { orderApi, type OrderStatCounts } from '../../api/order';
 import type { UserStats } from '../../api/user';
 import { useTabBarVisibility } from '../../hooks/useTabBarVisibility';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -180,17 +181,30 @@ const MINE_TOOL_ITEMS: MineToolItem[] = [
     iconTint: '#334155',
     iconBackground: '#E7EDF7',
     actionKey: 'notifications',
-    badgeCount: 3,
   },
 ];
 
-const MINE_ORDER_SHORTCUTS: MineOrderShortcut[] = [
-  { id: 'pending-payment', label: '待付款', icon: 'credit-card', pendingCount: 1, tint: '#F97316', bg: '#FFF1E7', actionKey: 'orders' },
-  { id: 'pending-shipping', label: '待发货', icon: 'package', pendingCount: 2, tint: '#8B5CF6', bg: '#F3ECFF', actionKey: 'orders' },
-  { id: 'pending-receipt', label: '待收货', icon: 'truck', pendingCount: 1, tint: '#0EA5E9', bg: '#E8F7FF', actionKey: 'orders' },
-  { id: 'completed', label: '已完成', icon: 'check-circle', pendingCount: 6, tint: '#22C55E', bg: '#EAFBF1', actionKey: 'orders' },
-  { id: 'after-sale', label: '售后', icon: 'rotate-ccw', pendingCount: 0, tint: '#64748B', bg: '#EEF2F7', actionKey: 'orders' },
+type OrderShortcutTemplate = Omit<MineOrderShortcut, 'pendingCount'> & {
+  countKey: keyof OrderStatCounts;
+  orderTab?: ProfileOrderFilterTab;
+};
+
+const ORDER_SHORTCUT_TEMPLATES: OrderShortcutTemplate[] = [
+  { id: 'pending-payment',  label: '待付款', icon: 'credit-card',  tint: '#F97316', bg: '#FFF1E7', actionKey: 'orders', countKey: 'pending',   orderTab: '待支付' },
+  { id: 'pending-shipping', label: '待发货', icon: 'package',      tint: '#8B5CF6', bg: '#F3ECFF', actionKey: 'orders', countKey: 'paid',      orderTab: '待发货' },
+  { id: 'pending-receipt',  label: '待收货', icon: 'truck',        tint: '#0EA5E9', bg: '#E8F7FF', actionKey: 'orders', countKey: 'shipped',   orderTab: '待收货' },
+  { id: 'completed',        label: '已完成', icon: 'check-circle', tint: '#22C55E', bg: '#EAFBF1', actionKey: 'orders', countKey: 'completed' },
+  { id: 'after-sale',       label: '售后',   icon: 'rotate-ccw',   tint: '#64748B', bg: '#EEF2F7', actionKey: 'orders', countKey: 'refund',    orderTab: '退款/售后' },
 ];
+
+const EMPTY_ORDER_COUNTS: OrderStatCounts = {
+  pending: 0,
+  paid: 0,
+  shipped: 0,
+  completed: 0,
+  cancelled: 0,
+  refund: 0,
+};
 
 const MINE_MENU_ITEMS: MineMenuItem[] = [
   {
@@ -237,7 +251,7 @@ function buildMineProfileSummary(
     displayName,
     avatarText: displayName.slice(0, 1).toUpperCase(),
     signature: user?.bio?.trim() || '记录手作灵感、拼豆配色和每一次认真完成的小作品。',
-    levelLabel: `Lv.${Math.max(3, stats.designCount + 2)} 创作者`,
+    levelLabel: `Lv.${stats.level || 1} 创作者`,
     pointsValue: formatCount(pointsBalance),
     gender: user?.gender,
   };
@@ -285,6 +299,7 @@ export const ProfileScreen: React.FC = () => {
   const [notices, setNotices] = useState<ProfileNoticeItem[]>([]);
   const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicketItem[]>([]);
   const [favoriteCount, setFavoriteCount] = useState(0);
+  const [orderCounts, setOrderCounts] = useState<OrderStatCounts>(EMPTY_ORDER_COUNTS);
 
   const prevTokenRef = useRef<string | null | undefined>(undefined);
 
@@ -299,10 +314,12 @@ export const ProfileScreen: React.FC = () => {
       notificationApi.list().then((res) => setNotices(res.data?.records || [])).catch(() => setNotices([]));
       feedbackApi.list().then((res) => setFeedbackTickets(res.data?.records || [])).catch(() => setFeedbackTickets([]));
       profileApi.favorites().then((res) => setFavoriteCount(res.data?.length || 0)).catch(() => setFavoriteCount(0));
+      orderApi.statCounts().then((res) => setOrderCounts(res.data || EMPTY_ORDER_COUNTS)).catch(() => setOrderCounts(EMPTY_ORDER_COUNTS));
     } else {
       setNotices([]);
       setFeedbackTickets([]);
       setFavoriteCount(0);
+      setOrderCounts(EMPTY_ORDER_COUNTS);
     }
   }, [fetchStats, loadAddresses, loadWallet, token]);
 
@@ -326,7 +343,10 @@ export const ProfileScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchStats();
+      await Promise.all([
+        fetchStats(),
+        orderApi.statCounts().then((res) => setOrderCounts(res.data || EMPTY_ORDER_COUNTS)).catch(() => undefined),
+      ]);
     } finally {
       setRefreshing(false);
     }
@@ -428,8 +448,8 @@ export const ProfileScreen: React.FC = () => {
     return lastSignInDate === today;
   }, [lastSignInDate]);
 
-  const handleSignIn = useCallback(() => {
-    const signed = signIn();
+  const handleSignIn = useCallback(async () => {
+    const signed = await signIn();
     if (signed) {
       Alert.alert('签到成功', '今日签到奖励 +20 积分已到账。');
       return;
@@ -443,8 +463,25 @@ export const ProfileScreen: React.FC = () => {
   );
 
   const statItems = useMemo(
-    () => buildMineStatItems(stats, favoriteCount * 21),
+    () => buildMineStatItems(stats, favoriteCount),
     [stats, favoriteCount],
+  );
+
+  const toolItems = useMemo<MineToolItem[]>(
+    () => MINE_TOOL_ITEMS.map((item) =>
+      item.id === 'notices'
+        ? { ...item, badgeCount: unreadNoticeCount > 0 ? unreadNoticeCount : undefined }
+        : item,
+    ),
+    [unreadNoticeCount],
+  );
+
+  const orderShortcuts = useMemo<MineOrderShortcut[]>(
+    () => ORDER_SHORTCUT_TEMPLATES.map(({ countKey, ...rest }) => ({
+      ...rest,
+      pendingCount: orderCounts[countKey] || 0,
+    })),
+    [orderCounts],
   );
 
   const handleMineAction = useCallback((actionKey: MineActionKey, orderTab?: ProfileOrderFilterTab) => {
@@ -632,12 +669,12 @@ export const ProfileScreen: React.FC = () => {
           />
 
           <ProfileOrdersCard
-            items={MINE_ORDER_SHORTCUTS}
+            items={orderShortcuts}
             onPressAll={() => openOrders('全部' as ProfileOrderFilterTab)}
             onPressItem={handleOrderPress}
           />
 
-          <ProfileToolsGrid items={MINE_TOOL_ITEMS} onPressItem={handleToolPress} />
+          <ProfileToolsGrid items={toolItems} onPressItem={handleToolPress} />
 
           <ProfileMenuList items={MINE_MENU_ITEMS} onPressItem={handleMenuPress} />
         </ScrollView>

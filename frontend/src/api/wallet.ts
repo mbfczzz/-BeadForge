@@ -11,6 +11,15 @@ export interface WalletBalance {
   balance: number;
   totalCharged: number;
   totalSpent: number;
+  signedToday: boolean;
+  lastSignInDate: string | null;
+}
+
+export interface WalletSignInResult {
+  balance: number;
+  reward: number;
+  signedToday: boolean;
+  lastSignInDate: string;
 }
 
 export const walletApi = {
@@ -25,4 +34,7 @@ export const walletApi = {
 
   buyPattern: (id: number) =>
     client.post<any, ApiRes<{ balance: number; cost: number }>>(`/wallet/buy-pattern/${id}`),
+
+  signIn: () =>
+    client.post<any, ApiRes<WalletSignInResult>>('/wallet/sign-in'),
 };

@@ -13,6 +13,7 @@ export interface UserStats {
   likeCount: number;
   followerCount: number;
   followingCount: number;
+  level: number;
 }
 
 export const userApi = {

@@ -23,7 +23,7 @@ interface ResourceAccessState {
   markDownloaded: (fileId: number) => void;
   toggleMockMembership: () => void;
   addPoints: (amount: number) => void;
-  signIn: () => boolean;
+  signIn: () => Promise<boolean>;
 }
 
 function formatLogTime(date = new Date()) {
@@ -57,6 +57,7 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
       set({
         pointsBalance: balRes.data?.balance || 0,
         pointsLogs: logsRes.data || [],
+        lastSignInDate: balRes.data?.signedToday ? (balRes.data.lastSignInDate || formatDateKey()) : null,
       });
     } catch {
       // 未登录或网络错误时保留空状态
@@ -174,26 +175,24 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
     }));
   },
 
-  signIn: () => {
-    const reward = 20;
+  signIn: async () => {
     const today = formatDateKey();
     if (get().lastSignInDate === today) return false;
 
-    set((state) => ({
-      pointsBalance: state.pointsBalance + reward,
-      lastSignInDate: today,
-      pointsLogs: [
-        {
-          id: Date.now(),
-          title: '签到',
-          description: '每日签到奖励',
-          amount: reward,
-          createdAt: formatLogTime(),
-        },
-        ...state.pointsLogs,
-      ],
-    }));
+    try {
+      const res = await walletApi.signIn();
+      if (!res?.data) return false;
 
-    return true;
+      // 重新拉一次流水，保证签到记录入列
+      const logsRes = await walletApi.logs().catch(() => null);
+      set({
+        pointsBalance: res.data.balance,
+        lastSignInDate: res.data.lastSignInDate || today,
+        pointsLogs: logsRes?.data ?? get().pointsLogs,
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 }));

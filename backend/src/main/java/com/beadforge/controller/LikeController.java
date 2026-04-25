@@ -3,10 +3,12 @@ package com.beadforge.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.beadforge.exception.BusinessException;
 import com.beadforge.model.dto.ApiResponse;
+import com.beadforge.model.entity.Comment;
 import com.beadforge.model.entity.Design;
 import com.beadforge.model.entity.Feed;
 import com.beadforge.model.entity.Like;
 import com.beadforge.model.entity.User;
+import com.beadforge.repository.CommentRepository;
 import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.LikeRepository;
@@ -41,6 +43,7 @@ public class LikeController {
     private final DesignRepository designRepo;
     private final FeedRepository feedRepo;
     private final UserRepository userRepo;
+    private final CommentRepository commentRepo;
 
     @PostMapping("/{type}/{id}")
     @Transactional(rollbackFor = Exception.class)
@@ -70,6 +73,12 @@ public class LikeController {
                 f.setLikeCount((f.getLikeCount() == null ? 0 : f.getLikeCount()) + 1);
                 feedRepo.updateById(f);
             }
+        } else if ("COMMENT".equals(t)) {
+            Comment c = commentRepo.selectById(id);
+            if (c != null) {
+                c.setLikeCount((c.getLikeCount() == null ? 0 : c.getLikeCount()) + 1);
+                commentRepo.updateById(c);
+            }
         }
         return ApiResponse.success("点赞成功", null);
     }
@@ -93,6 +102,12 @@ public class LikeController {
                 if (f != null && f.getLikeCount() != null && f.getLikeCount() > 0) {
                     f.setLikeCount(f.getLikeCount() - 1);
                     feedRepo.updateById(f);
+                }
+            } else if ("COMMENT".equals(t)) {
+                Comment c = commentRepo.selectById(id);
+                if (c != null && c.getLikeCount() != null && c.getLikeCount() > 0) {
+                    c.setLikeCount(c.getLikeCount() - 1);
+                    commentRepo.updateById(c);
                 }
             }
         }
@@ -147,6 +162,55 @@ public class LikeController {
                 m.put("likeCount", d != null && d.getLikeCount() != null ? d.getLikeCount() : 0);
             } else {
                 Feed f = fmap.get(l.getTargetId());
+                m.put("title", f != null ? safeShorten(f.getContent(), 30) : "(已删除)");
+                m.put("author", f != null ? nameMap.getOrDefault(f.getUserId(), "") : "");
+                m.put("patternIndex", (int) (l.getTargetId() % 8));
+                m.put("likeCount", f != null && f.getLikeCount() != null ? f.getLikeCount() : 0);
+            }
+            return m;
+        }).collect(Collectors.toList());
+        return ApiResponse.success(result);
+    }
+
+    /** 公开 — 某用户给过的赞列表（用于他人主页"喜欢" tab） */
+    @GetMapping("/by-user/{userId}")
+    public ApiResponse<List<Map<String, Object>>> byUser(@PathVariable Long userId) {
+        List<Like> likes = likeRepo.selectList(new QueryWrapper<Like>()
+            .eq("user_id", userId).orderByDesc("created_at").last("LIMIT 50"));
+        if (likes.isEmpty()) return ApiResponse.success(Collections.emptyList());
+
+        Set<Long> designIds = likes.stream()
+            .filter(l -> "DESIGN".equals(l.getTargetType())).map(Like::getTargetId).collect(Collectors.toSet());
+        Set<Long> feedIds = likes.stream()
+            .filter(l -> "FEED".equals(l.getTargetType())).map(Like::getTargetId).collect(Collectors.toSet());
+
+        Map<Long, Design> dmap = designIds.isEmpty() ? new HashMap<>()
+            : designRepo.selectBatchIds(designIds).stream().collect(Collectors.toMap(Design::getId, d -> d));
+        Map<Long, Feed> fmap = feedIds.isEmpty() ? new HashMap<>()
+            : feedRepo.selectBatchIds(feedIds).stream().collect(Collectors.toMap(Feed::getId, f -> f));
+
+        Set<Long> authorIds = new HashSet<>();
+        dmap.values().forEach(d -> authorIds.add(d.getUserId()));
+        fmap.values().forEach(f -> authorIds.add(f.getUserId()));
+        Map<Long, String> nameMap = authorIds.isEmpty() ? new HashMap<>()
+            : userRepo.selectBatchIds(authorIds).stream().collect(Collectors.toMap(
+                User::getId, u -> u.getNickname() != null ? u.getNickname() : u.getUsername()));
+
+        List<Map<String, Object>> result = likes.stream().map(l -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", l.getId());
+            m.put("targetType", "FEED".equals(l.getTargetType()) ? "动态" : "作品");
+            m.put("timeAgo", formatTimeAgo(l.getCreatedAt()));
+            if ("DESIGN".equals(l.getTargetType())) {
+                Design d = dmap.get(l.getTargetId());
+                m.put("targetId", l.getTargetId());
+                m.put("title", d != null ? d.getTitle() : "(已删除)");
+                m.put("author", d != null ? nameMap.getOrDefault(d.getUserId(), "") : "");
+                m.put("patternIndex", (int) (l.getTargetId() % 8));
+                m.put("likeCount", d != null && d.getLikeCount() != null ? d.getLikeCount() : 0);
+            } else {
+                Feed f = fmap.get(l.getTargetId());
+                m.put("targetId", l.getTargetId());
                 m.put("title", f != null ? safeShorten(f.getContent(), 30) : "(已删除)");
                 m.put("author", f != null ? nameMap.getOrDefault(f.getUserId(), "") : "");
                 m.put("patternIndex", (int) (l.getTargetId() % 8));
@@ -223,6 +287,7 @@ public class LikeController {
             case "design":  return "DESIGN";
             case "feed":    return "FEED";
             case "pattern": return "PATTERN";
+            case "comment": return "COMMENT";
             default: return type.toUpperCase();
         }
     }

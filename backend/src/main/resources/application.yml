@@ -32,6 +32,11 @@ spring:
     time-zone: Asia/Shanghai
     default-property-inclusion: non_null
 
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 100MB
+
 mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
   configuration:
@@ -48,6 +53,10 @@ jwt:
   # 开发默认值仅供本地；生产必须通过 JWT_SECRET 覆盖（≥32 字符强随机）。ConfigGuard 会在非 dev profile 下强制检查。
   secret: ${JWT_SECRET:dev-insecure-secret-do-not-use-in-production-min-32-chars}
   expiration: 86400000
+
+app:
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
 
 cors:
   # 逗号分隔；仅写明确域名；可用通配符 pattern（如 https://*.example.com）

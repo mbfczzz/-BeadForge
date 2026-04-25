@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS t_feed (
     content TEXT NOT NULL,
     design_id BIGINT COMMENT '关联的设计作品',
     tags VARCHAR(500) COMMENT '标签，逗号分隔',
+    media_urls TEXT COMMENT '媒体 URL 列表，逗号分隔',
+    media_type VARCHAR(10) COMMENT 'image / gif / video',
     like_count INT DEFAULT 0,
     comment_count INT DEFAULT 0,
     share_count INT DEFAULT 0,
@@ -88,6 +90,9 @@ CREATE TABLE IF NOT EXISTS t_feed (
     INDEX idx_user_id (user_id),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 老库升级
+ALTER TABLE t_feed ADD COLUMN media_urls TEXT;
+ALTER TABLE t_feed ADD COLUMN media_type VARCHAR(10);
 
 -- 点赞表
 CREATE TABLE IF NOT EXISTS t_like (
@@ -127,11 +132,14 @@ CREATE TABLE IF NOT EXISTS t_comment (
     target_id BIGINT NOT NULL,
     content TEXT NOT NULL,
     parent_id BIGINT COMMENT '回复的评论ID',
+    like_count INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     deleted INT DEFAULT 0,
     INDEX idx_target (target_type, target_id),
     INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 老库升级：保证 like_count 列存在（init.continue-on-error=true 失败也无碍）
+ALTER TABLE t_comment ADD COLUMN like_count INT DEFAULT 0;
 
 -- 材料商品表
 CREATE TABLE IF NOT EXISTS t_product (

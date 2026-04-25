@@ -18,4 +18,6 @@ public interface UserService {
     UserDTO updateUser(Long id, UserDTO userDTO);
 
     UserStatsDTO getUserStats(Long userId);
+
+    void changePassword(Long userId, String oldPassword, String newPassword);
 }

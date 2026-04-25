@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -72,7 +73,47 @@ public class WalletController {
         m.put("balance", w.getBalance());
         m.put("totalCharged", w.getTotalCharged());
         m.put("totalSpent", w.getTotalSpent());
+        boolean signed = hasSignedToday(userId);
+        m.put("signedToday", signed);
+        m.put("lastSignInDate", signed ? LocalDate.now().toString() : null);
         return ApiResponse.success(m);
+    }
+
+    /** 每日签到，奖励 20 拼豆币 */
+    @PostMapping("/sign-in")
+    @Transactional(rollbackFor = Exception.class)
+    public ApiResponse<Map<String, Object>> signIn(HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) return ApiResponse.error(401, "需要登录");
+
+        if (hasSignedToday(userId)) {
+            return ApiResponse.error(400, "今日已签到");
+        }
+
+        int reward = 20;
+        Wallet w = getOrCreate(userId);
+        w.setBalance(w.getBalance() + reward);
+        w.setTotalCharged(w.getTotalCharged() + reward);
+        walletRepo.updateById(w);
+
+        addLog(userId, reward, w.getBalance(), "SIGN_IN", "每日签到奖励");
+
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("balance", w.getBalance());
+        m.put("reward", reward);
+        m.put("signedToday", true);
+        m.put("lastSignInDate", LocalDate.now().toString());
+        return ApiResponse.success("签到成功", m);
+    }
+
+    private boolean hasSignedToday(Long userId) {
+        LocalDate today = LocalDate.now();
+        QueryWrapper<WalletLog> qw = new QueryWrapper<>();
+        qw.eq("user_id", userId)
+          .eq("type", "SIGN_IN")
+          .ge("created_at", today.atStartOfDay())
+          .lt("created_at", today.plusDays(1).atStartOfDay());
+        return logRepo.selectCount(qw) > 0;
     }
 
     /** 充值（模拟，实际对接微信/支付宝） */

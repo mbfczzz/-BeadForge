@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -47,6 +48,11 @@ public class SecurityConfig {
                 .antMatchers("/products/**").permitAll()
                 .antMatchers("/patterns/list").permitAll()
                 .antMatchers("/feeds/list").permitAll()
+                .antMatchers(HttpMethod.GET, "/feeds/by-user/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/designs/public/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/likes/by-user/**").permitAll()
+                .antMatchers(HttpMethod.GET, "/comments").permitAll()
+                .antMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 .antMatchers("/discovery/**").permitAll()
                 .antMatchers("/admin/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()

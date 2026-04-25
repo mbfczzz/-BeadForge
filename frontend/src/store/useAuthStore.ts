@@ -23,6 +23,7 @@ const EMPTY_STATS: UserStats = {
   likeCount: 0,
   followerCount: 0,
   followingCount: 0,
+  level: 1,
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({

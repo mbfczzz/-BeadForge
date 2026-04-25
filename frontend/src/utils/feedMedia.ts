@@ -1,4 +1,5 @@
 import type { FeedItemData, FeedMediaType } from '../api/community';
+import { resolveUploadUrl } from '../api/upload';
 
 export interface FeedMockMedia {
   svg: string;
@@ -148,14 +149,23 @@ function buildFeedMockMedia(feed: FeedItemData, variant = 0): FeedMockMedia {
 }
 
 export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
+  if (feed.media.assetUris?.length) {
+    return {
+      svg: '',
+      uri: resolveUploadUrl(feed.media.assetUris[0]),
+      aspectRatio: feed.media.aspectRatio || 1,
+      accent: feed.coverAccent || '#3B82F6',
+      type: feed.media.type,
+    };
+  }
   return buildFeedMockMedia(feed, 0);
 }
 
 export function getFeedMockGallery(feed: FeedItemData): FeedMockMedia[] {
   if (feed.media.assetUris?.length) {
-    return feed.media.assetUris.map((uri, index) => ({
+    return feed.media.assetUris.map((uri) => ({
       svg: '',
-      uri,
+      uri: resolveUploadUrl(uri),
       aspectRatio: feed.media.aspectRatio || 1,
       accent: feed.coverAccent || '#3B82F6',
       type: feed.media.type,

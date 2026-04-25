@@ -73,6 +73,17 @@ public class DesignServiceImpl implements DesignService {
         return enrichAuthorNames(designPage);
     }
 
+    @Override
+    public Page<DesignDTO> listPublicDesignsByUser(Long userId, int page, int size) {
+        QueryWrapper<Design> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId)
+               .eq("status", DesignStatus.PUBLISHED.name())
+               .orderByDesc("created_at");
+
+        Page<Design> designPage = designRepository.selectPage(new Page<>(page, size), wrapper);
+        return enrichAuthorNames(designPage);
+    }
+
     /** 批量填充 authorName */
     private Page<DesignDTO> enrichAuthorNames(Page<Design> designPage) {
         List<DesignDTO> dtos = designPage.getRecords().stream().map(ConvertUtil::toDesignDTO).collect(Collectors.toList());

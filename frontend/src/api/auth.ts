@@ -35,7 +35,20 @@ export interface AuthResponse {
   };
 }
 
+export interface ChangePasswordParams {
+  oldPassword: string;
+  newPassword: string;
+}
+
+interface BaseApiRes {
+  code: number;
+  message: string;
+  data: null;
+}
+
 export const authApi = {
   login: (params: LoginParams) => client.post<any, AuthResponse>('/auth/login', params),
   register: (params: RegisterParams) => client.post<any, AuthResponse>('/auth/register', params),
+  changePassword: (params: ChangePasswordParams) =>
+    client.post<any, BaseApiRes>('/user/change-password', params),
 };

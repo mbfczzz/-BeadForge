@@ -43,9 +43,21 @@ export interface OrderCreatePayload {
   items: { productId: number; quantity: number }[];
 }
 
+export interface OrderStatCounts {
+  pending: number;
+  paid: number;
+  shipped: number;
+  completed: number;
+  cancelled: number;
+  refund: number;
+}
+
 export const orderApi = {
   list: (status?: string, page = 1, size = 50) =>
     client.get<any, ApiRes<PageRes<BackendOrderDTO>>>('/orders', { params: { status, page, size } }),
+
+  statCounts: () =>
+    client.get<any, ApiRes<OrderStatCounts>>('/orders/stat-counts'),
 
   detail: (id: string) =>
     client.get<any, ApiRes<BackendOrderDTO>>(`/orders/${id}`),

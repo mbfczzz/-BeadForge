@@ -13,6 +13,9 @@ public interface DesignService {
 
     Page<DesignDTO> listUserDesigns(Long userId, int page, int size);
 
+    /** 别人主页用：只返回 PUBLISHED 状态的作品 */
+    Page<DesignDTO> listPublicDesignsByUser(Long userId, int page, int size);
+
     DesignDTO updateDesign(Long userId, Long designId, DesignDTO dto);
 
     void deleteDesign(Long userId, Long designId);

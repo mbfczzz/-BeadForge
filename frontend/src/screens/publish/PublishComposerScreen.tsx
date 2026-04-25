@@ -1,11 +1,12 @@
 import React, { useCallback, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { AppHeader } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
-import { useCommunityFeedStore } from '../../store/useCommunityFeedStore';
+import { feedApi } from '../../api/community';
+import { uploadApi } from '../../api/upload';
 import { useTheme } from '../../theme';
 import { fp, wp, BOTTOM_SAFE_H } from '../../utils/responsive';
 
@@ -15,12 +16,13 @@ const PAD = wp(16);
 
 export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>> = ({ navigation }) => {
   const { colors } = useTheme();
-  const addLocalFeed = useCommunityFeedStore((state) => state.addLocalFeed);
   const [content, setContent] = useState('');
   const [caption, setCaption] = useState('');
   const [tagsText, setTagsText] = useState('');
   const [assets, setAssets] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [error, setError] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [progress, setProgress] = useState('');
 
   const pickMedia = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -42,9 +44,9 @@ export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>>
     }
   }, []);
 
-  const publish = useCallback(() => {
+  const publish = useCallback(async () => {
+    if (publishing) return;
     const nextContent = content.trim();
-    const nextCaption = caption.trim();
     const tags = tagsText
       .split(/[,\s，#]+/)
       .map((item) => item.trim())
@@ -61,32 +63,43 @@ export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>>
       return;
     }
 
-    const firstAsset = assets[0];
-    const isVideo = firstAsset.type === 'video';
-    const isGif = firstAsset.uri.toLowerCase().includes('.gif');
+    setError('');
+    setPublishing(true);
+    try {
+      // 依次上传所有 assets
+      const uploaded: string[] = [];
+      let mediaType: 'image' | 'gif' | 'video' = 'image';
+      for (let i = 0; i < assets.length; i += 1) {
+        const asset = assets[i];
+        setProgress(`上传素材 ${i + 1}/${assets.length}…`);
+        const ext = (asset.uri.split('.').pop() || (asset.type === 'video' ? 'mp4' : 'jpg')).toLowerCase();
+        const isVideo = asset.type === 'video' || ['mp4', 'mov', 'webm'].includes(ext);
+        const isGif = ext === 'gif';
+        const fileType = isVideo ? `video/${ext}` : isGif ? 'image/gif' : `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        const fileName = `feed-${Date.now()}-${i}.${ext}`;
+        const res = await uploadApi.image({ uri: asset.uri, name: fileName, type: fileType });
+        if (!res.data?.url) throw new Error('上传失败');
+        uploaded.push(res.data.url);
+        if (i === 0) mediaType = res.data.type;
+      }
 
-    addLocalFeed({
-      id: Date.now(),
-      user: { name: '测试用户', title: '本地创作者' },
-      content: nextContent,
-      caption: nextCaption || undefined,
-      media: {
-        type: isVideo ? 'video' : isGif ? 'gif' : 'image',
-        demoAssetId: `local-${Date.now()}`,
-        aspectRatio: firstAsset.width && firstAsset.height ? firstAsset.width / firstAsset.height : 1,
-        durationSec: isVideo && firstAsset.duration ? Math.max(1, Math.round(firstAsset.duration / 1000)) : undefined,
-        assetUris: assets.map((asset) => asset.uri),
-      },
-      coverAccent: PUBLISH_BLUE,
-      likeCount: 0,
-      commentCount: 0,
-      shareCount: 0,
-      timeAgo: '刚刚',
-      tags: tags.length ? tags : ['新动态'],
-    });
+      setProgress('提交动态…');
+      await feedApi.create({
+        content: nextContent,
+        tags: tags.join(','),
+        mediaUrls: uploaded.join(','),
+        mediaType,
+      });
 
-    navigation.goBack();
-  }, [addLocalFeed, assets, caption, content, navigation, tagsText]);
+      navigation.goBack();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '发布失败，请稍后重试';
+      Alert.alert('发布失败', msg);
+    } finally {
+      setPublishing(false);
+      setProgress('');
+    }
+  }, [assets, caption, content, navigation, publishing, tagsText]);
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -153,8 +166,13 @@ export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>>
       </ScrollView>
 
       <View style={[styles.bottomBar, { backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
-        <TouchableOpacity activeOpacity={0.86} onPress={publish} style={styles.publishButton}>
-          <Text style={styles.publishButtonText}>发布</Text>
+        <TouchableOpacity
+          activeOpacity={0.86}
+          onPress={publish}
+          disabled={publishing}
+          style={[styles.publishButton, publishing && { opacity: 0.6 }]}
+        >
+          <Text style={styles.publishButtonText}>{publishing ? (progress || '发布中…') : '发布'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

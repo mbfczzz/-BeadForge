@@ -1,4 +1,4 @@
-import React, { useMemo, useState, memo } from 'react';
+import React, { useEffect, useMemo, useState, memo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Platform, Alert,
 } from 'react-native';
@@ -15,6 +15,8 @@ import { MOCK_DANMAKU } from '../../mock/danmaku';
 import type { RootScreenProps } from '../../navigation/types';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
+import { likeApi, favoriteApi, followApi } from '../../api/community';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const PAD = wp(15);
 const PREVIEW_H = wp(220);
@@ -61,11 +63,17 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
   }, [item.designData, item.id]);
   const info = useMemo(() => analyzePattern(pat), [pat]);
 
+  const currentUser = useAuthStore((state) => state.user);
+  const isOwnDesign = currentUser?.id === item.userId;
+
   const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(item.likeCount);
+  const [likeBusy, setLikeBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
   const [followed, setFollowed] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const likeCount = liked ? item.likeCount + 1 : item.likeCount;
   const toast = useToast();
 
   const danmaku = useDanmaku(MOCK_DANMAKU);
@@ -73,9 +81,87 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
   const previewW = screenW - PAD * 2 - wp(40);
   const beadSize = Math.floor(previewW / (info.cols || 9)) - 1;
 
-  const toggleLike = () => { setLiked(!liked); hapticLight(); if (!liked) toast.show('已点赞'); };
-  const toggleSave = () => { setSaved(!saved); hapticLight(); toast.show(saved ? '已取消收藏' : '已收藏'); };
-  const toggleFollow = () => { setFollowed(!followed); hapticSuccess(); toast.show(followed ? '已取消关注' : '已关注'); };
+  // 进入页面回填三个互动状态
+  useEffect(() => {
+    let alive = true;
+    likeApi.check('design', item.id)
+      .then((res) => { if (alive) setLiked(!!res.data?.liked); })
+      .catch(() => undefined);
+    favoriteApi.check('design', item.id)
+      .then((res) => { if (alive) setBookmarkedFromCheck(res.data?.favorited); })
+      .catch(() => undefined);
+    function setBookmarkedFromCheck(v: boolean | undefined) { if (alive) setSaved(!!v); }
+    if (item.userId && !isOwnDesign && currentUser) {
+      followApi.check(item.userId)
+        .then((res) => { if (alive) setFollowed(!!res.data); })
+        .catch(() => undefined);
+    } else {
+      setFollowed(false);
+    }
+    return () => { alive = false; };
+  }, [item.id, item.userId, isOwnDesign, currentUser?.id]);
+
+  const toggleLike = async () => {
+    if (likeBusy) return;
+    if (!currentUser) { toast.show('请先登录'); return; }
+    const next = !liked;
+    setLiked(next);
+    setLikeCount((v) => Math.max(0, v + (next ? 1 : -1)));
+    hapticLight();
+    setLikeBusy(true);
+    try {
+      if (next) await likeApi.like('design', item.id);
+      else await likeApi.unlike('design', item.id);
+      if (next) toast.show('已点赞');
+    } catch {
+      setLiked(!next);
+      setLikeCount((v) => Math.max(0, v + (next ? -1 : 1)));
+      toast.show('操作失败');
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
+  const toggleSave = async () => {
+    if (saveBusy) return;
+    if (!currentUser) { toast.show('请先登录'); return; }
+    const next = !saved;
+    setSaved(next);
+    hapticLight();
+    setSaveBusy(true);
+    try {
+      if (next) await favoriteApi.add('design', item.id);
+      else await favoriteApi.remove('design', item.id);
+      toast.show(next ? '已收藏' : '已取消收藏');
+    } catch {
+      setSaved(!next);
+      toast.show('操作失败');
+    } finally {
+      setSaveBusy(false);
+    }
+  };
+
+  const toggleFollow = async () => {
+    if (followBusy) return;
+    if (!currentUser) { toast.show('请先登录'); return; }
+    if (!item.userId) { toast.show('作者信息缺失'); return; }
+    if (isOwnDesign) { toast.show('不能关注自己'); return; }
+    const next = !followed;
+    setFollowed(next);
+    hapticSuccess();
+    setFollowBusy(true);
+    try {
+      if (next) await followApi.follow(item.userId);
+      else await followApi.unfollow(item.userId);
+      toast.show(next ? '已关注' : '已取消关注');
+    } catch {
+      setFollowed(!next);
+      toast.show('操作失败');
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
   const doShare = () => { hapticLight(); toast.show('链接已复制'); };
 
   return (
@@ -146,9 +232,16 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
             <Text style={[$.authorName, { color: colors.text }]}>{item.authorName || '创作者'}</Text>
             <Text style={[$.authorSub, { color: colors.textHint }]}>拼豆创作者</Text>
           </View>
-          <HoverView onPress={toggleFollow} style={[$.followBtn, { backgroundColor: followed ? colors.inputBg : colors.accent }]} hoverScale={1.05} hoverLift={1}>
-            <Text style={[$.followText, followed && { color: colors.textSecondary }]}>{followed ? '已关注' : '关注'}</Text>
-          </HoverView>
+          {isOwnDesign ? null : (
+            <HoverView
+              onPress={toggleFollow}
+              style={[$.followBtn, { backgroundColor: followed ? colors.inputBg : colors.accent, opacity: followBusy ? 0.6 : 1 }]}
+              hoverScale={1.05}
+              hoverLift={1}
+            >
+              <Text style={[$.followText, followed && { color: colors.textSecondary }]}>{followed ? '已关注' : '关注'}</Text>
+            </HoverView>
+          )}
         </View>
 
         {/* 数据统计 */}

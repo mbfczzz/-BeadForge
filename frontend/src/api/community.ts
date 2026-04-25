@@ -24,6 +24,7 @@ export interface FeedMediaData {
 }
 
 export interface FeedAuthorData {
+  id?: number;
   name: string;
   title: string;
 }
@@ -42,6 +43,7 @@ export interface FeedItemData {
   shareCount: number;
   timeAgo: string;
   tags: string[];
+  liked?: boolean;
 }
 
 export interface HotTopicItem {
@@ -56,6 +58,7 @@ export interface StoryUserItem {
 }
 
 export interface CommunityUserData {
+  id: number | null;
   name: string;
   title: string;
   bio: string;
@@ -65,6 +68,7 @@ export interface CommunityUserData {
   likes: number;
   joinDate: string;
   tags: string[];
+  gender?: string | null;
 }
 
 /* ────────── 真实 API ────────── */
@@ -82,7 +86,98 @@ export const feedApi = {
   mine: (page = 1, size = 20) =>
     client.get<any, ApiRes<PageRes<FeedItemData>>>('/feeds/mine', { params: { page, size } }),
 
+  /** 公开 — 某用户发布的动态 */
+  byUser: (userId: number, page = 1, size = 20) =>
+    client.get<any, ApiRes<PageRes<FeedItemData>>>(`/feeds/by-user/${userId}`, { params: { page, size } }),
+
   /** 发布动态 */
-  create: (data: { content: string; tags?: string; designId?: number }) =>
+  create: (data: { content: string; tags?: string; designId?: number; mediaUrls?: string; mediaType?: 'image' | 'gif' | 'video' }) =>
     client.post<any, ApiRes<any>>('/feeds', data),
+};
+
+export interface PublicDesignItem {
+  id: number;
+  title: string;
+  description?: string;
+  category?: string;
+  coverImage?: string;
+  authorName?: string;
+  likeCount: number;
+  viewCount: number;
+  status: string;
+}
+
+export const designApi = {
+  byUser: (userId: number, page = 1, size = 20) =>
+    client.get<any, ApiRes<PageRes<PublicDesignItem>>>(`/designs/public/by-user/${userId}`, { params: { page, size } }),
+};
+
+export interface UserLikedItem {
+  id: number;
+  targetType: '动态' | '作品';
+  targetId: number;
+  title: string;
+  author: string;
+  patternIndex: number;
+  likeCount: number;
+  timeAgo: string;
+}
+
+export type LikeTarget = 'design' | 'feed' | 'pattern' | 'comment';
+export type FavoriteTarget = 'design' | 'pattern';
+
+export const likeApi = {
+  like: (type: LikeTarget, id: number) =>
+    client.post<any, ApiRes<null>>(`/likes/${type}/${id}`),
+  unlike: (type: LikeTarget, id: number) =>
+    client.delete<any, ApiRes<null>>(`/likes/${type}/${id}`),
+  check: (type: LikeTarget, id: number) =>
+    client.get<any, ApiRes<{ liked: boolean }>>(`/likes/check/${type}/${id}`),
+  byUser: (userId: number) =>
+    client.get<any, ApiRes<UserLikedItem[]>>(`/likes/by-user/${userId}`),
+};
+
+export const favoriteApi = {
+  add: (type: FavoriteTarget, id: number) =>
+    client.post<any, ApiRes<null>>(`/favorites/${type}/${id}`),
+  remove: (type: FavoriteTarget, id: number) =>
+    client.delete<any, ApiRes<null>>(`/favorites/${type}/${id}`),
+  check: (type: FavoriteTarget, id: number) =>
+    client.get<any, ApiRes<{ favorited: boolean }>>(`/favorites/check/${type}/${id}`),
+};
+
+export const followApi = {
+  follow: (targetUserId: number) =>
+    client.post<any, ApiRes<null>>(`/follow/${targetUserId}`),
+  unfollow: (targetUserId: number) =>
+    client.delete<any, ApiRes<null>>(`/follow/${targetUserId}`),
+  check: (targetUserId: number) =>
+    client.get<any, ApiRes<boolean>>(`/follow/check/${targetUserId}`),
+};
+
+export type CommentTarget = 'feed' | 'design';
+
+export interface CommentItem {
+  id: number;
+  content: string;
+  parentId: number | null;
+  replyToUserName: string | null;
+  timeAgo: string;
+  createdAt: string;
+  likeCount: number;
+  liked: boolean;
+  user: {
+    id: number;
+    name: string;
+    title: string;
+  };
+}
+
+export const commentApi = {
+  list: (type: CommentTarget, id: number) =>
+    client.get<any, ApiRes<CommentItem[]>>('/comments', { params: { type, id } }),
+  create: (type: CommentTarget, id: number, content: string, parentId?: number) =>
+    client.post<any, ApiRes<CommentItem>>('/comments', { content, parentId }, { params: { type, id } }),
+  remove: (id: number) =>
+    client.delete<any, ApiRes<null>>(`/comments/${id}`),
 };

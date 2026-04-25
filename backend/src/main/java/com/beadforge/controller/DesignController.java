@@ -35,6 +35,15 @@ public class DesignController {
         return ApiResponse.success(designService.getDesignById(id));
     }
 
+    /** 公开 — 某用户的发布作品（用于他人主页"作品" tab） */
+    @GetMapping("/public/by-user/{userId}")
+    public ApiResponse<Page<DesignDTO>> publicByUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ApiResponse.success(designService.listPublicDesignsByUser(userId, page, size));
+    }
+
     @GetMapping("/my")
     public ApiResponse<Page<DesignDTO>> myDesigns(
             HttpServletRequest request,
