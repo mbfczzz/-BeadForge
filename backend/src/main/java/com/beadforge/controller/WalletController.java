@@ -17,9 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/wallet")
@@ -145,15 +148,37 @@ public class WalletController {
         return ApiResponse.success("购买成功", m);
     }
 
-    /** 流水记录 */
+    /** 流水记录 — 对齐前端 ProfileWalletLog { id, title, description, amount, createdAt } */
     @GetMapping("/logs")
-    public ApiResponse<List<WalletLog>> logs(HttpServletRequest request) {
+    public ApiResponse<List<Map<String, Object>>> logs(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
         QueryWrapper<WalletLog> qw = new QueryWrapper<>();
         qw.eq("user_id", userId).orderByDesc("created_at");
         qw.last("LIMIT 50");
-        return ApiResponse.success(logRepo.selectList(qw));
+        List<WalletLog> raws = logRepo.selectList(qw);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        List<Map<String, Object>> result = raws.stream().map(l -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", l.getId());
+            m.put("title", typeToCn(l.getType()));
+            m.put("description", l.getDescription() != null ? l.getDescription() : "");
+            m.put("amount", l.getAmount());
+            m.put("createdAt", l.getCreatedAt() == null ? null : l.getCreatedAt().format(fmt));
+            return m;
+        }).collect(Collectors.toList());
+        return ApiResponse.success(result);
+    }
+
+    private static String typeToCn(String type) {
+        if (type == null) return "";
+        switch (type) {
+            case "CHARGE":       return "账户充值";
+            case "BUY_PATTERN":  return "购买图纸";
+            case "BUY_PRODUCT":  return "购买商品";
+            case "REWARD":       return "奖励到账";
+            default: return type;
+        }
     }
 
     @Data

@@ -6,10 +6,12 @@ import com.beadforge.exception.BusinessException;
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.OrderCreateRequest;
 import com.beadforge.model.dto.OrderDTO;
+import com.beadforge.model.entity.Address;
 import com.beadforge.model.entity.Order;
 import com.beadforge.model.entity.OrderItem;
 import com.beadforge.model.entity.Product;
 import com.beadforge.model.enums.OrderStatus;
+import com.beadforge.repository.AddressRepository;
 import com.beadforge.repository.OrderItemRepository;
 import com.beadforge.repository.OrderRepository;
 import com.beadforge.repository.ProductRepository;
@@ -42,6 +44,7 @@ public class OrderController {
     private final OrderRepository orderRepo;
     private final OrderItemRepository itemRepo;
     private final ProductRepository productRepo;
+    private final AddressRepository addressRepo;
 
     /** 创建订单 */
     @PostMapping
@@ -120,10 +123,13 @@ public class OrderController {
             : productRepo.selectBatchIds(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
 
+        Address defaultAddr = loadDefaultAddress(userId);
         Page<OrderDTO> result = new Page<>(raw.getCurrent(), raw.getSize(), raw.getTotal());
         result.setRecords(raw.getRecords().stream().map(o -> {
             List<OrderItem> items = itemsByOrder.getOrDefault(o.getId(), Collections.emptyList());
-            return OrderDTO.brief(o, resolveTitle(pmap, items), resolveCover(pmap, items));
+            return applyAddress(
+                OrderDTO.brief(o, resolveTitle(pmap, items), resolveCover(pmap, items)),
+                defaultAddr);
         }).collect(Collectors.toList()));
         return ApiResponse.success(result);
     }
@@ -140,7 +146,9 @@ public class OrderController {
             ? new HashMap<>()
             : productRepo.selectBatchIds(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
-        return ApiResponse.success(OrderDTO.detail(o, resolveTitle(pmap, items), resolveCover(pmap, items), items));
+        return ApiResponse.success(applyAddress(
+            OrderDTO.detail(o, resolveTitle(pmap, items), resolveCover(pmap, items), items),
+            loadDefaultAddress(userId)));
     }
 
     @PostMapping("/{id}/pay")
@@ -206,7 +214,23 @@ public class OrderController {
         Map<Long, Product> pmap = pids.isEmpty()
             ? new HashMap<>()
             : productRepo.selectBatchIds(pids).stream().collect(Collectors.toMap(Product::getId, p -> p));
-        return OrderDTO.detail(o, resolveTitle(pmap, items), resolveCover(pmap, items), items);
+        return applyAddress(
+            OrderDTO.detail(o, resolveTitle(pmap, items), resolveCover(pmap, items), items),
+            loadDefaultAddress(o.getUserId()));
+    }
+
+    private Address loadDefaultAddress(Long userId) {
+        QueryWrapper<Address> qw = new QueryWrapper<>();
+        qw.eq("user_id", userId).orderByDesc("is_default").orderByDesc("updated_at").last("LIMIT 1");
+        List<Address> list = addressRepo.selectList(qw);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    private OrderDTO applyAddress(OrderDTO dto, Address a) {
+        if (a == null) return dto;
+        String full = (a.getRegion() == null ? "" : a.getRegion()) + " " + (a.getDetail() == null ? "" : a.getDetail());
+        dto.withReceiver(a.getReceiver(), a.getPhone(), full.trim());
+        return dto;
     }
 
     private String resolveTitle(Map<Long, Product> pmap, List<OrderItem> items) {

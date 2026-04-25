@@ -41,6 +41,21 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result));
     }
 
+    /** 需要登录 — 我发布的动态 */
+    @GetMapping("/mine")
+    public ApiResponse<Page<Map<String, Object>>> mine(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("userId");
+        if (userId == null) return ApiResponse.error(401, "需要登录");
+        Page<Feed> p = new Page<>(page, size);
+        QueryWrapper<Feed> qw = new QueryWrapper<>();
+        qw.eq("user_id", userId).orderByDesc("created_at");
+        Page<Feed> result = feedRepo.selectPage(p, qw);
+        return ApiResponse.success(enrichFeeds(result));
+    }
+
     /** 需要登录 — 关注的人的动态 */
     @GetMapping("/following")
     public ApiResponse<Page<Map<String, Object>>> following(
@@ -81,7 +96,7 @@ public class FeedController {
         return ApiResponse.success("发布成功", feed);
     }
 
-    /** 附加用户信息到动态列表 */
+    /** 附加用户信息到动态列表 — 对齐前端 FeedItemData：补 media/coverAccent/linkedPatternIdx 占位字段 */
     private Page<Map<String, Object>> enrichFeeds(Page<Feed> result) {
         Set<Long> userIds = result.getRecords().stream().map(Feed::getUserId).collect(Collectors.toSet());
         Map<Long, User> userMap = new HashMap<>();
@@ -89,16 +104,19 @@ public class FeedController {
             userRepo.selectBatchIds(userIds).forEach(u -> userMap.put(u.getId(), u));
         }
 
+        String[] accents = {"#FF8DA8", "#6C8BFF", "#8E63FF", "#3FB28D", "#F9B95C", "#FF6F91"};
+
         Page<Map<String, Object>> mapped = new Page<>(result.getCurrent(), result.getSize(), result.getTotal());
         mapped.setRecords(result.getRecords().stream().map(f -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", f.getId());
             User u = userMap.get(f.getUserId());
-            Map<String, String> userInfo = new HashMap<>();
+            Map<String, String> userInfo = new LinkedHashMap<>();
             userInfo.put("name", u != null ? (u.getNickname() != null ? u.getNickname() : u.getUsername()) : "未知");
             userInfo.put("title", "创作者");
             m.put("user", userInfo);
             m.put("content", f.getContent());
+            m.put("caption", null);
             m.put("designId", f.getDesignId());
             String tagsStr = f.getTags();
             m.put("tags", (tagsStr != null && !tagsStr.trim().isEmpty()) ? Arrays.asList(tagsStr.split(",")) : Collections.emptyList());
@@ -107,6 +125,15 @@ public class FeedController {
             m.put("shareCount", f.getShareCount());
             m.put("timeAgo", formatTimeAgo(f.getCreatedAt()));
             m.put("createdAt", f.getCreatedAt());
+
+            // 占位 media（前端 utils/feedMedia 会按 demoAssetId 哈希生成 SVG，无需真实素材）
+            Map<String, Object> media = new LinkedHashMap<>();
+            media.put("type", "image");
+            media.put("demoAssetId", "feed-" + f.getId());
+            media.put("aspectRatio", 1.0);
+            m.put("media", media);
+            m.put("coverAccent", accents[(int) (Math.abs(f.getId()) % accents.length)]);
+            m.put("linkedPatternIdx", (int) (Math.abs(f.getId()) % 8));
             return m;
         }).collect(Collectors.toList()));
 

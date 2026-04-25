@@ -12,22 +12,32 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 订单响应 DTO — 对齐前端 ProfileOrderItem：
- * {
- *   id: string, title: string, amount: number, status: '待支付'..., createdAt: string, coverLabel?: string
- * }
+ * 订单响应 DTO — 对齐前端 ProfileOrderItem / ProfileDisplayOrder。
  *
- * title / coverLabel 由订单项（如果只有一条）或第一条+"等 N 件" 组合而成。
+ * 基础字段：id, title, amount, status, createdAt, coverLabel
+ * 扩展字段（前端 detail 页用）：orderNo, category, imageText, itemCount,
+ *                              receiver, phone, address, trackingNo, statusNote
+ *
+ * 收件人/电话/地址来自当前用户默认地址（订单表暂未存地址快照）。
  * 金额按 number 输出（避免 BigDecimal 字符串化）。
  */
 @Data
 public class OrderDTO {
     private String id;
+    private String orderNo;
     private String title;
     private Double amount;
     private String status;
     private String createdAt;
     private String coverLabel;
+    private String category;
+    private String imageText;
+    private Integer itemCount;
+    private String receiver;
+    private String phone;
+    private String address;
+    private String trackingNo;
+    private String statusNote;
     private List<ItemDTO> items;
 
     @Data
@@ -50,13 +60,19 @@ public class OrderDTO {
     /** 基础 DTO（不含 items，用于列表） */
     public static OrderDTO brief(Order o, String title, String coverLabel) {
         OrderDTO d = new OrderDTO();
-        d.setId(String.valueOf(o.getId()));
+        String idStr = String.valueOf(o.getId());
+        d.setId(idStr);
+        d.setOrderNo("BF" + idStr);
         d.setTitle(title);
         d.setAmount(o.getTotalAmount() == null ? 0.0 : o.getTotalAmount().doubleValue());
         OrderStatus s = OrderStatus.fromLabel(o.getStatus());
         d.setStatus(s == null ? o.getStatus() : s.getLabel());
         d.setCreatedAt(o.getCreatedAt() == null ? null : o.getCreatedAt().toLocalDate().toString());
         d.setCoverLabel(coverLabel);
+        d.setCategory(coverLabel);
+        d.setImageText(coverLabel);
+        d.setItemCount(0);
+        d.setStatusNote(buildStatusNote(s));
         d.setItems(Collections.emptyList());
         return d;
     }
@@ -64,9 +80,31 @@ public class OrderDTO {
     /** 完整 DTO（含 items，用于详情） */
     public static OrderDTO detail(Order o, String title, String coverLabel, List<OrderItem> items) {
         OrderDTO d = brief(o, title, coverLabel);
+        d.setItemCount(items == null ? 0 : items.size());
         d.setItems(items == null
             ? Collections.emptyList()
             : items.stream().map(ItemDTO::from).collect(Collectors.toList()));
         return d;
+    }
+
+    /** 把当前用户默认地址填入收货信息 */
+    public OrderDTO withReceiver(String receiver, String phone, String address) {
+        this.receiver = receiver;
+        this.phone = phone;
+        this.address = address;
+        return this;
+    }
+
+    private static String buildStatusNote(OrderStatus s) {
+        if (s == null) return "";
+        switch (s) {
+            case PENDING:   return "订单已创建，请尽快完成支付。";
+            case PAID:      return "商家正在备货，预计 24 小时内出库。";
+            case SHIPPED:   return "包裹运输中，请留意物流信息。";
+            case COMPLETED: return "订单已完成，欢迎再次购买。";
+            case CANCELLED: return "订单已取消。";
+            case REFUND:    return "售后申请已提交，平台正在处理中。";
+            default: return "";
+        }
     }
 }
