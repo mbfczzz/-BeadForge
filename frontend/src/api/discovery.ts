@@ -1,4 +1,10 @@
-import { getDefaultHomeBanners, getDiscoverHomeConfig } from '../mock/discovery';
+import client from './client';
+
+interface ApiRes<T> {
+  code: number;
+  message: string;
+  data: T;
+}
 
 export type DiscoverAccessMode = 'free' | 'points' | 'member';
 export type DiscoverSortMode = 'latest' | 'hot';
@@ -45,15 +51,9 @@ export interface DiscoverHomePayload {
   banners: HomeBannerItem[];
 }
 
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 export const discoveryApi = {
   async getHomePayload(): Promise<DiscoverHomePayload> {
-    await wait(120);
-
-    return {
-      config: getDiscoverHomeConfig(),
-      banners: getDefaultHomeBanners(),
-    };
+    const res = await client.get<any, ApiRes<DiscoverHomePayload>>('/discovery/home');
+    return res.data;
   },
 };

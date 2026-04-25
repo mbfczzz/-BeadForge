@@ -1,3 +1,13 @@
+import client from './client';
+
+interface ApiRes<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+/* ────────── 类型契约（与 UI 形态对齐，保持原有定义） ────────── */
+
 export interface ProfileFavoriteItem {
   id: number;
   title: string;
@@ -101,3 +111,27 @@ export interface ProfileNoticeItem {
   unread?: boolean;
   action?: ProfileNoticeAction;
 }
+
+/* ────────── 真实 API 调用 ────────── */
+
+export const profileApi = {
+  /** 我的收藏（默认 design 类型） */
+  favorites: (type: 'design' | 'pattern' = 'design') =>
+    client.get<any, ApiRes<ProfileFavoriteItem[]>>('/favorites', { params: { type } }),
+
+  /** 我收到的赞 */
+  receivedLikes: () =>
+    client.get<any, ApiRes<ProfileReceivedLikeItem[]>>('/likes/received'),
+
+  /** 我给出的赞 */
+  givenLikes: () =>
+    client.get<any, ApiRes<ProfileGivenLikeItem[]>>('/likes/given'),
+
+  /** 我的粉丝 */
+  followers: () =>
+    client.get<any, ApiRes<ProfileFollowUser[]>>('/follow/followers'),
+
+  /** 我关注的人 */
+  following: () =>
+    client.get<any, ApiRes<ProfileFollowUser[]>>('/follow/following'),
+};

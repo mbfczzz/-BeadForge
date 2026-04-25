@@ -1,7 +1,37 @@
 import localRegionData from 'china-division/dist/pca-code.json';
+import client from './client';
 import { getAddressRegionApiUrl, getAddressRegionProvider, getAmapWebKey } from '../config/env';
 import type { AddressRegionNode } from '../mock/address';
 import { MOCK_ADDRESS_REGIONS } from '../mock/address';
+import type { ProfileAddressItem } from './profile';
+
+interface ApiRes<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+export interface AddressUpsertPayload {
+  receiver: string;
+  phone: string;
+  region: string;
+  detail: string;
+  tag?: string;
+  isDefault?: boolean;
+}
+
+/** 用户收货地址 CRUD（后端 /addresses） */
+export const addressApi = {
+  list: () => client.get<any, ApiRes<ProfileAddressItem[]>>('/addresses'),
+  detail: (id: string) => client.get<any, ApiRes<ProfileAddressItem>>(`/addresses/${id}`),
+  create: (data: AddressUpsertPayload) =>
+    client.post<any, ApiRes<ProfileAddressItem>>('/addresses', data),
+  update: (id: string, data: AddressUpsertPayload) =>
+    client.put<any, ApiRes<ProfileAddressItem>>(`/addresses/${id}`, data),
+  remove: (id: string) => client.delete<any, ApiRes<void>>(`/addresses/${id}`),
+  setDefault: (id: string) =>
+    client.post<any, ApiRes<ProfileAddressItem>>(`/addresses/${id}/default`),
+};
 
 export type AddressProvider = 'local' | 'backend' | 'amap' | 'auto' | 'mock';
 

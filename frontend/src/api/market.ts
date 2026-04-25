@@ -109,6 +109,59 @@ export const marketApi = {
     }),
 };
 
+interface BackendPatternListing {
+  id: number;
+  title: string;
+  author: string;
+  authorId: number;
+  description: string;
+  category: string;
+  price: number;
+  free: boolean;
+  cols: number;
+  rows: number;
+  downloads: number;
+  rating: number;
+  createdAt: string;
+}
+
+function backendListingToSeed(p: BackendPatternListing): PatternListingSeed {
+  return {
+    id: p.id,
+    title: p.title,
+    author: p.author,
+    authorId: p.authorId,
+    price: Number(p.price || 0),
+    free: !!p.free,
+    patIdx: Math.abs(p.id) % 8,
+    cat: p.category || '其他',
+    downloads: p.downloads || 0,
+    rating: Number(p.rating || 5),
+    cols: p.cols || 9,
+    rows: p.rows || 9,
+    desc: p.description || '',
+    createdAt: typeof p.createdAt === 'string' ? p.createdAt.slice(0, 10) : '',
+  };
+}
+
+export const patternApi = {
+  list: (page = 1, size = 50, category?: string, sortBy: 'latest' | 'hot' | 'free' | 'price_asc' = 'latest') =>
+    client
+      .get<any, ApiRes<PageData<BackendPatternListing>>>('/patterns/list', {
+        params: { page, size, category, sortBy },
+      })
+      .then((res) => ({
+        ...res,
+        seeds: (res.data?.records || []).map(backendListingToSeed),
+      })),
+
+  publish: (data: any) => client.post<any, ApiRes<any>>('/patterns/publish', data),
+
+  buy: (id: number) => client.post<any, ApiRes<void>>(`/patterns/${id}/buy`),
+
+  myPurchased: () => client.get<any, ApiRes<number[]>>('/patterns/purchased'),
+};
+
 export interface PatternListingSeed {
   id: number;
   title: string;

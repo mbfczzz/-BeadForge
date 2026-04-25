@@ -1,3 +1,18 @@
+import client from './client';
+
+interface ApiRes<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+
+interface PageRes<T> {
+  records: T[];
+  total: number;
+  size: number;
+  current: number;
+}
+
 export type FeedMediaType = 'image' | 'video' | 'gif';
 
 export interface FeedMediaData {
@@ -51,3 +66,23 @@ export interface CommunityUserData {
   joinDate: string;
   tags: string[];
 }
+
+/* ────────── 真实 API ────────── */
+
+export const feedApi = {
+  /** 公开动态列表 */
+  list: (tab: 'recommend' | 'latest' = 'recommend', page = 1, size = 20) =>
+    client.get<any, ApiRes<PageRes<FeedItemData>>>('/feeds/list', { params: { tab, page, size } }),
+
+  /** 关注的人的动态 */
+  following: (page = 1, size = 20) =>
+    client.get<any, ApiRes<PageRes<FeedItemData>>>('/feeds/following', { params: { page, size } }),
+
+  /** 我发布的动态 */
+  mine: (page = 1, size = 20) =>
+    client.get<any, ApiRes<PageRes<FeedItemData>>>('/feeds/mine', { params: { page, size } }),
+
+  /** 发布动态 */
+  create: (data: { content: string; tags?: string; designId?: number }) =>
+    client.post<any, ApiRes<any>>('/feeds', data),
+};
