@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import type { HomeBannerItem } from '../api/discovery';
-import type { MarketPattern, PatternListingSeed, PublishPatternInput, ResourceAccessMode } from '../api/market';
-import { getDefaultHomeBanners } from '../mock/discovery';
-import { MOCK_PATTERN_LISTINGS } from '../mock/market';
+import { patternApi, type MarketPattern, type PatternListingSeed, type PublishPatternInput, type ResourceAccessMode } from '../api/market';
 
 export type { MarketPattern } from '../api/market';
 
@@ -12,14 +10,11 @@ interface PatternState {
   refreshing: boolean;
   homeBanners: HomeBannerItem[];
   setHomeBanners: (banners: HomeBannerItem[]) => void;
-  publish: (pattern: PublishPatternInput) => number;
+  publish: (pattern: PublishPatternInput) => Promise<number>;
   unlist: (id: number) => void;
   isMine: (id: number) => boolean;
   refreshListings: () => Promise<void>;
 }
-
-let nextId = 300;
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const normalizeListing = (item: PatternListingSeed): MarketPattern => {
   const accessMode: ResourceAccessMode = item.accessMode || (item.free ? 'free' : 'points');
@@ -35,10 +30,10 @@ const normalizeListing = (item: PatternListingSeed): MarketPattern => {
 };
 
 export const usePatternStore = create<PatternState>((set, get) => ({
-  listings: MOCK_PATTERN_LISTINGS.map(normalizeListing),
+  listings: [],
   myListings: new Set<number>(),
   refreshing: false,
-  homeBanners: getDefaultHomeBanners(),
+  homeBanners: [],
 
   setHomeBanners: (banners) => {
     set({
@@ -48,31 +43,44 @@ export const usePatternStore = create<PatternState>((set, get) => ({
     });
   },
 
-  publish: (pattern) => {
-    const id = nextId++;
+  publish: async (pattern) => {
     const pointsCost = pattern.accessMode === 'points' ? Math.max(0, pattern.pointsCost || 0) : 0;
+    try {
+      const res = await patternApi.publish({
+        title: pattern.title,
+        description: pattern.desc,
+        category: pattern.cat,
+        price: pointsCost,
+        cols: pattern.cols,
+        rows: pattern.rows,
+        previewData: pattern.gridData ? JSON.stringify(pattern.gridData) : null,
+      });
+      const id = res.data?.id || Date.now();
 
-    const newPattern: MarketPattern = {
-      ...pattern,
-      id,
-      downloads: 0,
-      rating: 5,
-      createdAt: new Date().toISOString().slice(0, 10),
-      free: pattern.accessMode === 'free',
-      pointsCost,
-      price: pointsCost,
-    };
-
-    set((state) => {
-      const myListings = new Set(state.myListings);
-      myListings.add(id);
-      return {
-        listings: [newPattern, ...state.listings],
-        myListings,
+      const newPattern: MarketPattern = {
+        ...pattern,
+        id,
+        downloads: 0,
+        rating: 5,
+        createdAt: new Date().toISOString().slice(0, 10),
+        free: pattern.accessMode === 'free',
+        pointsCost,
+        price: pointsCost,
       };
-    });
 
-    return id;
+      set((state) => {
+        const myListings = new Set(state.myListings);
+        myListings.add(id);
+        return {
+          listings: [newPattern, ...state.listings],
+          myListings,
+        };
+      });
+
+      return id;
+    } catch {
+      return -1;
+    }
   },
 
   unlist: (id) => {
@@ -91,7 +99,19 @@ export const usePatternStore = create<PatternState>((set, get) => ({
   refreshListings: async () => {
     if (get().refreshing) return;
     set({ refreshing: true });
-    await wait(320);
-    set({ refreshing: false });
+    try {
+      const [listRes, ownedRes] = await Promise.all([
+        patternApi.list(),
+        patternApi.myPurchased().catch(() => ({ data: [] as number[] })),
+      ]);
+      const seeds = (listRes as any).seeds as PatternListingSeed[];
+      set({
+        listings: seeds.map(normalizeListing),
+        myListings: new Set<number>(ownedRes.data || []),
+        refreshing: false,
+      });
+    } catch {
+      set({ refreshing: false });
+    }
   },
 }));

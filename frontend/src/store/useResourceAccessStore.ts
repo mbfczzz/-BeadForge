@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { ProfileWalletLog } from '../api/profile';
-import { MOCK_PROFILE_WALLET_LOGS } from '../mock/profile';
+import { walletApi } from '../api/wallet';
 import { usePatternStore, type MarketPattern } from './usePatternStore';
 
 export type UnlockSource = 'free' | 'points' | 'member' | 'author';
@@ -13,6 +13,7 @@ interface ResourceAccessState {
   ownedFileIds: Set<number>;
   downloadedFileIds: Set<number>;
   unlockSourceById: Record<number, UnlockSource>;
+  loadWallet: () => Promise<void>;
   canAccessFile: (file: MarketPattern) => boolean;
   canDownloadImage: (file: MarketPattern) => boolean;
   getUnlockSource: (fileId: number) => UnlockSource | null;
@@ -24,8 +25,6 @@ interface ResourceAccessState {
   addPoints: (amount: number) => void;
   signIn: () => boolean;
 }
-
-const DEFAULT_POINTS = 860;
 
 function formatLogTime(date = new Date()) {
   const year = date.getFullYear();
@@ -44,13 +43,25 @@ function formatDateKey(date = new Date()) {
 }
 
 export const useResourceAccessStore = create<ResourceAccessState>((set, get) => ({
-  pointsBalance: DEFAULT_POINTS,
-  pointsLogs: MOCK_PROFILE_WALLET_LOGS,
+  pointsBalance: 0,
+  pointsLogs: [],
   lastSignInDate: null,
   membershipActive: false,
   ownedFileIds: new Set<number>(),
   downloadedFileIds: new Set<number>(),
   unlockSourceById: {},
+
+  loadWallet: async () => {
+    try {
+      const [balRes, logsRes] = await Promise.all([walletApi.balance(), walletApi.logs()]);
+      set({
+        pointsBalance: balRes.data?.balance || 0,
+        pointsLogs: logsRes.data || [],
+      });
+    } catch {
+      // 未登录或网络错误时保留空状态
+    }
+  },
 
   canAccessFile: (file) => {
     const isMine = usePatternStore.getState().isMine(file.id);

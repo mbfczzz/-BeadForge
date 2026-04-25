@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import type { DesignItem } from '../api/design';
-import { getMockMyDesignPage, getMockPublicDesignPage } from '../mock/design';
-import { useAuthStore } from './useAuthStore';
+import { designApi, type DesignItem } from '../api/design';
 
 interface DesignState {
   designs: DesignItem[];
@@ -24,7 +22,6 @@ interface DesignState {
 }
 
 const PAGE_SIZE = 10;
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export const useDesignStore = create<DesignState>((set, get) => ({
   designs: [],
@@ -61,21 +58,15 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ loading: true, refreshing: refresh, error: null });
 
     try {
-      await wait(250);
-      const data = getMockPublicDesignPage({
-        page,
-        size: PAGE_SIZE,
-        sortBy: state.sortBy,
-        category: state.category,
-        keyword: state.searchKeyword,
-      });
-      const records = data.records || [];
+      const res = await designApi.getPublicList(page, PAGE_SIZE, state.sortBy, state.category || undefined);
+      const data = res.data;
+      const records = data?.records || [];
       const allRecords = refresh ? records : [...state.designs, ...records];
 
       set({
         designs: allRecords,
         page: page + 1,
-        hasMore: allRecords.length < (data.total || 0),
+        hasMore: allRecords.length < (data?.total || 0),
         loading: false,
         refreshing: false,
       });
@@ -92,16 +83,15 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ myLoading: true });
 
     try {
-      await wait(180);
-      const userId = useAuthStore.getState().user?.id;
-      const data = getMockMyDesignPage({ page, size: PAGE_SIZE, userId });
-      const records = data.records || [];
+      const res = await designApi.getMyDesigns(page, PAGE_SIZE);
+      const data = res.data;
+      const records = data?.records || [];
       const all = refresh ? records : [...state.myDesigns, ...records];
 
       set({
         myDesigns: all,
         myPage: page + 1,
-        myHasMore: all.length < (data.total || 0),
+        myHasMore: all.length < (data?.total || 0),
         myLoading: false,
       });
     } catch {
