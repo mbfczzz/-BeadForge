@@ -2,6 +2,7 @@ package com.beadforge.model.dto;
 
 import com.beadforge.model.entity.Feedback;
 import com.beadforge.model.entity.FeedbackReply;
+import com.beadforge.service.DictService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 
@@ -77,32 +78,14 @@ public class FeedbackDTO {
     }
 
     public static String typeToCn(String en) {
-        if (en == null) return null;
-        switch (en) {
-            case "FEATURE":    return "功能问题";
-            case "ORDER":      return "订单问题";
-            case "SUGGESTION": return "体验建议";
-            default: return en;
-        }
+        return en == null ? null : DictService.labelOf("FEEDBACK_TYPE", en);
     }
 
     public static String typeToEn(String cn) {
-        if (cn == null) return null;
-        switch (cn) {
-            case "功能问题": return "FEATURE";
-            case "订单问题": return "ORDER";
-            case "体验建议": return "SUGGESTION";
-            default: return cn;
-        }
+        return cn == null ? null : DictService.keyOf("FEEDBACK_TYPE", cn);
     }
 
     public static String statusToCn(String en) {
-        if (en == null) return null;
-        switch (en) {
-            case "PROCESSING": return "处理中";
-            case "WAITING":    return "待回复";
-            case "COMPLETED":  return "已完成";
-            default: return en;
-        }
+        return en == null ? null : DictService.labelOf("FEEDBACK_STATUS", en);
     }
 }

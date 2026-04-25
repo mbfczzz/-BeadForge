@@ -10,6 +10,7 @@ import com.beadforge.repository.PatternListingRepository;
 import com.beadforge.repository.PatternPurchaseRepository;
 import com.beadforge.repository.WalletLogRepository;
 import com.beadforge.repository.WalletRepository;
+import com.beadforge.service.DictService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -171,14 +172,7 @@ public class WalletController {
     }
 
     private static String typeToCn(String type) {
-        if (type == null) return "";
-        switch (type) {
-            case "CHARGE":       return "账户充值";
-            case "BUY_PATTERN":  return "购买图纸";
-            case "BUY_PRODUCT":  return "购买商品";
-            case "REWARD":       return "奖励到账";
-            default: return type;
-        }
+        return type == null ? "" : DictService.labelOf("WALLET_LOG_TYPE", type);
     }
 
     @Data

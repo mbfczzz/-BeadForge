@@ -1,92 +1,225 @@
 package com.beadforge.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.beadforge.model.dto.ApiResponse;
+import com.beadforge.model.entity.DiscoverBanner;
+import com.beadforge.model.entity.DiscoverSetting;
+import com.beadforge.model.entity.DiscoverTab;
+import com.beadforge.repository.DiscoverBannerRepository;
+import com.beadforge.repository.DiscoverSettingRepository;
+import com.beadforge.repository.DiscoverTabRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * 发现页首页配置：banner 列表 + 分类 tab 配置。
+ * 发现页配置：banner / tab / 全局文案。全部从数据库查询，admin 后台可维护。
  *
- * 当前实现：硬编码默认配置，返回结构完全对齐前端 DiscoverHomePayload。
- * 将来可扩展：
- *   - 新增 t_discover_banner / t_discover_tab 表，允许管理后台动态增删
- *   - 按时段切换节日 banner（如春节用朱砂、端午用青绿等）
+ * 公开接口：
+ *   GET    /discovery/home                  — 前端展示用 payload（合并 setting + banners + tabs）
  *
- * 接口为公开（匿名可访问），需要在 SecurityConfig 白名单里放行。
+ * 管理接口（建议加 ADMIN 角色校验）：
+ *   GET    /discovery/banners               — 全量 banner
+ *   POST   /discovery/banners               — 新建
+ *   PUT    /discovery/banners/{id}          — 更新
+ *   DELETE /discovery/banners/{id}          — 软删
+ *   GET    /discovery/tabs
+ *   POST   /discovery/tabs
+ *   PUT    /discovery/tabs/{id}
+ *   DELETE /discovery/tabs/{id}
+ *   GET    /discovery/settings
+ *   PUT    /discovery/settings/{key}        — 更新全局文案
  */
 @RestController
 @RequestMapping("/discovery")
 @RequiredArgsConstructor
 public class DiscoveryController {
 
+    private final DiscoverBannerRepository bannerRepo;
+    private final DiscoverTabRepository tabRepo;
+    private final DiscoverSettingRepository settingRepo;
+
+    /** ────────── 公开 ────────── */
+
     @GetMapping("/home")
     public ApiResponse<Map<String, Object>> home() {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("config", buildConfig());
-        payload.put("banners", buildBanners());
+        payload.put("banners", listEnabledBanners());
         return ApiResponse.success(payload);
     }
 
+    /** ────────── 管理 — Banner ────────── */
+
+    @GetMapping("/banners")
+    public ApiResponse<List<DiscoverBanner>> listBanners() {
+        return ApiResponse.success(bannerRepo.selectList(new QueryWrapper<DiscoverBanner>()
+            .orderByAsc("sort_order").orderByDesc("id")));
+    }
+
+    @PostMapping("/banners")
+    public ApiResponse<DiscoverBanner> createBanner(@RequestBody DiscoverBanner b) {
+        if (b.getEnabled() == null) b.setEnabled(1);
+        if (b.getSortOrder() == null) b.setSortOrder(99);
+        if (b.getSortMode() == null || b.getSortMode().isEmpty()) b.setSortMode("hot");
+        bannerRepo.insert(b);
+        return ApiResponse.success("新建成功", b);
+    }
+
+    @PutMapping("/banners/{id}")
+    public ApiResponse<DiscoverBanner> updateBanner(@PathVariable Long id, @RequestBody DiscoverBanner b) {
+        DiscoverBanner exist = bannerRepo.selectById(id);
+        if (exist == null) return ApiResponse.error(404, "Banner 不存在");
+        b.setId(id);
+        bannerRepo.updateById(b);
+        return ApiResponse.success("更新成功", bannerRepo.selectById(id));
+    }
+
+    @DeleteMapping("/banners/{id}")
+    public ApiResponse<Void> deleteBanner(@PathVariable Long id) {
+        bannerRepo.deleteById(id);
+        return ApiResponse.success("已删除", null);
+    }
+
+    /** ────────── 管理 — Tab ────────── */
+
+    @GetMapping("/tabs")
+    public ApiResponse<List<DiscoverTab>> listTabs() {
+        return ApiResponse.success(tabRepo.selectList(new QueryWrapper<DiscoverTab>()
+            .orderByAsc("sort_order").orderByDesc("id")));
+    }
+
+    @PostMapping("/tabs")
+    public ApiResponse<DiscoverTab> createTab(@RequestBody DiscoverTab t) {
+        if (t.getEnabled() == null) t.setEnabled(1);
+        if (t.getIsDefault() == null) t.setIsDefault(0);
+        if (t.getSortOrder() == null) t.setSortOrder(99);
+        if (t.getSortMode() == null || t.getSortMode().isEmpty()) t.setSortMode("hot");
+        if (Integer.valueOf(1).equals(t.getIsDefault())) clearDefaultExcept(null);
+        tabRepo.insert(t);
+        return ApiResponse.success("新建成功", t);
+    }
+
+    @PutMapping("/tabs/{id}")
+    public ApiResponse<DiscoverTab> updateTab(@PathVariable Long id, @RequestBody DiscoverTab t) {
+        DiscoverTab exist = tabRepo.selectById(id);
+        if (exist == null) return ApiResponse.error(404, "Tab 不存在");
+        if (Integer.valueOf(1).equals(t.getIsDefault())) clearDefaultExcept(id);
+        t.setId(id);
+        tabRepo.updateById(t);
+        return ApiResponse.success("更新成功", tabRepo.selectById(id));
+    }
+
+    @DeleteMapping("/tabs/{id}")
+    public ApiResponse<Void> deleteTab(@PathVariable Long id) {
+        tabRepo.deleteById(id);
+        return ApiResponse.success("已删除", null);
+    }
+
+    /** ────────── 管理 — Setting (K-V 全局文案) ────────── */
+
+    @GetMapping("/settings")
+    public ApiResponse<List<DiscoverSetting>> listSettings() {
+        return ApiResponse.success(settingRepo.selectList(null));
+    }
+
+    @PutMapping("/settings/{key}")
+    public ApiResponse<DiscoverSetting> upsertSetting(@PathVariable String key, @RequestBody Map<String, String> body) {
+        String value = body.get("value");
+        DiscoverSetting exist = settingRepo.selectOne(new QueryWrapper<DiscoverSetting>().eq("config_key", key));
+        if (exist == null) {
+            exist = new DiscoverSetting();
+            exist.setConfigKey(key);
+            exist.setConfigValue(value);
+            settingRepo.insert(exist);
+        } else {
+            exist.setConfigValue(value);
+            settingRepo.updateById(exist);
+        }
+        return ApiResponse.success("已保存", exist);
+    }
+
+    /** ────────── helpers ────────── */
+
     private Map<String, Object> buildConfig() {
+        Map<String, String> kv = settingRepo.selectList(null).stream()
+            .collect(Collectors.toMap(DiscoverSetting::getConfigKey, s -> s.getConfigValue() == null ? "" : s.getConfigValue(), (a, b) -> a));
+
+        List<DiscoverTab> tabs = tabRepo.selectList(new QueryWrapper<DiscoverTab>()
+            .eq("enabled", 1).orderByAsc("sort_order"));
+        DiscoverTab def = tabs.stream().filter(t -> Integer.valueOf(1).equals(t.getIsDefault())).findFirst()
+            .orElse(tabs.isEmpty() ? null : tabs.get(0));
+
         Map<String, Object> cfg = new LinkedHashMap<>();
-        cfg.put("defaultTabKey", "all");
-        cfg.put("searchPlaceholder", "搜索图纸、作者或分类");
-        cfg.put("resultTitle", "为你推荐");
-        cfg.put("emptyText", "暂无匹配的图纸资源");
-        cfg.put("tabs", Arrays.asList(
-            tab("all",    "全部", Arrays.asList(1, 2, 3, 4), null,                          "hot",    1, "为你推荐",   "暂无推荐图纸"),
-            tab("animal", "动物", Collections.singletonList(2), Collections.singletonList("动物"), "hot",    2, "动物推荐",   "暂无动物主题图纸"),
-            tab("flower", "花草", Collections.singletonList(3), Collections.singletonList("花草"), "latest", 3, "花草推荐",   "暂无花草主题图纸"),
-            tab("food",   "美食", Collections.singletonList(4), Collections.singletonList("美食"), "hot",    4, "美食推荐",   "暂无美食主题图纸")
-        ));
+        cfg.put("defaultTabKey", def == null ? "all" : def.getTabKey());
+        cfg.put("searchPlaceholder", kv.getOrDefault("searchPlaceholder", "搜索"));
+        cfg.put("resultTitle", kv.getOrDefault("resultTitle", "为你推荐"));
+        cfg.put("emptyText", kv.getOrDefault("emptyText", "暂无内容"));
+        cfg.put("tabs", tabs.stream().map(this::tabToMap).collect(Collectors.toList()));
         return cfg;
     }
 
-    private Map<String, Object> tab(String key, String label, List<Integer> bannerIds,
-                                    List<String> categories, String sort, int order,
-                                    String resultTitle, String emptyText) {
-        Map<String, Object> t = new LinkedHashMap<>();
-        t.put("key", key);
-        t.put("label", label);
-        if (bannerIds != null) t.put("bannerIds", bannerIds);
-        if (categories != null) t.put("categories", categories);
-        t.put("sort", sort);
-        t.put("enabled", true);
-        t.put("order", order);
-        t.put("resultTitle", resultTitle);
-        t.put("emptyText", emptyText);
-        return t;
+    private List<Map<String, Object>> listEnabledBanners() {
+        return bannerRepo.selectList(new QueryWrapper<DiscoverBanner>()
+                .eq("enabled", 1).orderByAsc("sort_order"))
+            .stream().map(this::bannerToMap).collect(Collectors.toList());
     }
 
-    private List<Map<String, Object>> buildBanners() {
-        return Arrays.asList(
-            banner(1, "热门精选", "近期收藏和浏览都很高的图案", 0, "#4B78FF", "",    "hot",    1, "发现图纸", "立即查看"),
-            banner(2, "动物主题", "适合挂件和卡片的小尺寸作品", 1, "#D6B161", "动物", "hot",    2, "发现图纸", "热门动物"),
-            banner(3, "花草系列", "贺卡和礼物封面常用花卉主题", 3, "#E986B5", "花草", "latest", 3, "春季灵感", "最新上架"),
-            banner(4, "美食图纸", "杯垫、冰箱贴和摆台都很适合", 5, "#63A88B", "美食", "hot",    4, "厨房灵感", "看看新品")
-        );
+    private Map<String, Object> tabToMap(DiscoverTab t) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("key", t.getTabKey());
+        m.put("label", t.getLabel());
+        m.put("bannerIds", csvToIntList(t.getBannerIds()));
+        m.put("categories", csvToStrList(t.getCategories()));
+        m.put("accessModes", csvToStrList(t.getAccessModes()));
+        m.put("sort", t.getSortMode() == null ? "hot" : t.getSortMode());
+        m.put("enabled", Integer.valueOf(1).equals(t.getEnabled()));
+        m.put("order", t.getSortOrder() == null ? 0 : t.getSortOrder());
+        m.put("resultTitle", t.getResultTitle());
+        m.put("emptyText", t.getEmptyText());
+        if (t.getSearchPlaceholder() != null) m.put("searchPlaceholder", t.getSearchPlaceholder());
+        return m;
     }
 
-    private Map<String, Object> banner(int id, String title, String sub, int pi, String bg,
-                                       String cat, String sort, int order, String eyebrow, String buttonText) {
-        Map<String, Object> b = new LinkedHashMap<>();
-        b.put("id", id);
-        b.put("title", title);
-        b.put("sub", sub);
-        b.put("pi", pi);
-        b.put("bg", bg);
-        b.put("cat", cat);
-        b.put("sort", sort);
-        b.put("enabled", true);
-        b.put("order", order);
-        b.put("eyebrow", eyebrow);
-        b.put("buttonText", buttonText);
-        return b;
+    private Map<String, Object> bannerToMap(DiscoverBanner b) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", b.getId());
+        m.put("title", b.getTitle());
+        m.put("sub", b.getSub());
+        m.put("pi", b.getPi() == null ? 0 : b.getPi());
+        m.put("bg", b.getBg());
+        m.put("cat", b.getCat());
+        m.put("sort", b.getSortMode() == null ? "hot" : b.getSortMode());
+        m.put("enabled", Integer.valueOf(1).equals(b.getEnabled()));
+        m.put("order", b.getSortOrder() == null ? 0 : b.getSortOrder());
+        m.put("eyebrow", b.getEyebrow());
+        m.put("buttonText", b.getButtonText());
+        if (b.getTextColor() != null) m.put("textColor", b.getTextColor());
+        return m;
+    }
+
+    private List<Integer> csvToIntList(String csv) {
+        if (csv == null || csv.isEmpty()) return Collections.emptyList();
+        List<Integer> out = new ArrayList<>();
+        for (String s : csv.split(",")) {
+            s = s.trim();
+            if (!s.isEmpty()) try { out.add(Integer.parseInt(s)); } catch (NumberFormatException ignored) {}
+        }
+        return out;
+    }
+
+    private List<String> csvToStrList(String csv) {
+        if (csv == null || csv.isEmpty()) return Collections.emptyList();
+        return Arrays.stream(csv.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+    }
+
+    private void clearDefaultExcept(Long keepId) {
+        UpdateWrapper<DiscoverTab> uw = new UpdateWrapper<>();
+        uw.eq("is_default", 1).set("is_default", 0);
+        if (keepId != null) uw.ne("id", keepId);
+        tabRepo.update(null, uw);
     }
 }

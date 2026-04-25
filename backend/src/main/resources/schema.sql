@@ -252,6 +252,69 @@ CREATE TABLE IF NOT EXISTS t_feedback_reply (
     INDEX idx_feedback_id (feedback_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 发现页 banner（首页轮播 / 大卡片）
+CREATE TABLE IF NOT EXISTS t_discover_banner (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    sub VARCHAR(200) COMMENT '副标题',
+    pi INT DEFAULT 0 COMMENT '关联图案下标',
+    bg VARCHAR(20) COMMENT '背景色 hex',
+    cat VARCHAR(50) COMMENT '关联分类，可空',
+    sort_mode VARCHAR(20) DEFAULT 'hot' COMMENT 'hot / latest',
+    sort_order INT DEFAULT 0 COMMENT '排序权重，小的在前',
+    eyebrow VARCHAR(50) COMMENT '上方小标题',
+    button_text VARCHAR(50) COMMENT '按钮文案',
+    text_color VARCHAR(20) COMMENT '文字色 hex，可空',
+    enabled TINYINT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_enabled_order (enabled, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 发现页过滤 tab
+CREATE TABLE IF NOT EXISTS t_discover_tab (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tab_key VARCHAR(50) NOT NULL UNIQUE COMMENT '前端用 key, e.g. all/animal',
+    label VARCHAR(50) NOT NULL,
+    banner_ids VARCHAR(200) COMMENT '关联 banner id 列表，逗号分隔',
+    categories VARCHAR(200) COMMENT '关联分类列表，逗号分隔',
+    access_modes VARCHAR(100) COMMENT 'free/points/member 列表，逗号分隔',
+    sort_mode VARCHAR(20) DEFAULT 'hot' COMMENT 'hot / latest',
+    sort_order INT DEFAULT 0,
+    result_title VARCHAR(100),
+    empty_text VARCHAR(200),
+    search_placeholder VARCHAR(100),
+    is_default TINYINT DEFAULT 0 COMMENT '默认选中 tab，应该只有 1 条为 1',
+    enabled TINYINT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_enabled_order (enabled, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 通用字典表（订单状态文案 / 工单类型 / 工单状态 / 钱包流水类型 等）
+CREATE TABLE IF NOT EXISTS t_dict (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dict_type VARCHAR(50) NOT NULL COMMENT 'ORDER_STATUS_NOTE / FEEDBACK_TYPE / FEEDBACK_STATUS / WALLET_LOG_TYPE',
+    dict_key VARCHAR(50) NOT NULL COMMENT '英文枚举值，如 PENDING / FEATURE / CHARGE',
+    label VARCHAR(100) COMMENT '中文显示名',
+    description VARCHAR(500) COMMENT '长文案，如订单状态说明',
+    sort_order INT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_type_key (dict_type, dict_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 发现页全局配置（单行）
+CREATE TABLE IF NOT EXISTS t_discover_setting (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    config_key VARCHAR(50) NOT NULL UNIQUE,
+    config_value VARCHAR(500),
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 通知
 CREATE TABLE IF NOT EXISTS t_notification (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

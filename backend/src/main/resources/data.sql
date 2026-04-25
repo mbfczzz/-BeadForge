@@ -131,3 +131,50 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 确保 test1 用户有 ADMIN 角色（方便管理后台登录）
 UPDATE t_user SET role = 'ADMIN' WHERE username = 'test1' AND (role IS NULL OR role != 'ADMIN');
+
+-- ────────── Discovery 配置初始数据 ──────────
+INSERT IGNORE INTO t_discover_banner (id, title, sub, pi, bg, cat, sort_mode, sort_order, eyebrow, button_text, enabled) VALUES
+(1, '热门精选', '近期收藏和浏览都很高的图案',  0, '#4B78FF', NULL,   'hot',    1, '发现图纸', '立即查看', 1),
+(2, '动物主题', '适合挂件和卡片的小尺寸作品',  1, '#D6B161', '动物', 'hot',    2, '发现图纸', '热门动物', 1),
+(3, '花草系列', '贺卡和礼物封面常用花卉主题',  3, '#E986B5', '花草', 'latest', 3, '春季灵感', '最新上架', 1),
+(4, '美食图纸', '杯垫、冰箱贴和摆台都很适合',  5, '#63A88B', '美食', 'hot',    4, '厨房灵感', '看看新品', 1);
+
+INSERT IGNORE INTO t_discover_tab (id, tab_key, label, banner_ids, categories, sort_mode, sort_order, result_title, empty_text, is_default, enabled) VALUES
+(1, 'all',    '全部', '1,2,3,4', NULL,   'hot',    1, '为你推荐', '暂无推荐图纸',     1, 1),
+(2, 'animal', '动物', '2',       '动物', 'hot',    2, '动物推荐', '暂无动物主题图纸', 0, 1),
+(3, 'flower', '花草', '3',       '花草', 'latest', 3, '花草推荐', '暂无花草主题图纸', 0, 1),
+(4, 'food',   '美食', '4',       '美食', 'hot',    4, '美食推荐', '暂无美食主题图纸', 0, 1);
+
+INSERT IGNORE INTO t_discover_setting (config_key, config_value) VALUES
+('searchPlaceholder', '搜索图纸、作者或分类'),
+('resultTitle',       '为你推荐'),
+('emptyText',         '暂无匹配的图纸资源');
+
+-- ────────── 字典数据 ──────────
+-- 订单状态长文案（OrderDTO.buildStatusNote）
+INSERT IGNORE INTO t_dict (dict_type, dict_key, label, description, sort_order) VALUES
+('ORDER_STATUS_NOTE', 'PENDING',   '待支付',     '订单已创建，请尽快完成支付。',                 1),
+('ORDER_STATUS_NOTE', 'PAID',      '待发货',     '商家正在备货，预计 24 小时内出库。',           2),
+('ORDER_STATUS_NOTE', 'SHIPPED',   '待收货',     '包裹运输中，请留意物流信息。',                 3),
+('ORDER_STATUS_NOTE', 'COMPLETED', '已完成',     '订单已完成，欢迎再次购买。',                   4),
+('ORDER_STATUS_NOTE', 'CANCELLED', '已取消',     '订单已取消。',                                 5),
+('ORDER_STATUS_NOTE', 'REFUND',    '退款/售后', '售后申请已提交，平台正在处理中。',             6);
+
+-- 工单类型映射（FeedbackDTO.typeToCn / typeToEn）
+INSERT IGNORE INTO t_dict (dict_type, dict_key, label, sort_order) VALUES
+('FEEDBACK_TYPE',   'FEATURE',    '功能问题', 1),
+('FEEDBACK_TYPE',   'ORDER',      '订单问题', 2),
+('FEEDBACK_TYPE',   'SUGGESTION', '体验建议', 3);
+
+-- 工单状态映射（FeedbackDTO.statusToCn）
+INSERT IGNORE INTO t_dict (dict_type, dict_key, label, sort_order) VALUES
+('FEEDBACK_STATUS', 'PROCESSING', '处理中', 1),
+('FEEDBACK_STATUS', 'WAITING',    '待回复', 2),
+('FEEDBACK_STATUS', 'COMPLETED',  '已完成', 3);
+
+-- 钱包流水类型映射（WalletController.typeToCn）
+INSERT IGNORE INTO t_dict (dict_type, dict_key, label, sort_order) VALUES
+('WALLET_LOG_TYPE', 'CHARGE',       '账户充值', 1),
+('WALLET_LOG_TYPE', 'BUY_PATTERN',  '购买图纸', 2),
+('WALLET_LOG_TYPE', 'BUY_PRODUCT',  '购买商品', 3),
+('WALLET_LOG_TYPE', 'REWARD',       '奖励到账', 4);

@@ -3,6 +3,7 @@ package com.beadforge.model.dto;
 import com.beadforge.model.entity.Order;
 import com.beadforge.model.entity.OrderItem;
 import com.beadforge.model.enums.OrderStatus;
+import com.beadforge.service.DictService;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -96,15 +97,6 @@ public class OrderDTO {
     }
 
     private static String buildStatusNote(OrderStatus s) {
-        if (s == null) return "";
-        switch (s) {
-            case PENDING:   return "订单已创建，请尽快完成支付。";
-            case PAID:      return "商家正在备货，预计 24 小时内出库。";
-            case SHIPPED:   return "包裹运输中，请留意物流信息。";
-            case COMPLETED: return "订单已完成，欢迎再次购买。";
-            case CANCELLED: return "订单已取消。";
-            case REFUND:    return "售后申请已提交，平台正在处理中。";
-            default: return "";
-        }
+        return s == null ? "" : DictService.descriptionOf("ORDER_STATUS_NOTE", s.name());
     }
 }
