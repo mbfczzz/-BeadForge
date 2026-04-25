@@ -15,6 +15,8 @@ const router = createRouter({
         { path: 'products', component: () => import('../views/Products.vue'), meta: { title: '商品管理' } },
         { path: 'patterns', component: () => import('../views/Patterns.vue'), meta: { title: '图纸管理' } },
         { path: 'feeds', component: () => import('../views/Feeds.vue'), meta: { title: '动态管理' } },
+        { path: 'discovery', component: () => import('../views/Discovery.vue'), meta: { title: '发现页配置' } },
+        { path: 'dict', component: () => import('../views/Dict.vue'), meta: { title: '字典管理' } },
         { path: 'api-config', component: () => import('../views/ApiConfig.vue'), meta: { title: 'API配置' } },
       ],
     },

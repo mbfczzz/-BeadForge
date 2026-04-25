@@ -38,6 +38,14 @@
           <el-icon><ChatDotRound /></el-icon>
           <template #title>动态管理</template>
         </el-menu-item>
+        <el-menu-item index="/discovery">
+          <el-icon><Compass /></el-icon>
+          <template #title>发现页配置</template>
+        </el-menu-item>
+        <el-menu-item index="/dict">
+          <el-icon><Files /></el-icon>
+          <template #title>字典管理</template>
+        </el-menu-item>
         <el-menu-item index="/api-config">
           <el-icon><Setting /></el-icon>
           <template #title>API 配置</template>
