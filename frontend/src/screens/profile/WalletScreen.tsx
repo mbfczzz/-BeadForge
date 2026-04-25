@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +19,11 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
   const pointsLogs = useResourceAccessStore((state) => state.pointsLogs);
   const membershipActive = useResourceAccessStore((state) => state.membershipActive);
   const addPoints = useResourceAccessStore((state) => state.addPoints);
+  const loadWallet = useResourceAccessStore((state) => state.loadWallet);
+
+  useEffect(() => {
+    void loadWallet();
+  }, [loadWallet]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>

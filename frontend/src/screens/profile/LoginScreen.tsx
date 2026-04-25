@@ -14,7 +14,6 @@ import { Button, Input, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
-import { TEST_LOGIN_CREDENTIALS } from '../../mock/auth';
 
 interface Props {
   onSwitchToRegister: () => void;
@@ -22,8 +21,8 @@ interface Props {
 
 export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
   const { colors } = useTheme();
-  const [username, setUsername] = useState(TEST_LOGIN_CREDENTIALS.username);
-  const [password, setPassword] = useState(TEST_LOGIN_CREDENTIALS.password);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const login = useAuthStore((state) => state.login);
 

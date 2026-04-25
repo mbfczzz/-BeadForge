@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Alert,
 } from 'react-native';
@@ -15,10 +15,11 @@ import { shadow } from '../../utils/shadow';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 import {
   PROFILE_TABS,
-  getCommunityUserData,
   getCommunityUserFeeds,
   getCommunityUserWorks,
 } from '../../mock/community';
+import type { CommunityUserData } from '../../api/community';
+import { userApi } from '../../api/user';
 
 const PAD = wp(15);
 const GRID_GAP = wp(8);
@@ -59,7 +60,25 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
   const { userName } = route.params;
   const { colors, dark } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const user = useMemo(() => getCommunityUserData(userName), [userName]);
+  const [user, setUser] = useState<CommunityUserData>(() => ({
+    name: userName,
+    title: '创作者',
+    bio: '',
+    followers: 0,
+    following: 0,
+    posts: 0,
+    likes: 0,
+    joinDate: '',
+    tags: [],
+  }));
+  useEffect(() => {
+    userApi
+      .getCommunityProfile(userName)
+      .then((res) => {
+        if (res.data) setUser(res.data);
+      })
+      .catch(() => undefined);
+  }, [userName]);
   const works = useMemo(() => getCommunityUserWorks(userName), [userName]);
   const feeds = useMemo(() => getCommunityUserFeeds(userName), [userName]);
   const profileGender = (user as { gender?: string | null }).gender || inferCommunityGender(user.name);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -14,7 +14,8 @@ import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { AppHeader, Avatar } from '../../components/common';
 import { useTheme } from '../../theme';
 import type { RootScreenProps } from '../../navigation/types';
-import { getCommunityUserData } from '../../mock/community';
+import type { CommunityUserData } from '../../api/community';
+import { userApi } from '../../api/user';
 import { fp, wp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
@@ -61,7 +62,26 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
   const { userName } = route.params;
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
-  const user = useMemo(() => getCommunityUserData(userName), [userName]);
+  const [user, setUser] = useState<CommunityUserData>(() => ({
+    name: userName,
+    title: '创作者',
+    bio: '',
+    followers: 0,
+    following: 0,
+    posts: 0,
+    likes: 0,
+    joinDate: '',
+    tags: [],
+  }));
+
+  useEffect(() => {
+    userApi
+      .getCommunityProfile(userName)
+      .then((res) => {
+        if (res.data) setUser(res.data);
+      })
+      .catch(() => undefined);
+  }, [userName]);
   const [messages, setMessages] = useState<MessageItem[]>(() => buildMessages(userName));
   const [draft, setDraft] = useState('');
 

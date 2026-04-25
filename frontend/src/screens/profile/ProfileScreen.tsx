@@ -12,12 +12,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
-import type { FeedbackTicketItem } from '../../api/feedback';
+import { feedbackApi, type FeedbackTicketItem } from '../../api/feedback';
 import type { UserInfo } from '../../api/auth';
-import type { ProfileNoticeAction, ProfileNoticeItem, ProfileOrderFilterTab } from '../../api/profile';
+import { profileApi, type ProfileNoticeAction, type ProfileNoticeItem, type ProfileOrderFilterTab } from '../../api/profile';
+import { notificationApi } from '../../api/notification';
 import type { UserStats } from '../../api/user';
-import { MOCK_PROFILE_FAVORITES, MOCK_PROFILE_NOTICES } from '../../mock/profile';
-import { INITIAL_FEEDBACK_TICKETS } from '../../mock/feedback';
 import { useTabBarVisibility } from '../../hooks/useTabBarVisibility';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAddressStore } from '../../store/useAddressStore';
@@ -283,16 +282,29 @@ export const ProfileScreen: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [subPage, setSubPage] = useState<SubPage>({ key: 'none' });
   const [refreshing, setRefreshing] = useState(false);
-  const [notices, setNotices] = useState<ProfileNoticeItem[]>(MOCK_PROFILE_NOTICES);
-  const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicketItem[]>(INITIAL_FEEDBACK_TICKETS);
+  const [notices, setNotices] = useState<ProfileNoticeItem[]>([]);
+  const [feedbackTickets, setFeedbackTickets] = useState<FeedbackTicketItem[]>([]);
+  const [favoriteCount, setFavoriteCount] = useState(0);
 
   const prevTokenRef = useRef<string | null | undefined>(undefined);
+
+  const loadWallet = useResourceAccessStore((state) => state.loadWallet);
+  const loadAddresses = useAddressStore((state) => state.loadAddresses);
 
   useEffect(() => {
     if (token) {
       void fetchStats();
+      void loadWallet();
+      void loadAddresses();
+      notificationApi.list().then((res) => setNotices(res.data?.records || [])).catch(() => setNotices([]));
+      feedbackApi.list().then((res) => setFeedbackTickets(res.data?.records || [])).catch(() => setFeedbackTickets([]));
+      profileApi.favorites().then((res) => setFavoriteCount(res.data?.length || 0)).catch(() => setFavoriteCount(0));
+    } else {
+      setNotices([]);
+      setFeedbackTickets([]);
+      setFavoriteCount(0);
     }
-  }, [fetchStats, token]);
+  }, [fetchStats, loadAddresses, loadWallet, token]);
 
   useEffect(() => {
     if (prevTokenRef.current === token) {
@@ -347,10 +359,12 @@ export const ProfileScreen: React.FC = () => {
 
   const markNoticeRead = useCallback((id: number) => {
     setNotices((current) => current.map((item) => (item.id === id ? { ...item, unread: false } : item)));
+    notificationApi.markRead(id).catch(() => undefined);
   }, []);
 
   const markAllNoticesRead = useCallback(() => {
     setNotices((current) => current.map((item) => ({ ...item, unread: false })));
+    notificationApi.markAllRead().catch(() => undefined);
   }, []);
 
   const openNoticeAction = useCallback(
@@ -389,32 +403,18 @@ export const ProfileScreen: React.FC = () => {
   const submitFeedbackTicket = useCallback((
     ticket: Omit<FeedbackTicketItem, 'id' | 'createdAt' | 'status' | 'replies'>,
   ) => {
-    const createdAt = new Date().toLocaleString('zh-CN', { hour12: false });
-    const ticketId = `TK${Date.now().toString().slice(-8)}`;
-
-    const nextTicket: FeedbackTicketItem = {
-      ...ticket,
-      id: ticketId,
-      createdAt,
-      status: '处理中',
-      replies: [
-        {
-          id: `${ticketId}-1`,
-          from: '用户',
-          content: ticket.content,
-          createdAt,
-        },
-        {
-          id: `${ticketId}-2`,
-          from: '客服',
-          content: '工单已收到，我们会尽快处理并回复你。',
-          createdAt,
-        },
-      ],
-    };
-
-    setFeedbackTickets((current) => [nextTicket, ...current]);
-    return ticketId;
+    const tempId = `TK${Date.now().toString().slice(-8)}`;
+    feedbackApi
+      .create({
+        type: ticket.type,
+        title: ticket.title,
+        content: ticket.content,
+        screenshots: ticket.screenshots,
+      })
+      .then(() => feedbackApi.list())
+      .then((res) => setFeedbackTickets(res.data?.records || []))
+      .catch(() => undefined);
+    return tempId;
   }, []);
 
   const profileSummary = useMemo(
@@ -443,8 +443,8 @@ export const ProfileScreen: React.FC = () => {
   );
 
   const statItems = useMemo(
-    () => buildMineStatItems(stats, MOCK_PROFILE_FAVORITES.length * 21),
-    [stats],
+    () => buildMineStatItems(stats, favoriteCount * 21),
+    [stats, favoriteCount],
   );
 
   const handleMineAction = useCallback((actionKey: MineActionKey, orderTab?: ProfileOrderFilterTab) => {

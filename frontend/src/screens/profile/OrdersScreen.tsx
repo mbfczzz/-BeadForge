@@ -16,8 +16,8 @@ import { Feather } from '@expo/vector-icons';
 import { AppHeader } from '../../components/common';
 import { useTheme } from '../../theme';
 import type { ProfileOrderFilterTab } from '../../api/profile';
+import { orderApi, type BackendOrderDTO } from '../../api/order';
 import {
-  PROFILE_ORDERS,
   PROFILE_ORDER_STATUS_META,
   PROFILE_ORDER_TABS,
   getProfileOrderActions,
@@ -27,6 +27,26 @@ import {
   type ProfileDisplayOrder,
 } from '../../mock/profileOrders';
 import { fp, wp } from '../../utils/responsive';
+
+function toDisplayOrder(o: BackendOrderDTO): ProfileDisplayOrder {
+  return {
+    id: o.id,
+    orderNo: o.orderNo || `BF${o.id}`,
+    title: o.title,
+    amount: o.amount,
+    status: o.status as ProfileDisplayOrder['status'],
+    createdAt: o.createdAt,
+    coverLabel: o.coverLabel || (o.category ?? '订单'),
+    category: o.category || '',
+    imageText: o.imageText || '',
+    itemCount: o.itemCount || 1,
+    receiver: o.receiver || '',
+    phone: o.phone || '',
+    address: o.address || '',
+    trackingNo: o.trackingNo,
+    statusNote: o.statusNote || '',
+  };
+}
 
 type SortMode = 'latest' | 'amount';
 type OrderListItem =
@@ -334,15 +354,26 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
   const [sortMode, setSortMode] = useState<SortMode>('latest');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState<ProfileDisplayOrder[]>([]);
+
+  const reload = useCallback(async () => {
+    try {
+      const res = await orderApi.list();
+      setOrders((res.data?.records || []).map(toDisplayOrder));
+    } catch {
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 450);
-    return () => clearTimeout(timer);
-  }, []);
+    void reload();
+  }, [reload]);
 
   const counts = useMemo<Record<OrderFilterTab, number>>(() => {
     const next: Record<OrderFilterTab, number> = {
-      全部: PROFILE_ORDERS.length,
+      全部: orders.length,
       待支付: 0,
       待发货: 0,
       待收货: 0,
@@ -350,17 +381,18 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
       已完成: 0,
     };
 
-    PROFILE_ORDERS.forEach((item) => {
-      next[item.status as Exclude<OrderFilterTab, '全部'>] += 1;
+    orders.forEach((item) => {
+      const k = item.status as Exclude<OrderFilterTab, '全部'>;
+      if (next[k] !== undefined) next[k] += 1;
     });
 
     return next;
-  }, []);
+  }, [orders]);
 
   const filteredOrders = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    let next = PROFILE_ORDERS.filter((item) => {
+    let next = orders.filter((item) => {
       const tabMatched = activeTab === '全部' ? true : item.status === activeTab;
       const keywordMatched =
         normalizedKeyword.length === 0
@@ -379,7 +411,7 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
     });
 
     return next;
-  }, [activeTab, keyword, sortMode]);
+  }, [activeTab, keyword, sortMode, orders]);
 
   const listData = useMemo<OrderListItem[]>(
     () => (loading ? SKELETON_ITEMS : filteredOrders.map((order) => ({ type: 'order', order }))),
@@ -401,12 +433,14 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
     [onOpenOrder],
   );
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
+    try {
+      await reload();
+    } finally {
       setRefreshing(false);
-    }, 850);
-  }, []);
+    }
+  }, [reload]);
 
   const handleReset = useCallback(() => {
     setKeyword('');

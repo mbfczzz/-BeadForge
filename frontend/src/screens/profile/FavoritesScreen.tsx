@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { ALL_PATTERNS, AppHeader, BeadGrid, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
-import { MOCK_PROFILE_FAVORITES } from '../../mock/profile';
+import { profileApi, type ProfileFavoriteItem } from '../../api/profile';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -17,19 +17,24 @@ interface Props {
 
 export const FavoritesScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
+  const [favorites, setFavorites] = useState<ProfileFavoriteItem[]>([]);
+
+  useEffect(() => {
+    profileApi.favorites().then((res) => setFavorites(res.data || [])).catch(() => setFavorites([]));
+  }, []);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <AppHeader title="我的收藏" onBack={onBack} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={$.content}>
-        <Text style={[$.statsText, { color: colors.textHint }]}>共 {MOCK_PROFILE_FAVORITES.length} 个收藏</Text>
+        <Text style={[$.statsText, { color: colors.textHint }]}>共 {favorites.length} 个收藏</Text>
 
-        {MOCK_PROFILE_FAVORITES.length === 0 ? (
+        {favorites.length === 0 ? (
           <StateView empty emptyText="暂无收藏" />
         ) : (
           <View style={$.grid}>
-            {MOCK_PROFILE_FAVORITES.map((item, index) => {
+            {favorites.map((item, index) => {
               const pattern = ALL_PATTERNS[item.patternIndex % ALL_PATTERNS.length];
               const beadSize = Math.min(Math.floor((CARD_W - wp(28)) / (pattern[0]?.length || 9)), wp(8));
 

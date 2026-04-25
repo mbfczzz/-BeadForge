@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -22,8 +22,9 @@ import { useTheme } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { Avatar, FilterChip, HoverView, Input, PressableScale } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
-import type { RootStackParamList, FeedItemData } from '../../navigation/types';
-import { ALL_FEEDS, COMMUNITY_TABS } from '../../mock/community';
+import type { RootStackParamList } from '../../navigation/types';
+import { COMMUNITY_TABS } from '../../mock/community';
+import { feedApi, type FeedItemData } from '../../api/community';
 import { getFeedMockGallery } from '../../utils/feedMedia';
 import { shadow } from '../../utils/shadow';
 import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
@@ -61,12 +62,21 @@ export const PublishScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshRound, setRefreshRound] = useState(0);
   const [showTop, setShowTop] = useState(false);
+  const [remoteFeeds, setRemoteFeeds] = useState<FeedItemData[]>([]);
   const localFeeds = useCommunityFeedStore((state) => state.localFeeds);
   const scrollRef = useRef<ScrollView>(null);
   const topAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    const tab = tabIdx === 2 ? 'latest' : 'recommend';
+    feedApi
+      .list(tab)
+      .then((res) => setRemoteFeeds(res.data?.records || []))
+      .catch(() => setRemoteFeeds([]));
+  }, [tabIdx, refreshRound]);
+
   const baseFeeds = useMemo(() => {
-    const rotated = rotateFeeds([...localFeeds, ...ALL_FEEDS], refreshRound);
+    const rotated = rotateFeeds([...localFeeds, ...remoteFeeds], refreshRound);
     return rotated.map((feed, index) => ({
       ...feed,
       likeCount: feed.likeCount + ((refreshRound + index) % 3 === 0 ? refreshRound % 4 : 0),
@@ -74,7 +84,7 @@ export const PublishScreen: React.FC = () => {
       shareCount: feed.shareCount + ((refreshRound + index) % 4 === 0 ? 1 : 0),
       timeAgo: refreshRound > 0 && index < 2 ? '刚刚' : feed.timeAgo,
     }));
-  }, [localFeeds, refreshRound]);
+  }, [localFeeds, remoteFeeds, refreshRound]);
 
   const filteredFeeds = useMemo(() => {
     let feeds = [...baseFeeds];

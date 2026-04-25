@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader, Avatar, Button, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
-import { MOCK_PROFILE_FOLLOWERS, MOCK_PROFILE_FOLLOWING } from '../../mock/profile';
+import { profileApi, type ProfileFollowUser } from '../../api/profile';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -15,8 +15,13 @@ interface Props {
 
 export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
   const { colors } = useTheme();
-  const list = type === 'followers' ? MOCK_PROFILE_FOLLOWERS : MOCK_PROFILE_FOLLOWING;
+  const [list, setList] = useState<ProfileFollowUser[]>([]);
   const title = type === 'followers' ? '粉丝' : '关注';
+
+  useEffect(() => {
+    const fetcher = type === 'followers' ? profileApi.followers() : profileApi.following();
+    fetcher.then((res) => setList(res.data || [])).catch(() => setList([]));
+  }, [type]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>

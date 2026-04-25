@@ -1,17 +1,38 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { AppHeader, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
+import { orderApi, type BackendOrderDTO } from '../../api/order';
 import {
-  PROFILE_ORDERS,
   PROFILE_ORDER_STATUS_META,
   buildProfileOrderTimeline,
   getProfileOrderActions,
   resolveProfileTrackingNo,
+  type ProfileDisplayOrder,
 } from '../../mock/profileOrders';
 import { fp, wp } from '../../utils/responsive';
+
+function toDisplayOrder(o: BackendOrderDTO): ProfileDisplayOrder {
+  return {
+    id: o.id,
+    orderNo: o.orderNo || `BF${o.id}`,
+    title: o.title,
+    amount: o.amount,
+    status: o.status as ProfileDisplayOrder['status'],
+    createdAt: o.createdAt,
+    coverLabel: o.coverLabel || (o.category ?? '订单'),
+    category: o.category || '',
+    imageText: o.imageText || '',
+    itemCount: o.itemCount || 1,
+    receiver: o.receiver || '',
+    phone: o.phone || '',
+    address: o.address || '',
+    trackingNo: o.trackingNo,
+    statusNote: o.statusNote || '',
+  };
+}
 
 function InfoRow({
   colors,
@@ -47,11 +68,14 @@ interface Props {
 
 export const OrderDetailScreen: React.FC<Props> = ({ orderId, onBack }) => {
   const { colors, dark } = useTheme();
+  const [order, setOrder] = useState<ProfileDisplayOrder | null>(null);
 
-  const order = useMemo(
-    () => PROFILE_ORDERS.find((item) => item.id === orderId) || null,
-    [orderId],
-  );
+  useEffect(() => {
+    orderApi
+      .detail(orderId)
+      .then((res) => setOrder(res.data ? toDisplayOrder(res.data) : null))
+      .catch(() => setOrder(null));
+  }, [orderId]);
 
   const handleActionPress = useCallback((actionKey: string) => {
     console.log('order-detail-action', orderId, actionKey);

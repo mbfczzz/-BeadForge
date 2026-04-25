@@ -25,7 +25,6 @@ import {
   type DiscoverFilterTabDef,
   type DiscoverHomeConfig,
 } from '../../api/discovery';
-import { getDiscoverHomeConfig } from '../../mock/discovery';
 import type { RootStackParamList } from '../../navigation/types';
 import { usePatternStore, type MarketPattern } from '../../store/usePatternStore';
 import { useTheme } from '../../theme';
@@ -35,7 +34,13 @@ import { shadow } from '../../utils/shadow';
 const PAD = wp(18);
 const CARD_GAP = wp(12);
 const CARD_W = getCardWidth(PAD, CARD_GAP, 2);
-const DEFAULT_DISCOVER_CONFIG = getDiscoverHomeConfig();
+const DEFAULT_DISCOVER_CONFIG: DiscoverHomeConfig = {
+  defaultTabKey: 'all',
+  searchPlaceholder: '搜索图纸、作者或分类',
+  resultTitle: '为你推荐',
+  emptyText: '暂无匹配的图纸资源',
+  tabs: [],
+};
 
 function matchesTab(item: MarketPattern, tab?: DiscoverFilterTabDef) {
   if (!tab) return true;

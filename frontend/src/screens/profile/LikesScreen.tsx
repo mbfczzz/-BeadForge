@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Avatar, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
-import { MOCK_PROFILE_RECEIVED_LIKES } from '../../mock/profile';
+import { profileApi, type ProfileReceivedLikeItem } from '../../api/profile';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -15,6 +15,11 @@ interface Props {
 
 export const LikesScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
+  const [items, setItems] = useState<ProfileReceivedLikeItem[]>([]);
+
+  useEffect(() => {
+    profileApi.receivedLikes().then((res) => setItems(res.data || [])).catch(() => setItems([]));
+  }, []);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -29,22 +34,22 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(40) }}>
         <View style={[$.statsBar, { backgroundColor: colors.surface, borderBottomColor: colors.divider }]}>
           <Text style={[$.statsText, { color: colors.textHint }]}>
-            共 {MOCK_PROFILE_RECEIVED_LIKES.length} 条获赞记录
+            共 {items.length} 条获赞记录
           </Text>
         </View>
 
-        {MOCK_PROFILE_RECEIVED_LIKES.length === 0 ? (
+        {items.length === 0 ? (
           <StateView empty emptyText="暂无获赞记录" />
         ) : (
-          MOCK_PROFILE_RECEIVED_LIKES.map((item, index) => (
+          items.map((item, index) => (
             <View
               key={item.id}
               style={[
                 $.row,
                 {
                   backgroundColor: colors.surface,
-                  borderBottomColor: index < MOCK_PROFILE_RECEIVED_LIKES.length - 1 ? colors.divider : 'transparent',
-                  borderBottomWidth: index < MOCK_PROFILE_RECEIVED_LIKES.length - 1 ? StyleSheet.hairlineWidth : 0,
+                  borderBottomColor: index < items.length - 1 ? colors.divider : 'transparent',
+                  borderBottomWidth: index < items.length - 1 ? StyleSheet.hairlineWidth : 0,
                 },
               ]}
             >

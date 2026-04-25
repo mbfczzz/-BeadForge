@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
 import { AppHeader, Avatar, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
-import { buildMockMyFeeds } from '../../mock/profile';
+import { feedApi, type FeedItemData } from '../../api/community';
 import { useAuthStore } from '../../store/useAuthStore';
 import { getFeedMockMedia } from '../../utils/feedMedia';
 import { fp, wp } from '../../utils/responsive';
@@ -19,8 +19,11 @@ interface Props {
 export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
   const user = useAuthStore((state) => state.user);
+  const [feeds, setFeeds] = useState<FeedItemData[]>([]);
 
-  const feeds = buildMockMyFeeds(user?.nickname || user?.username || '测试用户');
+  useEffect(() => {
+    feedApi.mine().then((res) => setFeeds(res.data?.records || [])).catch(() => setFeeds([]));
+  }, []);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>

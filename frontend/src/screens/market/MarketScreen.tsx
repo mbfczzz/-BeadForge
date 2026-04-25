@@ -18,8 +18,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Input, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { marketApi, productDataToMaterialProduct, type MaterialProduct } from '../../api/market';
+// （旧）mock 商品数据已移除：商品全部走 marketApi.getProducts
 import type { ProductData, RootStackParamList } from '../../navigation/types';
-import { MOCK_PRODUCTS } from '../../mock/market';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { useCartStore } from '../../store/useCartStore';
@@ -61,7 +61,7 @@ export const MarketScreen: React.FC = () => {
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [products, setProducts] = useState<MaterialProduct[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<MaterialProduct[]>([]);
   const [dragEnabled, setDragEnabled] = useState(false);
   const floatingPosition = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const floatingPositionRef = React.useRef({ x: 0, y: 0 });
@@ -88,7 +88,7 @@ export const MarketScreen: React.FC = () => {
         setProducts(records.map(productDataToMaterialProduct));
       }
     } catch {
-      setProducts(MOCK_PRODUCTS);
+      setProducts([]);
     }
   }, []);
 
