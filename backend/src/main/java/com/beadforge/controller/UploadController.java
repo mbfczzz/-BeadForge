@@ -2,6 +2,8 @@ package com.beadforge.controller;
 
 import com.beadforge.exception.BusinessException;
 import com.beadforge.model.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,11 +17,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-/**
- * 文件上传：保存到本地 ./uploads/<yyyy-MM>/<uuid>.<ext>
- *   POST /upload/image    — 单文件，限制图片/视频
- *   返回 { url: "/uploads/2026-04/xxx.jpg" }（前端拼 baseURL 的 origin）
- */
+@Tag(name = "文件上传", description = "图片 / 视频上传到本地 ./uploads/yyyy-MM/<uuid>.<ext>")
 @Slf4j
 @RestController
 @RequestMapping("/upload")
@@ -34,6 +32,8 @@ public class UploadController {
     ));
     private static final long MAX_SIZE = 20L * 1024 * 1024; // 20MB
 
+    @Operation(summary = "上传图片或视频",
+            description = "form-data；最大 20MB；后缀限定 jpg/jpeg/png/gif/webp/mp4/mov/webm；返回 { url, size, type }")
     @PostMapping("/image")
     public ApiResponse<Map<String, Object>> uploadImage(
             @RequestParam("file") MultipartFile file,

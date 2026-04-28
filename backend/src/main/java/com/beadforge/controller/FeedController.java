@@ -11,6 +11,8 @@ import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +20,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "动态", description = "社区 Feed 流（推荐 / 最新 / 关注 / 我的 / 他人）")
 @RestController
 @RequestMapping("/feeds")
 @RequiredArgsConstructor
@@ -28,7 +31,7 @@ public class FeedController {
     private final FollowRepository followRepo;
     private final LikeRepository likeRepo;
 
-    /** 公开 — 动态列表 */
+    @Operation(summary = "动态列表", description = "公开；tab: recommend（默认）/ latest")
     @GetMapping("/list")
     public ApiResponse<Page<Map<String, Object>>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -45,7 +48,7 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result, (Long) request.getAttribute("userId")));
     }
 
-    /** 需要登录 — 我发布的动态 */
+    @Operation(summary = "我发布的动态")
     @GetMapping("/mine")
     public ApiResponse<Page<Map<String, Object>>> mine(
             @RequestParam(defaultValue = "1") int page,
@@ -60,7 +63,7 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result, userId));
     }
 
-    /** 公开 — 某用户发布的动态（用于他人主页"动态" tab） */
+    @Operation(summary = "某用户的动态", description = "公开；他人主页「动态」tab 用")
     @GetMapping("/by-user/{userId}")
     public ApiResponse<Page<Map<String, Object>>> byUser(
             @PathVariable Long userId,
@@ -74,7 +77,7 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result, (Long) request.getAttribute("userId")));
     }
 
-    /** 需要登录 — 关注的人的动态 */
+    @Operation(summary = "关注的人的动态")
     @GetMapping("/following")
     public ApiResponse<Page<Map<String, Object>>> following(
             @RequestParam(defaultValue = "1") int page,
@@ -101,7 +104,7 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result, userId));
     }
 
-    /** 需要登录 — 发布动态 */
+    @Operation(summary = "发布动态")
     @PostMapping
     public ApiResponse<Feed> create(@RequestBody Feed feed, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

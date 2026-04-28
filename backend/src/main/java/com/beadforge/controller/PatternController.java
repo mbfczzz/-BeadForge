@@ -10,6 +10,8 @@ import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.PatternListingRepository;
 import com.beadforge.repository.PatternPurchaseRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "图纸市场", description = "图纸（Pattern）：浏览 / 发布 / 购买（含免费下载）")
 @RestController
 @RequestMapping("/patterns")
 @RequiredArgsConstructor
@@ -28,7 +31,8 @@ public class PatternController {
     private final PatternPurchaseRepository purchaseRepo;
     private final UserRepository userRepo;
 
-    /** 公开 — 图纸列表 */
+    @Operation(summary = "图纸市场列表",
+            description = "公开接口；sortBy: latest / hot / price_asc / free")
     @GetMapping("/list")
     public ApiResponse<Page<Map<String, Object>>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -78,7 +82,7 @@ public class PatternController {
         return ApiResponse.success(mapped);
     }
 
-    /** 需要登录 — 发布图纸 */
+    @Operation(summary = "发布图纸", description = "价格 ≤ 0 自动标记为免费图纸")
     @PostMapping("/publish")
     public ApiResponse<PatternListing> publish(@RequestBody PatternListing listing, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -92,7 +96,8 @@ public class PatternController {
         return ApiResponse.success("发布成功", listing);
     }
 
-    /** 需要登录 — 购买/下载图纸（insert 购买记录 + update 下载量 必须在同一事务） */
+    @Operation(summary = "购买/下载图纸",
+            description = "免费图纸即下载、付费图纸需扣款；写购买记录与下载量在同一事务")
     @PostMapping("/{id}/buy")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Void> buy(@PathVariable Long id, HttpServletRequest request) {
@@ -123,7 +128,7 @@ public class PatternController {
         return ApiResponse.success(free ? "下载成功" : "购买成功", null);
     }
 
-    /** 需要登录 — 我的已购图纸 */
+    @Operation(summary = "我的已购图纸 ID 列表")
     @GetMapping("/purchased")
     public ApiResponse<List<Long>> purchased(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

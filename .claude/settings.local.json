@@ -40,7 +40,14 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(git restore *)",
-      "Bash(mvn -q -DskipTests compile)"
+      "Bash(mvn -q -DskipTests compile)",
+      "Bash(git fetch *)",
+      "Bash(git -C /d/mbfczzzz/claude/BeadForge log --all --oneline -20 --grep=\"mock\")",
+      "Bash(git -C /d/mbfczzzz/claude/BeadForge log --oneline)",
+      "Bash(xargs grep *)",
+      "PowerShell(Get-Command *)",
+      "Bash(python -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(python scripts/gen_feature_status.py)"
     ]
   }
 }

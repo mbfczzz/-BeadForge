@@ -8,6 +8,8 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.dto.NotificationDTO;
 import com.beadforge.model.entity.Notification;
 import com.beadforge.repository.NotificationRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,15 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 站内通知中心。
- *
- * GET  /notifications             — 通知列表（分页，可按 type 过滤）
- * GET  /notifications/unread-count — 未读数（用于红点）
- * POST /notifications/{id}/read   — 标记单条已读
- * POST /notifications/read-all    — 全部已读
- * DELETE /notifications/{id}      — 删除（逻辑删）
- */
+@Tag(name = "通知", description = "站内通知中心：列表 / 未读数 / 已读 / 全部已读 / 删除")
 @RestController
 @RequestMapping("/notifications")
 @RequiredArgsConstructor
@@ -32,6 +26,8 @@ public class NotificationController {
 
     private final NotificationRepository notificationRepo;
 
+    @Operation(summary = "通知列表",
+            description = "可按 type 过滤：系统 / 订单 / 互动；按 created_at 倒序")
     @GetMapping
     public ApiResponse<Page<NotificationDTO>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -53,6 +49,7 @@ public class NotificationController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "未读通知数", description = "用于 tab/icon 红点")
     @GetMapping("/unread-count")
     public ApiResponse<Map<String, Long>> unreadCount(HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -64,6 +61,7 @@ public class NotificationController {
         return ApiResponse.success(m);
     }
 
+    @Operation(summary = "标记单条已读")
     @PostMapping("/{id}/read")
     public ApiResponse<Void> markRead(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -76,6 +74,7 @@ public class NotificationController {
         return ApiResponse.success(null);
     }
 
+    @Operation(summary = "全部标记为已读", description = "返回 affected = 受影响行数")
     @PostMapping("/read-all")
     public ApiResponse<Map<String, Integer>> markAllRead(HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -87,6 +86,7 @@ public class NotificationController {
         return ApiResponse.success("已全部标记为已读", m);
     }
 
+    @Operation(summary = "删除通知", description = "逻辑删；仅本人通知可删")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);

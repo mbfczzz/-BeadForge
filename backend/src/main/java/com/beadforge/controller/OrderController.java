@@ -15,6 +15,8 @@ import com.beadforge.repository.AddressRepository;
 import com.beadforge.repository.OrderItemRepository;
 import com.beadforge.repository.OrderRepository;
 import com.beadforge.repository.ProductRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
  *   POST   /orders/{id}/cancel     — 取消（仅 PENDING / PAID 阶段允许）
  *   POST   /orders/{id}/refund     — 申请退款/售后
  */
+@Tag(name = "订单",
+        description = "材料商品订单：创建 → 支付 → 发货 → 收货 → 完成；含取消、申请售后")
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -46,7 +50,7 @@ public class OrderController {
     private final ProductRepository productRepo;
     private final AddressRepository addressRepo;
 
-    /** 创建订单 */
+    @Operation(summary = "创建订单", description = "状态: PENDING；批量校验商品上架")
     @PostMapping
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<OrderDTO> create(@Valid @RequestBody OrderCreateRequest req, HttpServletRequest request) {
@@ -92,7 +96,8 @@ public class OrderController {
         return ApiResponse.success("创建成功", dto);
     }
 
-    /** 列表（支持 status 中文/英文过滤）*/
+    @Operation(summary = "我的订单列表",
+            description = "status 支持中文（如「待付款」）或英文枚举名（PENDING / PAID / SHIPPED / COMPLETED / CANCELLED / REFUND）")
     @GetMapping
     public ApiResponse<Page<OrderDTO>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -134,10 +139,8 @@ public class OrderController {
         return ApiResponse.success(result);
     }
 
-    /**
-     * 各状态订单数量聚合 — 供"我的"页面订单卡片红点使用。
-     * 返回结构永远包含全部状态键，新用户全为 0。
-     */
+    @Operation(summary = "各状态订单数",
+            description = "返回 { pending, paid, shipped, completed, cancelled, refund }，新用户全为 0；用于「我的」页订单卡片红点")
     @GetMapping("/stat-counts")
     public ApiResponse<Map<String, Long>> statCounts(HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -162,7 +165,7 @@ public class OrderController {
         return ApiResponse.success(result);
     }
 
-    /** 详情 */
+    @Operation(summary = "订单详情", description = "含订单项与默认收货地址")
     @GetMapping("/{id}")
     public ApiResponse<OrderDTO> detail(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -179,21 +182,25 @@ public class OrderController {
             loadDefaultAddress(userId)));
     }
 
+    @Operation(summary = "支付订单", description = "PENDING → PAID（当前为模拟支付）")
     @PostMapping("/{id}/pay")
     public ApiResponse<OrderDTO> pay(@PathVariable Long id, HttpServletRequest request) {
         return transition(id, request, OrderStatus.PENDING, OrderStatus.PAID, "支付成功");
     }
 
+    @Operation(summary = "发货", description = "PAID → SHIPPED（管理员场景）")
     @PostMapping("/{id}/ship")
     public ApiResponse<OrderDTO> ship(@PathVariable Long id, HttpServletRequest request) {
         return transition(id, request, OrderStatus.PAID, OrderStatus.SHIPPED, "已发货");
     }
 
+    @Operation(summary = "确认收货", description = "SHIPPED → COMPLETED")
     @PostMapping("/{id}/receive")
     public ApiResponse<OrderDTO> receive(@PathVariable Long id, HttpServletRequest request) {
         return transition(id, request, OrderStatus.SHIPPED, OrderStatus.COMPLETED, "已确认收货");
     }
 
+    @Operation(summary = "取消订单", description = "仅 PENDING / PAID 阶段允许")
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderDTO> cancel(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -208,6 +215,7 @@ public class OrderController {
         return ApiResponse.success("已取消", reloadDetail(o));
     }
 
+    @Operation(summary = "申请售后/退款", description = "PENDING / CANCELLED 之外的状态可申请")
     @PostMapping("/{id}/refund")
     public ApiResponse<OrderDTO> refund(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);

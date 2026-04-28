@@ -8,6 +8,8 @@ import com.beadforge.model.entity.WalletLog;
 import com.beadforge.repository.ApiConfigRepository;
 import com.beadforge.repository.WalletLogRepository;
 import com.beadforge.repository.WalletRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@Tag(name = "充值支付",
+        description = "拼豆币充值（微信/支付宝下单 + 回调确认）；payment_enabled=true 时走真实支付，否则模拟到账")
 @Slf4j
 @RestController
 @RequestMapping("/payment")
@@ -36,11 +40,8 @@ public class PaymentController {
         return c != null ? c.getConfigValue() : "";
     }
 
-    /**
-     * 创建充值订单
-     * POST /payment/create-order
-     * Body: { amount: 100, method: "wechat" | "alipay" }
-     */
+    @Operation(summary = "创建充值订单",
+            description = "method: wechat / alipay；返回支付参数（开启真实支付时含 prepayId / payUrl）")
     @PostMapping("/create-order")
     public ApiResponse<Map<String, Object>> createOrder(@RequestBody OrderRequest req, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -85,10 +86,8 @@ public class PaymentController {
         }
     }
 
-    /**
-     * 确认支付（模拟模式直接到账，真实模式由回调触发）
-     * POST /payment/confirm
-     */
+    @Operation(summary = "确认支付",
+            description = "模拟模式下前端直接调用即到账；真实支付由微信/支付宝回调触发，会写钱包余额并产生 CHARGE 流水")
     @PostMapping("/confirm")
     @Transactional
     public ApiResponse<Map<String, Object>> confirmPayment(@RequestBody ConfirmRequest req, HttpServletRequest request) {
@@ -136,9 +135,7 @@ public class PaymentController {
         return ApiResponse.success("充值成功", result);
     }
 
-    /**
-     * 查询支付配置（前端判断是否开启真实支付）
-     */
+    @Operation(summary = "查询支付配置", description = "返回 paymentEnabled 与 coinRate；前端用于切换支付按钮文案")
     @GetMapping("/config")
     public ApiResponse<Map<String, Object>> payConfig(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

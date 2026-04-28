@@ -9,6 +9,8 @@ import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.*;
 import com.beadforge.util.ConvertUtil;
 import com.beadforge.util.SqlUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "管理后台",
+        description = "运营后台接口（需 ADMIN 角色）：统计 / 用户 / 作品 / 商品 / 图纸 / 动态 / API 配置")
 @Slf4j
 @RestController
 @RequestMapping("/admin")
@@ -31,6 +35,7 @@ public class AdminController {
 
     // ═══════ 统计 ═══════
 
+    @Operation(summary = "全局统计", description = "users / designs / products / feeds / patterns 总数")
     @GetMapping("/stats")
     public ApiResponse<Map<String, Long>> stats() {
         Map<String, Long> m = new HashMap<>();
@@ -44,6 +49,7 @@ public class AdminController {
 
     // ═══════ 用户管理 ═══════
 
+    @Operation(summary = "用户列表", description = "支持按 username / nickname 模糊搜索")
     @GetMapping("/users")
     public ApiResponse<Page<User>> users(
             @RequestParam(defaultValue = "1") int page,
@@ -60,6 +66,7 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "删除用户")
     @DeleteMapping("/users/{id}")
     public ApiResponse<Void> deleteUser(@PathVariable Long id) {
         userRepo.deleteById(id);
@@ -68,6 +75,7 @@ public class AdminController {
 
     // ═══════ 作品管理（带 authorName） ═══════
 
+    @Operation(summary = "作品列表", description = "附带作者名 authorName")
     @GetMapping("/designs")
     public ApiResponse<Page<DesignDTO>> designs(
             @RequestParam(defaultValue = "1") int page,
@@ -96,6 +104,7 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "删除作品")
     @DeleteMapping("/designs/{id}")
     public ApiResponse<Void> deleteDesign(@PathVariable Long id) {
         designRepo.deleteById(id);
@@ -104,6 +113,7 @@ public class AdminController {
 
     // ═══════ 商品管理 ═══════
 
+    @Operation(summary = "新增商品")
     @PostMapping("/products")
     public ApiResponse<Product> addProduct(@RequestBody Product product) {
         product.setStatus(ListingStatus.ACTIVE.name());
@@ -113,6 +123,7 @@ public class AdminController {
         return ApiResponse.success("添加成功", product);
     }
 
+    @Operation(summary = "更新商品")
     @PutMapping("/products/{id}")
     public ApiResponse<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
         product.setId(id);
@@ -120,6 +131,7 @@ public class AdminController {
         return ApiResponse.success("更新成功", product);
     }
 
+    @Operation(summary = "删除商品")
     @DeleteMapping("/products/{id}")
     public ApiResponse<Void> deleteProduct(@PathVariable Long id) {
         productRepo.deleteById(id);
@@ -128,6 +140,7 @@ public class AdminController {
 
     // ═══════ 图纸管理 ═══════
 
+    @Operation(summary = "下架图纸")
     @DeleteMapping("/patterns/{id}")
     public ApiResponse<Void> deletePattern(@PathVariable Long id) {
         patternRepo.deleteById(id);
@@ -136,6 +149,7 @@ public class AdminController {
 
     // ═══════ 动态管理 ═══════
 
+    @Operation(summary = "删除动态")
     @DeleteMapping("/feeds/{id}")
     public ApiResponse<Void> deleteFeed(@PathVariable Long id) {
         feedRepo.deleteById(id);
@@ -144,7 +158,8 @@ public class AdminController {
 
     // ═══════ API 配置 ═══════
 
-    /** list 时 configValue 脱敏（只返回首4+尾4），避免密钥泄露；默认分页，防止表膨胀后一次拉全量 */
+    @Operation(summary = "API 配置列表",
+            description = "configValue 自动脱敏（首 4 + 尾 4）；想看完整值请用 /reveal")
     @GetMapping("/api-config")
     public ApiResponse<Page<ApiConfig>> listApiConfig(
             @RequestParam(defaultValue = "1") int page,
@@ -155,7 +170,7 @@ public class AdminController {
         return ApiResponse.success(result);
     }
 
-    /** 单条获取完整值：仅在管理员显式要求时才返回；可在此加审计日志 */
+    @Operation(summary = "查看 API 配置完整值", description = "返回未脱敏的 configValue；会写一条 SECURITY_AUDIT 日志")
     @GetMapping("/api-config/{id}/reveal")
     public ApiResponse<ApiConfig> revealApiConfig(@PathVariable Long id) {
         ApiConfig c = apiConfigRepo.selectById(id);
@@ -164,6 +179,7 @@ public class AdminController {
         return ApiResponse.success(c);
     }
 
+    @Operation(summary = "新增 API 配置", description = "返回值会脱敏")
     @PostMapping("/api-config")
     public ApiResponse<ApiConfig> addApiConfig(@RequestBody ApiConfig config) {
         apiConfigRepo.insert(config);
@@ -176,6 +192,8 @@ public class AdminController {
         return ApiResponse.success("添加成功", safe);
     }
 
+    @Operation(summary = "更新 API 配置",
+            description = "body 支持 configValue / description；configValue 留空则不修改")
     @PutMapping("/api-config/{id}")
     public ApiResponse<ApiConfig> updateApiConfig(@PathVariable Long id, @RequestBody Map<String, String> body) {
         ApiConfig existing = apiConfigRepo.selectById(id);
@@ -196,6 +214,7 @@ public class AdminController {
         return ApiResponse.success("更新成功", existing);
     }
 
+    @Operation(summary = "删除 API 配置")
     @DeleteMapping("/api-config/{id}")
     public ApiResponse<Void> deleteApiConfig(@PathVariable Long id) {
         apiConfigRepo.deleteById(id);

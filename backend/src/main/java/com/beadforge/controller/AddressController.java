@@ -6,6 +6,8 @@ import com.beadforge.model.dto.AddressRequest;
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.Address;
 import com.beadforge.repository.AddressRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
  * 用户收货地址。所有接口需登录。
  * 默认地址逻辑：同一 userId 下至多一个 is_default=1；切换默认时原默认会被置 0。
  */
+@Tag(name = "收货地址", description = "用户收货地址 CRUD；同一用户至多一个默认地址")
 @RestController
 @RequestMapping("/addresses")
 @RequiredArgsConstructor
@@ -26,7 +29,7 @@ public class AddressController {
 
     private final AddressRepository addressRepo;
 
-    /** GET /addresses — 当前用户所有地址，默认地址置顶 */
+    @Operation(summary = "地址列表", description = "返回当前用户所有地址，默认地址置顶")
     @GetMapping
     public ApiResponse<List<AddressDTO>> list(HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -40,7 +43,7 @@ public class AddressController {
         return ApiResponse.success(result);
     }
 
-    /** GET /addresses/{id} — 单条，仅限本人 */
+    @Operation(summary = "地址详情", description = "仅限本人")
     @GetMapping("/{id}")
     public ApiResponse<AddressDTO> detail(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -49,7 +52,7 @@ public class AddressController {
         return ApiResponse.success(AddressDTO.from(a));
     }
 
-    /** POST /addresses — 新建 */
+    @Operation(summary = "新增地址", description = "首条地址自动设为默认")
     @PostMapping
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<AddressDTO> create(@Valid @RequestBody AddressRequest req, HttpServletRequest request) {
@@ -71,7 +74,7 @@ public class AddressController {
         return ApiResponse.success("新增成功", AddressDTO.from(a));
     }
 
-    /** PUT /addresses/{id} — 编辑 */
+    @Operation(summary = "编辑地址")
     @PutMapping("/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<AddressDTO> update(@PathVariable Long id, @Valid @RequestBody AddressRequest req, HttpServletRequest request) {
@@ -88,7 +91,7 @@ public class AddressController {
         return ApiResponse.success("更新成功", AddressDTO.from(a));
     }
 
-    /** DELETE /addresses/{id} — 删除（逻辑删） */
+    @Operation(summary = "删除地址", description = "逻辑删")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -98,7 +101,7 @@ public class AddressController {
         return ApiResponse.success("删除成功", null);
     }
 
-    /** POST /addresses/{id}/default — 设为默认 */
+    @Operation(summary = "设为默认地址")
     @PostMapping("/{id}/default")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<AddressDTO> setDefault(@PathVariable Long id, HttpServletRequest request) {

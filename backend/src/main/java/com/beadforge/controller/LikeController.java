@@ -13,6 +13,8 @@ import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +36,7 @@ import java.util.stream.Collectors;
  * 点赞/取消时同步维护目标表的 like_count（保持简单，不用 version 乐观锁，
  * 并发场景个位数误差可接受；严格一致可后续改为 UPDATE ... SET like_count = like_count + 1）。
  */
+@Tag(name = "点赞", description = "对作品 / 动态 / 评论的点赞；含「我给的赞」「我收到的赞」")
 @RestController
 @RequestMapping("/likes")
 @RequiredArgsConstructor
@@ -45,6 +48,7 @@ public class LikeController {
     private final UserRepository userRepo;
     private final CommentRepository commentRepo;
 
+    @Operation(summary = "点赞", description = "type: design / feed / pattern / comment；幂等")
     @PostMapping("/{type}/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Void> like(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
@@ -83,6 +87,7 @@ public class LikeController {
         return ApiResponse.success("点赞成功", null);
     }
 
+    @Operation(summary = "取消点赞")
     @DeleteMapping("/{type}/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Void> unlike(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
@@ -114,6 +119,7 @@ public class LikeController {
         return ApiResponse.success("已取消点赞", null);
     }
 
+    @Operation(summary = "查询是否已点赞")
     @GetMapping("/check/{type}/{id}")
     public ApiResponse<Map<String, Boolean>> check(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -124,7 +130,7 @@ public class LikeController {
         return ApiResponse.success(m);
     }
 
-    /** 我给出的赞 */
+    @Operation(summary = "我给出的赞", description = "近 50 条；用于个人中心「我点过的赞」")
     @GetMapping("/given")
     public ApiResponse<List<Map<String, Object>>> given(HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -172,7 +178,7 @@ public class LikeController {
         return ApiResponse.success(result);
     }
 
-    /** 公开 — 某用户给过的赞列表（用于他人主页"喜欢" tab） */
+    @Operation(summary = "某用户点过的赞", description = "公开；他人主页「喜欢」tab 用")
     @GetMapping("/by-user/{userId}")
     public ApiResponse<List<Map<String, Object>>> byUser(@PathVariable Long userId) {
         List<Like> likes = likeRepo.selectList(new QueryWrapper<Like>()
@@ -221,7 +227,7 @@ public class LikeController {
         return ApiResponse.success(result);
     }
 
-    /** 我收到的赞：别人对我的作品/动态的点赞 */
+    @Operation(summary = "我收到的赞", description = "别人对我作品/动态的点赞，近 50 条")
     @GetMapping("/received")
     public ApiResponse<List<Map<String, Object>>> received(HttpServletRequest request) {
         Long userId = requireUser(request);

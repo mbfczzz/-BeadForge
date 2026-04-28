@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.ApiConfig;
 import com.beadforge.repository.ApiConfigRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import java.net.URL;
 import java.util.*;
 import java.util.List;
 
+@Tag(name = "AI 生图", description = "豆包 Seedream 文生图 → 像素化为拼豆 grid")
 @Slf4j
 @RestController
 @RequestMapping("/ai")
@@ -43,11 +46,8 @@ public class AiController {
         return config != null ? config.getConfigValue() : null;
     }
 
-    /**
-     * AI 文生图 → 像素化 → 返回 grid 数组
-     * POST /ai/generate-image
-     * Body: { "prompt": "可爱的小猫咪", "cols": 16, "rows": 16 }
-     */
+    @Operation(summary = "AI 文生图",
+            description = "调豆包生图 → 双线性缩放 → 24 色拼豆调色板匹配，返回 cols×rows 的 hex 颜色 grid")
     @PostMapping("/generate-image")
     public ApiResponse<Map<String, Object>> generateImage(@RequestBody GenerateRequest req, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

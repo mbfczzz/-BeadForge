@@ -5,6 +5,8 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.Dict;
 import com.beadforge.repository.DictRepository;
 import com.beadforge.service.DictService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,8 @@ import java.util.List;
  *
  * 任何写操作后会自动 reload。
  */
+@Tag(name = "字典",
+        description = "全局字典（订单状态文案 / 工单类型 / 钱包流水类型 等）；写操作后自动 reload 内存缓存")
 @RestController
 @RequestMapping("/dict")
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class DictController {
     private final DictRepository dictRepo;
     private final DictService dictService;
 
+    @Operation(summary = "字典列表", description = "可按 type 过滤，例：ORDER_STATUS_NOTE / WALLET_LOG_TYPE")
     @GetMapping
     public ApiResponse<List<Dict>> list(@RequestParam(required = false) String type) {
         QueryWrapper<Dict> qw = new QueryWrapper<>();
@@ -39,6 +44,7 @@ public class DictController {
         return ApiResponse.success(dictRepo.selectList(qw));
     }
 
+    @Operation(summary = "新建字典项")
     @PostMapping
     public ApiResponse<Dict> create(@RequestBody Dict d) {
         if (d.getDictType() == null || d.getDictKey() == null) {
@@ -51,6 +57,7 @@ public class DictController {
         return ApiResponse.success("新建成功", d);
     }
 
+    @Operation(summary = "更新字典项")
     @PutMapping("/{id}")
     public ApiResponse<Dict> update(@PathVariable Long id, @RequestBody Dict d) {
         Dict exist = dictRepo.selectById(id);
@@ -61,6 +68,7 @@ public class DictController {
         return ApiResponse.success("更新成功", dictRepo.selectById(id));
     }
 
+    @Operation(summary = "删除字典项")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         dictRepo.deleteById(id);
@@ -68,6 +76,7 @@ public class DictController {
         return ApiResponse.success("已删除", null);
     }
 
+    @Operation(summary = "手动 reload 字典缓存")
     @PostMapping("/reload")
     public ApiResponse<Void> reload() {
         dictService.reload();

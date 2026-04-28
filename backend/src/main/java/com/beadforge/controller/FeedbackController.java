@@ -12,6 +12,8 @@ import com.beadforge.model.entity.FeedbackReply;
 import com.beadforge.repository.FeedbackReplyRepository;
 import com.beadforge.repository.FeedbackRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +33,8 @@ import java.util.stream.Collectors;
  *   POST   /feedback/tickets            — 创建工单，首条 content 自动作为 USER 首回复
  *   POST   /feedback/tickets/{id}/reply — 追加用户回复，状态置 PROCESSING
  */
+@Tag(name = "反馈工单",
+        description = "用户反馈工单：创建 / 列表 / 详情 / 追加回复；首条 content 自动转为 USER 首回复")
 @RestController
 @RequestMapping("/feedback")
 @RequiredArgsConstructor
@@ -40,6 +44,7 @@ public class FeedbackController {
     private final FeedbackReplyRepository replyRepo;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    @Operation(summary = "我的工单列表", description = "分页；批量加载所有回复，避免 N+1")
     @GetMapping("/tickets")
     public ApiResponse<Page<FeedbackDTO>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -64,6 +69,7 @@ public class FeedbackController {
         return ApiResponse.success(result);
     }
 
+    @Operation(summary = "工单详情", description = "含全部回复，按 created_at 升序")
     @GetMapping("/tickets/{id}")
     public ApiResponse<FeedbackDTO> detail(@PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -74,6 +80,8 @@ public class FeedbackController {
         return ApiResponse.success(FeedbackDTO.from(f, replies));
     }
 
+    @Operation(summary = "创建工单",
+            description = "状态置 WAITING；首条 content 自动作为 USER 首回复，让前端按对话渲染")
     @PostMapping("/tickets")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<FeedbackDTO> create(@Valid @RequestBody FeedbackCreateRequest req, HttpServletRequest request) {
@@ -97,6 +105,7 @@ public class FeedbackController {
         return ApiResponse.success("提交成功", FeedbackDTO.from(f, java.util.Collections.singletonList(first)));
     }
 
+    @Operation(summary = "用户追加回复", description = "提交后工单状态置 PROCESSING")
     @PostMapping("/tickets/{id}/reply")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<FeedbackDTO> reply(@PathVariable Long id, @Valid @RequestBody FeedbackReplyRequest req, HttpServletRequest request) {

@@ -6,6 +6,8 @@ import com.beadforge.model.entity.Follow;
 import com.beadforge.model.entity.User;
 import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Tag(name = "关注关系", description = "关注 / 取关 / 粉丝列表 / 关注列表")
 @RestController
 @RequestMapping("/follow")
 @RequiredArgsConstructor
@@ -21,6 +24,7 @@ public class FollowController {
     private final FollowRepository followRepo;
     private final UserRepository userRepo;
 
+    @Operation(summary = "关注用户", description = "不能关注自己；幂等（已关注会返回 400）")
     @PostMapping("/{targetUserId}")
     public ApiResponse<Void> follow(@PathVariable Long targetUserId, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -40,6 +44,7 @@ public class FollowController {
         return ApiResponse.success("关注成功", null);
     }
 
+    @Operation(summary = "取消关注")
     @DeleteMapping("/{targetUserId}")
     public ApiResponse<Void> unfollow(@PathVariable Long targetUserId, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -50,6 +55,7 @@ public class FollowController {
         return ApiResponse.success("已取消关注", null);
     }
 
+    @Operation(summary = "查询是否已关注")
     @GetMapping("/check/{targetUserId}")
     public ApiResponse<Boolean> isFollowing(@PathVariable Long targetUserId, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -59,7 +65,7 @@ public class FollowController {
         return ApiResponse.success(followRepo.selectCount(qw) > 0);
     }
 
-    /** 我的粉丝（关注我的人） — ProfileFollowUser 形态 */
+    @Operation(summary = "我的粉丝", description = "返回 ProfileFollowUser 形态，附带 followed 反向关注标记")
     @GetMapping("/followers")
     public ApiResponse<List<Map<String, Object>>> followers(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -82,7 +88,7 @@ public class FollowController {
             .filter(Objects::nonNull).collect(Collectors.toList()));
     }
 
-    /** 我关注的人 — ProfileFollowUser 形态 */
+    @Operation(summary = "我关注的人")
     @GetMapping("/following")
     public ApiResponse<List<Map<String, Object>>> following(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

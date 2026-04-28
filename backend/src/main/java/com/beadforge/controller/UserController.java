@@ -16,6 +16,8 @@ import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
 import com.beadforge.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import java.time.format.DateTimeFormatter;
@@ -24,6 +26,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "用户", description = "当前用户资料 / 统计 / 密码 / 社区用户档案")
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -36,25 +39,28 @@ public class UserController {
     private final DesignRepository designRepo;
     private final LikeRepository likeRepo;
 
+    @Operation(summary = "获取我的资料")
     @GetMapping("/profile")
     public ApiResponse<UserDTO> getProfile(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         return ApiResponse.success(userService.getUserById(userId));
     }
 
+    @Operation(summary = "修改我的资料", description = "可更新昵称、头像、简介等")
     @PutMapping("/profile")
     public ApiResponse<UserDTO> updateProfile(HttpServletRequest request, @RequestBody UserDTO userDTO) {
         Long userId = (Long) request.getAttribute("userId");
         return ApiResponse.success(userService.updateUser(userId, userDTO));
     }
 
+    @Operation(summary = "我的统计数据", description = "作品数 / 粉丝数 / 关注数 / 获赞数 等聚合数据")
     @GetMapping("/stats")
     public ApiResponse<UserStatsDTO> getStats(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         return ApiResponse.success(userService.getUserStats(userId));
     }
 
-    /** 修改登录密码 */
+    @Operation(summary = "修改登录密码")
     @PostMapping("/change-password")
     public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest req,
                                             HttpServletRequest request) {
@@ -63,11 +69,8 @@ public class UserController {
         return ApiResponse.success("密码修改成功", null);
     }
 
-    /**
-     * 社区用户档案 — 通过 nickname 或 username 查找，用于他人主页 / 私信页面。
-     * 字段对齐前端 CommunityUserData：name, title, bio, followers, following, posts, likes, joinDate, tags
-     * bio / tags 当前 t_user 无字段，留空。
-     */
+    @Operation(summary = "社区用户档案",
+            description = "通过 nickname 或 username 查找，供他人主页 / 私信页面使用；返回字段对齐前端 CommunityUserData")
     @GetMapping("/community/{name}")
     public ApiResponse<Map<String, Object>> communityProfile(@PathVariable String name) {
         QueryWrapper<User> uqw = new QueryWrapper<>();

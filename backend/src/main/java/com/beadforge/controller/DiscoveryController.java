@@ -9,6 +9,8 @@ import com.beadforge.model.entity.DiscoverTab;
 import com.beadforge.repository.DiscoverBannerRepository;
 import com.beadforge.repository.DiscoverSettingRepository;
 import com.beadforge.repository.DiscoverTabRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +35,8 @@ import java.util.stream.Collectors;
  *   GET    /discovery/settings
  *   PUT    /discovery/settings/{key}        — 更新全局文案
  */
+@Tag(name = "发现页配置",
+        description = "发现页 banner / tab / 全局文案；/home 公开供前端展示，其他建议加 ADMIN 校验")
 @RestController
 @RequestMapping("/discovery")
 @RequiredArgsConstructor
@@ -44,6 +48,8 @@ public class DiscoveryController {
 
     /** ────────── 公开 ────────── */
 
+    @Operation(summary = "发现页首屏 payload",
+            description = "公开；合并 setting + banners + tabs，前端一次拉取即可渲染")
     @GetMapping("/home")
     public ApiResponse<Map<String, Object>> home() {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -54,12 +60,14 @@ public class DiscoveryController {
 
     /** ────────── 管理 — Banner ────────── */
 
+    @Operation(summary = "Banner 列表（含禁用）", description = "管理用；按 sort_order 升序")
     @GetMapping("/banners")
     public ApiResponse<List<DiscoverBanner>> listBanners() {
         return ApiResponse.success(bannerRepo.selectList(new QueryWrapper<DiscoverBanner>()
             .orderByAsc("sort_order").orderByDesc("id")));
     }
 
+    @Operation(summary = "新建 Banner")
     @PostMapping("/banners")
     public ApiResponse<DiscoverBanner> createBanner(@RequestBody DiscoverBanner b) {
         if (b.getEnabled() == null) b.setEnabled(1);
@@ -69,6 +77,7 @@ public class DiscoveryController {
         return ApiResponse.success("新建成功", b);
     }
 
+    @Operation(summary = "更新 Banner")
     @PutMapping("/banners/{id}")
     public ApiResponse<DiscoverBanner> updateBanner(@PathVariable Long id, @RequestBody DiscoverBanner b) {
         DiscoverBanner exist = bannerRepo.selectById(id);
@@ -78,6 +87,7 @@ public class DiscoveryController {
         return ApiResponse.success("更新成功", bannerRepo.selectById(id));
     }
 
+    @Operation(summary = "删除 Banner")
     @DeleteMapping("/banners/{id}")
     public ApiResponse<Void> deleteBanner(@PathVariable Long id) {
         bannerRepo.deleteById(id);
@@ -86,12 +96,14 @@ public class DiscoveryController {
 
     /** ────────── 管理 — Tab ────────── */
 
+    @Operation(summary = "Tab 列表（含禁用）")
     @GetMapping("/tabs")
     public ApiResponse<List<DiscoverTab>> listTabs() {
         return ApiResponse.success(tabRepo.selectList(new QueryWrapper<DiscoverTab>()
             .orderByAsc("sort_order").orderByDesc("id")));
     }
 
+    @Operation(summary = "新建 Tab", description = "isDefault=1 时会清空其他 Tab 的默认标记")
     @PostMapping("/tabs")
     public ApiResponse<DiscoverTab> createTab(@RequestBody DiscoverTab t) {
         if (t.getEnabled() == null) t.setEnabled(1);
@@ -103,6 +115,7 @@ public class DiscoveryController {
         return ApiResponse.success("新建成功", t);
     }
 
+    @Operation(summary = "更新 Tab")
     @PutMapping("/tabs/{id}")
     public ApiResponse<DiscoverTab> updateTab(@PathVariable Long id, @RequestBody DiscoverTab t) {
         DiscoverTab exist = tabRepo.selectById(id);
@@ -113,6 +126,7 @@ public class DiscoveryController {
         return ApiResponse.success("更新成功", tabRepo.selectById(id));
     }
 
+    @Operation(summary = "删除 Tab")
     @DeleteMapping("/tabs/{id}")
     public ApiResponse<Void> deleteTab(@PathVariable Long id) {
         tabRepo.deleteById(id);
@@ -121,11 +135,13 @@ public class DiscoveryController {
 
     /** ────────── 管理 — Setting (K-V 全局文案) ────────── */
 
+    @Operation(summary = "全局文案 K-V 列表")
     @GetMapping("/settings")
     public ApiResponse<List<DiscoverSetting>> listSettings() {
         return ApiResponse.success(settingRepo.selectList(null));
     }
 
+    @Operation(summary = "Upsert 全局文案", description = "key 不存在时新建；body: { value }")
     @PutMapping("/settings/{key}")
     public ApiResponse<DiscoverSetting> upsertSetting(@PathVariable String key, @RequestBody Map<String, String> body) {
         String value = body.get("value");

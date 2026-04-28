@@ -11,6 +11,8 @@ import com.beadforge.repository.PatternPurchaseRepository;
 import com.beadforge.repository.WalletLogRepository;
 import com.beadforge.repository.WalletRepository;
 import com.beadforge.service.DictService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Tag(name = "钱包",
+        description = "拼豆币：余额 / 签到 / 充值 / 购买图纸 / 流水")
 @RestController
 @RequestMapping("/wallet")
 @RequiredArgsConstructor
@@ -63,7 +67,8 @@ public class WalletController {
         logRepo.insert(log);
     }
 
-    /** 查余额 */
+    @Operation(summary = "查询钱包余额",
+            description = "返回 balance / totalCharged / totalSpent / signedToday / lastSignInDate")
     @GetMapping("/balance")
     public ApiResponse<Map<String, Object>> balance(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -79,7 +84,7 @@ public class WalletController {
         return ApiResponse.success(m);
     }
 
-    /** 每日签到，奖励 20 拼豆币 */
+    @Operation(summary = "每日签到", description = "每日 1 次，奖励 20 拼豆币；按 SIGN_IN 流水类型判断当天是否已签")
     @PostMapping("/sign-in")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> signIn(HttpServletRequest request) {
@@ -116,7 +121,8 @@ public class WalletController {
         return logRepo.selectCount(qw) > 0;
     }
 
-    /** 充值（模拟，实际对接微信/支付宝） */
+    @Operation(summary = "充值（模拟）",
+            description = "纯模拟充值；正式走 /payment/create-order + /payment/confirm 流程")
     @PostMapping("/charge")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> charge(@RequestBody ChargeRequest req, HttpServletRequest request) {
@@ -138,7 +144,8 @@ public class WalletController {
         return ApiResponse.success("充值成功", m);
     }
 
-    /** 拼豆币购买图纸 */
+    @Operation(summary = "用拼豆币购买图纸",
+            description = "免费图纸直接获取；付费扣余额（1 元 = 1 拼豆币）；同步写购买记录与下载量")
     @PostMapping("/buy-pattern/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> buyPattern(@PathVariable Long id, HttpServletRequest request) {
@@ -190,7 +197,8 @@ public class WalletController {
         return ApiResponse.success("购买成功", m);
     }
 
-    /** 流水记录 — 对齐前端 ProfileWalletLog { id, title, description, amount, createdAt } */
+    @Operation(summary = "钱包流水",
+            description = "近 50 条；返回字段对齐前端 ProfileWalletLog；type 通过字典 WALLET_LOG_TYPE 翻译为中文")
     @GetMapping("/logs")
     public ApiResponse<List<Map<String, Object>>> logs(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");

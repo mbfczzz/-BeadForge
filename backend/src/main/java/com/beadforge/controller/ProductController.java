@@ -6,9 +6,12 @@ import com.beadforge.model.dto.ApiResponse;
 import com.beadforge.model.entity.Product;
 import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.ProductRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "材料商品", description = "材料商城的商品列表与详情（公开）")
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
@@ -16,6 +19,8 @@ public class ProductController {
 
     private final ProductRepository productRepository;
 
+    @Operation(summary = "商品列表",
+            description = "sortBy: default / sales / price_asc / price_desc")
     @GetMapping("/list")
     public ApiResponse<Page<Product>> list(
             @RequestParam(defaultValue = "1") int page,
@@ -37,6 +42,7 @@ public class ProductController {
         return ApiResponse.success(productRepository.selectPage(p, qw));
     }
 
+    @Operation(summary = "商品详情")
     @GetMapping("/{id}")
     public ApiResponse<Product> detail(@PathVariable Long id) {
         Product product = productRepository.selectById(id);

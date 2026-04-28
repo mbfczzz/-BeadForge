@@ -13,6 +13,8 @@ import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +28,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 评论。
- *   GET    /comments?type=feed&id=123       — 列表（一级 + 回复扁平展示，按 created_at 倒序）
- *   POST   /comments?type=feed&id=123       — 发评论 body: { content, parentId? }
- *   DELETE /comments/{id}                   — 删除（仅作者本人；事务内 t_feed.comment_count 同步 -1）
- */
+@Tag(name = "评论", description = "作品 / 动态下的评论与回复（一级评论 + 回复扁平结构）")
 @RestController
 @RequestMapping("/comments")
 @RequiredArgsConstructor
@@ -43,6 +40,8 @@ public class CommentController {
     private final DesignRepository designRepo;
     private final LikeRepository likeRepo;
 
+    @Operation(summary = "评论列表",
+            description = "type: feed / design；按 created_at 倒序；登录态会附带 liked 字段")
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list(
             @RequestParam String type,
@@ -109,6 +108,8 @@ public class CommentController {
         }).collect(Collectors.toList()));
     }
 
+    @Operation(summary = "发表评论",
+            description = "type: feed / design；parentId 非空表示回复某条评论；同步维护目标的 comment_count")
     @PostMapping
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Map<String, Object>> create(
@@ -181,6 +182,7 @@ public class CommentController {
         return ApiResponse.success("评论成功", m);
     }
 
+    @Operation(summary = "删除评论", description = "仅评论作者本人；同步维护目标的 comment_count")
     @DeleteMapping("/{id}")
     @Transactional(rollbackFor = Exception.class)
     public ApiResponse<Void> remove(@PathVariable Long id, HttpServletRequest request) {

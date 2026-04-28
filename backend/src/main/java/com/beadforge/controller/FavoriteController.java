@@ -9,6 +9,8 @@ import com.beadforge.model.entity.User;
 import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.FavoriteRepository;
 import com.beadforge.repository.UserRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,13 +18,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 收藏管理。
- *   POST   /favorites/{type}/{id}     — 收藏（type: design / pattern）
- *   DELETE /favorites/{type}/{id}     — 取消收藏
- *   GET    /favorites/check/{type}/{id} — 是否已收藏
- *   GET    /favorites                 — 我的收藏列表（默认 design），返回 ProfileFavoriteItem 形态
- */
+@Tag(name = "收藏", description = "对作品 / 图纸的收藏")
 @RestController
 @RequestMapping("/favorites")
 @RequiredArgsConstructor
@@ -32,6 +28,7 @@ public class FavoriteController {
     private final DesignRepository designRepo;
     private final UserRepository userRepo;
 
+    @Operation(summary = "添加收藏", description = "type: design / pattern；幂等")
     @PostMapping("/{type}/{id}")
     public ApiResponse<Void> add(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -47,6 +44,7 @@ public class FavoriteController {
         return ApiResponse.success("收藏成功", null);
     }
 
+    @Operation(summary = "取消收藏")
     @DeleteMapping("/{type}/{id}")
     public ApiResponse<Void> remove(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -55,6 +53,7 @@ public class FavoriteController {
         return ApiResponse.success("已取消收藏", null);
     }
 
+    @Operation(summary = "查询是否已收藏")
     @GetMapping("/check/{type}/{id}")
     public ApiResponse<Map<String, Boolean>> check(@PathVariable String type, @PathVariable Long id, HttpServletRequest request) {
         Long userId = requireUser(request);
@@ -65,7 +64,8 @@ public class FavoriteController {
         return ApiResponse.success(m);
     }
 
-    /** 列表：默认 design 类型；对齐前端 ProfileFavoriteItem { id, title, author, patternIndex, likeCount } */
+    @Operation(summary = "我的收藏列表",
+            description = "默认 type=design；返回字段对齐前端 ProfileFavoriteItem")
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list(
             @RequestParam(defaultValue = "design") String type,
