@@ -18,7 +18,7 @@ interface ResourceAccessState {
   canDownloadImage: (file: MarketPattern) => boolean;
   getUnlockSource: (fileId: number) => UnlockSource | null;
   unlockFree: (fileId: number) => boolean;
-  unlockWithPoints: (file: MarketPattern) => boolean;
+  unlockWithPoints: (file: MarketPattern) => Promise<boolean>;
   unlockWithMember: (fileId: number) => boolean;
   markDownloaded: (fileId: number) => void;
   toggleMockMembership: () => void;
@@ -102,7 +102,7 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
     return true;
   },
 
-  unlockWithPoints: (file) => {
+  unlockWithPoints: async (file) => {
     const isMine = usePatternStore.getState().isMine(file.id);
     if (isMine) {
       get().unlockFree(file.id);
@@ -112,20 +112,34 @@ export const useResourceAccessStore = create<ResourceAccessState>((set, get) => 
     const cost = Math.max(0, file.pointsCost || 0);
     if (get().pointsBalance < cost) return false;
 
-    set((state) => {
-      const ownedFileIds = new Set(state.ownedFileIds);
-      ownedFileIds.add(file.id);
-      return {
-        pointsBalance: state.pointsBalance - cost,
-        ownedFileIds,
-        unlockSourceById: {
-          ...state.unlockSourceById,
-          [file.id]: 'points',
-        },
-      };
-    });
+    try {
+      const res = await walletApi.buyPattern(file.id);
+      const nextBalance = res?.data?.balance;
 
-    return true;
+      set((state) => {
+        const ownedFileIds = new Set(state.ownedFileIds);
+        ownedFileIds.add(file.id);
+        return {
+          pointsBalance: typeof nextBalance === 'number' ? nextBalance : state.pointsBalance - cost,
+          ownedFileIds,
+          unlockSourceById: {
+            ...state.unlockSourceById,
+            [file.id]: 'points',
+          },
+        };
+      });
+
+      // 同步到 patternStore.myListings，让首页/详情等"已购"标记立即生效
+      usePatternStore.setState((s) => {
+        const myListings = new Set(s.myListings);
+        myListings.add(file.id);
+        return { myListings };
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   unlockWithMember: (fileId) => {

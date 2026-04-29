@@ -47,7 +47,9 @@
       "Bash(xargs grep *)",
       "PowerShell(Get-Command *)",
       "Bash(python -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
-      "Bash(python scripts/gen_feature_status.py)"
+      "Bash(python scripts/gen_feature_status.py)",
+      "Bash(git pull *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ]
   }
 }

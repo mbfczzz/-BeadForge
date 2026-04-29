@@ -56,9 +56,18 @@ function fmtNum(n: number) {
 export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ route, navigation }) => {
   const { colors, dark } = useTheme();
   const item = route.params.item;
-  // 如果有实际的 designData（编辑器保存的 string[][]），优先使用；否则用内置 pattern
+  // 如果有实际的 designData，优先使用；后端存为 JSON 字符串、本地 mock 为 string[][]，都做兼容
   const pat = useMemo(() => {
-    if (Array.isArray(item.designData) && item.designData.length > 0) return item.designData as string[][];
+    const raw = item.designData;
+    if (Array.isArray(raw) && raw.length > 0) return raw as string[][];
+    if (typeof raw === 'string' && raw.length > 0) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.every((row) => Array.isArray(row))) {
+          return parsed as string[][];
+        }
+      } catch { /* 非合法 JSON 静默 fallback */ }
+    }
     return ALL_PATTERNS[item.id % ALL_PATTERNS.length];
   }, [item.designData, item.id]);
   const info = useMemo(() => analyzePattern(pat), [pat]);
@@ -329,7 +338,7 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
         <ActionBtn icon="share-2" label="分享" colors={colors} onPress={doShare} />
         <View style={{ flex: 1 }} />
         <HoverView
-          onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: info.cols, rows: info.rows })}
+          onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: info.cols, rows: info.rows, initialGrid: pat })}
           style={[$.makeBtn, { backgroundColor: colors.accent }]}
           hoverScale={1.03} hoverLift={2}
         >

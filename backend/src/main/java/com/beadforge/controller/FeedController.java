@@ -3,23 +3,28 @@ package com.beadforge.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beadforge.model.dto.ApiResponse;
+import com.beadforge.model.entity.Design;
 import com.beadforge.model.entity.Feed;
 import com.beadforge.model.entity.Follow;
 import com.beadforge.model.entity.Like;
 import com.beadforge.model.entity.User;
+import com.beadforge.repository.DesignRepository;
 import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
+import com.beadforge.service.GridImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Tag(name = "动态", description = "社区 Feed 流（推荐 / 最新 / 关注 / 我的 / 他人）")
 @RestController
 @RequestMapping("/feeds")
@@ -30,6 +35,8 @@ public class FeedController {
     private final UserRepository userRepo;
     private final FollowRepository followRepo;
     private final LikeRepository likeRepo;
+    private final DesignRepository designRepo;
+    private final GridImageService gridImageService;
 
     @Operation(summary = "动态列表", description = "公开；tab: recommend（默认）/ latest")
     @GetMapping("/list")
@@ -104,7 +111,8 @@ public class FeedController {
         return ApiResponse.success(enrichFeeds(result, userId));
     }
 
-    @Operation(summary = "发布动态")
+    @Operation(summary = "发布动态",
+            description = "若带 designId 但未带 mediaUrls，会自动把图纸 grid 渲染成 PNG 落到 /uploads，并回填 mediaUrls 让时间线正常显示图")
     @PostMapping
     public ApiResponse<Feed> create(@RequestBody Feed feed, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -113,6 +121,25 @@ public class FeedController {
         feed.setLikeCount(0);
         feed.setCommentCount(0);
         feed.setShareCount(0);
+
+        boolean noMedia = feed.getMediaUrls() == null || feed.getMediaUrls().trim().isEmpty();
+        if (noMedia && feed.getDesignId() != null) {
+            try {
+                Design design = designRepo.selectById(feed.getDesignId());
+                if (design != null && design.getDesignData() != null) {
+                    String url = gridImageService.renderToPng(design.getDesignData(), "feed-" + design.getId());
+                    if (url != null) {
+                        feed.setMediaUrls(url);
+                        if (feed.getMediaType() == null || feed.getMediaType().isEmpty()) {
+                            feed.setMediaType("image");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("根据 designId={} 自动渲染 grid 失败: {}", feed.getDesignId(), e.getMessage());
+            }
+        }
+
         feedRepo.insert(feed);
         return ApiResponse.success("发布成功", feed);
     }

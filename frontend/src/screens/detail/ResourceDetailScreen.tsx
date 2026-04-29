@@ -71,7 +71,7 @@ export const ResourceDetailScreen: React.FC<RootScreenProps<'ResourceDetail'>> =
   const actionVariant = owned || downloadable ? 'outline' : 'primary';
   const actionDisabled = !owned && resource.accessMode === 'member' && !membershipActive;
 
-  const handlePrimaryAction = () => {
+  const handlePrimaryAction = async () => {
     if (loading) return;
     if (downloadable) {
       markDownloaded(resource.id);
@@ -80,25 +80,36 @@ export const ResourceDetailScreen: React.FC<RootScreenProps<'ResourceDetail'>> =
     }
 
     if (owned) {
-      navigation.navigate('Editor', { mode: 'manual', cols: resource.cols, rows: resource.rows });
+      navigation.navigate('Editor', {
+        mode: 'manual',
+        cols: resource.cols,
+        rows: resource.rows,
+        initialGrid: resource.gridData,
+      });
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
       let ok = false;
       if (resource.accessMode === 'free') ok = unlockFree(resource.id);
-      if (resource.accessMode === 'points') ok = unlockWithPoints(resource);
-      if (resource.accessMode === 'member') ok = unlockWithMember(resource.id);
-      setLoading(false);
+      else if (resource.accessMode === 'points') ok = await unlockWithPoints(resource);
+      else if (resource.accessMode === 'member') ok = unlockWithMember(resource.id);
 
       if (!ok) {
-        Alert.alert('积分不足', `当前余额 ${pointsBalance} 积分，无法订购该图纸。`);
+        Alert.alert(
+          resource.accessMode === 'points' ? '订购失败' : '解锁失败',
+          resource.accessMode === 'points'
+            ? `当前余额 ${pointsBalance} 积分，无法订购该图纸。`
+            : '当前账户无法解锁该资源。',
+        );
         return;
       }
 
       Alert.alert('获取成功', resource.accessMode === 'points' ? '图纸已订购，可继续制作。' : '图纸已解锁，可继续制作。');
-    }, 220);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

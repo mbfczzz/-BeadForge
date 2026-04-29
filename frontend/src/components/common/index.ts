@@ -14,3 +14,4 @@ export { HoverView } from './HoverView';
 export { DanmakuOverlay } from './Danmaku';
 export { DanmakuInput } from './DanmakuInput';
 export type { DanmakuItem, DanmakuConfig } from './Danmaku';
+export { Toast } from './Toast';

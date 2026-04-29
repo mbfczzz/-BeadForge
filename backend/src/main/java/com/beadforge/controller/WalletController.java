@@ -172,8 +172,8 @@ public class WalletController {
             return ApiResponse.success("免费获取成功", null);
         }
 
-        // 扣拼豆币
-        int cost = listing.getPrice().intValue(); // 1元 = 1拼豆币
+        // 扣拼豆币：1 price 单位 = 1 拼豆币；用四舍五入与前端 Math.round 显示口径对齐，避免显示 3 实扣 2 这种截断差
+        int cost = listing.getPrice().setScale(0, java.math.RoundingMode.HALF_UP).intValue();
         Wallet w = getOrCreate(userId);
         if (w.getBalance() < cost) return ApiResponse.error(400, "拼豆币不足，请先充值");
 

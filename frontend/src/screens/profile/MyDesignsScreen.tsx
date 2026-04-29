@@ -1,12 +1,29 @@
 import React, { useEffect } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader, ALL_PATTERNS, BeadGrid, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { useDesignStore } from '../../store/useDesignStore';
+import type { RootStackParamList } from '../../navigation/types';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
+
+// designData 后端是 JSON 字符串、本地 mock 可能是数组，这里做一次容错解析
+function parseDesignData(raw: unknown): string[][] | null {
+  if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) return raw as string[][];
+  if (typeof raw === 'string' && raw.length > 0) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every((row) => Array.isArray(row))) {
+        return parsed as string[][];
+      }
+    } catch { /* ignore */ }
+  }
+  return null;
+}
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: '草稿', color: '#f59e0b' },
@@ -21,6 +38,7 @@ interface Props {
 export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
   const { myDesigns, myLoading, myHasMore, fetchMyDesigns } = useDesignStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useEffect(() => {
     void fetchMyDesigns(true);
@@ -35,11 +53,17 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: PAD, paddingBottom: wp(40) }}
         renderItem={({ item }) => {
-          const pattern = ALL_PATTERNS[item.id % ALL_PATTERNS.length];
+          // 优先用真实保存的 grid；缺省退回 mock 占位
+          const realGrid = parseDesignData(item.designData);
+          const pattern = realGrid || ALL_PATTERNS[item.id % ALL_PATTERNS.length];
           const status = STATUS_MAP[item.status] || { label: item.status, color: '#6b7280' };
 
           return (
-            <View style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => navigation.navigate('DesignDetail', { item })}
+              style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
               <View style={[$.thumb, { backgroundColor: colors.inputBg }]}>
                 <BeadGrid pixels={pattern} beadSize={wp(5)} gap={0.5} round />
               </View>
@@ -53,7 +77,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
                   <Text style={[$.dateText, { color: colors.textHint }]}>{item.createdAt?.slice(0, 10)}</Text>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
         refreshControl={

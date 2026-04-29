@@ -18,7 +18,8 @@ interface PatternState {
 
 const normalizeListing = (item: PatternListingSeed): MarketPattern => {
   const accessMode: ResourceAccessMode = item.accessMode || (item.free ? 'free' : 'points');
-  const pointsCost = typeof item.pointsCost === 'number' ? item.pointsCost : (item.free ? 0 : Math.round((item.price || 0) * 10));
+  // 全链路约定：1 price 单位 = 1 拼豆币（与后端 WalletController.buyPattern 的 intValue 取数一致）
+  const pointsCost = typeof item.pointsCost === 'number' ? item.pointsCost : (item.free ? 0 : Math.max(0, Math.round(item.price || 0)));
 
   return {
     ...item,

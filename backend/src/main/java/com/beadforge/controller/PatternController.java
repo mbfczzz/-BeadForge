@@ -76,6 +76,8 @@ public class PatternController {
             m.put("downloads", pl.getDownloads());
             m.put("rating", pl.getRating());
             m.put("createdAt", pl.getCreatedAt());
+            // grid 预览数据：发布时已存为 JSON 字符串，列表里直接透传供「开始制作」回填画布
+            m.put("previewData", pl.getPreviewData());
             return m;
         }).collect(Collectors.toList()));
 

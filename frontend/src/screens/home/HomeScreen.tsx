@@ -73,6 +73,7 @@ export const HomeScreen: React.FC = () => {
   const listings = usePatternStore((state) => state.listings);
   const refreshing = usePatternStore((state) => state.refreshing);
   const refreshListings = usePatternStore((state) => state.refreshListings);
+  const myListings = usePatternStore((state) => state.myListings);
   const homeBanners = usePatternStore((state) => state.homeBanners);
   const setHomeBanners = usePatternStore((state) => state.setHomeBanners);
 
@@ -163,12 +164,14 @@ export const HomeScreen: React.FC = () => {
   };
 
   const renderStatusText = (file: MarketPattern) => {
+    if (myListings.has(file.id)) return '已购';
     if (file.accessMode === 'free') return '免费';
     if (file.accessMode === 'points') return `${file.pointsCost} 积分`;
     return '会员';
   };
 
   const renderStatusColor = (file: MarketPattern) => {
+    if (myListings.has(file.id)) return colors.success;
     if (file.accessMode === 'free') return colors.success;
     if (file.accessMode === 'points') return colors.gold;
     return colors.accent;

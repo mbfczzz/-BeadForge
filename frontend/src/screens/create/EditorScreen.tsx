@@ -7,9 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { HoverView, ALL_PATTERNS } from '../../components/common';
+import { HoverView, ALL_PATTERNS, Toast } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
+import { designApi } from '../../api/design';
+import { feedApi } from '../../api/community';
 import { usePatternStore } from '../../store/usePatternStore';
 import { hapticSelection, hapticLight } from '../../hooks/useFeedback';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
@@ -86,17 +88,34 @@ const MODE_TITLES = { manual: '手动创作', image: '图片转换', ai: 'AI 生
 
 export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navigation }) => {
   const { colors, dark } = useTheme();
-  const { mode, cols, rows } = route.params;
+  const { mode, cols, rows, initialGrid } = route.params;
+
+  // 把外部传入的 grid 拉成请求的 cols×rows 尺寸；不一致时居中裁剪 / transparent 补齐
+  const fitInitialGrid = useCallback((src: string[][] | undefined): string[][] | null => {
+    if (!src || !src.length || !src[0]?.length) return null;
+    const out: string[][] = [];
+    for (let r = 0; r < rows; r++) {
+      const srcRow = src[r] || [];
+      const row: string[] = [];
+      for (let c = 0; c < cols; c++) {
+        row.push(srcRow[c] ?? 'transparent');
+      }
+      out.push(row);
+    }
+    return out;
+  }, [cols, rows]);
 
   /* ---- 生成状态 ---- */
-  const [generating, setGenerating] = useState(mode !== 'manual');
+  const hasInitialGrid = !!initialGrid && initialGrid.length > 0;
+  // 已有 initialGrid 时，跳过 image 模式默认的 1.5s 假 loading
+  const [generating, setGenerating] = useState(mode !== 'manual' && !hasInitialGrid);
   const [genError, setGenError] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
-  const [showAiInput, setShowAiInput] = useState(mode === 'ai');
+  const [showAiInput, setShowAiInput] = useState(mode === 'ai' && !hasInitialGrid);
   const useRealApi = true; // API Key 存后端数据库，始终尝试调用
 
   /* ---- 画布状态 ---- */
-  const [grid, setGrid] = useState<string[][]>(() => createEmptyGrid(cols, rows));
+  const [grid, setGrid] = useState<string[][]>(() => fitInitialGrid(initialGrid) || createEmptyGrid(cols, rows));
   const [tool, setTool] = useState<ToolType>('pen');
   const [color, setColor] = useState(PALETTE[0]);
   const [history, setHistory] = useState<string[][][]>([]);
@@ -135,6 +154,9 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
 
   /* ---- 初始化 ---- */
   useEffect(() => {
+    // 已经从图纸 / 作品页带 initialGrid 进来：跳过模式默认占位
+    if (hasInitialGrid) { setGenerating(false); return; }
+
     if (mode === 'image') {
       const t = setTimeout(() => { pushHistory(generateMockPattern(cols, rows)); setGenerating(false); }, 1500);
       return () => clearTimeout(t);
@@ -276,20 +298,73 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [pubAccessMode, setPubAccessMode] = useState<'free' | 'points' | 'member'>('free');
   const publishPattern = usePatternStore((s) => s.publish);
 
+  // 当前作品在后端的 ID（首次保存后获得；后续保存复用同一条记录，避免重复创建）
+  const savedDesignIdRef = useRef<number | null>(null);
+
+  // Toast：保留当前页面、不打断流程的轻反馈
+  const [toastMsg, setToastMsg] = useState('');
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 1800);
+  }, []);
+
+  // 把本地 grid 落到后端 t_design.design_data；返回 design id
+  const persistDesign = useCallback(async (extra?: { titleHint?: string; status?: 'DRAFT' | 'PUBLISHED' }) => {
+    const fallbackTitle = mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作';
+    const title = extra?.titleHint?.trim() || fallbackTitle;
+    const description = mode === 'ai'
+      ? `AI 生成：${aiPrompt || ''}`
+      : `${cols}×${rows} 手工创作`;
+
+    // 与 DesignDetailScreen 期望保持一致：直接序列化 grid 二维数组
+    const designData = JSON.stringify(grid);
+
+    if (savedDesignIdRef.current) {
+      await designApi.update(savedDesignIdRef.current, {
+        title,
+        description,
+        category: '抽象',
+        designData,
+        ...(extra?.status ? { status: extra.status } : {}),
+      });
+      return savedDesignIdRef.current;
+    }
+
+    const created = await designApi.create({ title, description, category: '抽象' });
+    const id = created.data?.id;
+    if (!id) throw new Error('创建作品失败');
+    // 创建后立即写入 designData（create 接口不接受 designData）
+    await designApi.update(id, {
+      title,
+      description,
+      category: '抽象',
+      designData,
+      ...(extra?.status ? { status: extra.status } : {}),
+    });
+    savedDesignIdRef.current = id;
+    return id;
+  }, [aiPrompt, cols, grid, mode, rows]);
+
   const handleSave = useCallback(() => {
     if (stats.beadCount === 0) { Alert.alert('提示', '画布是空的，先画点什么吧'); return; }
     Alert.alert('完成', '选择操作', [
-      { text: '保存到我的作品', onPress: () => {
-        navigation.navigate('DesignDetail', {
-          item: {
-            id: Date.now(), userId: 1, authorName: '我',
-            title: mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作',
-            description: mode === 'ai' ? `AI 生成：${aiPrompt}` : '手工创作的拼豆图纸',
-            category: '抽象', coverImage: null, designData: grid,
-            status: 'DRAFT', likeCount: 0, viewCount: 0,
-            createdAt: new Date().toISOString().slice(0, 10),
-          },
-        });
+      { text: '保存到我的作品', onPress: async () => {
+        try {
+          await persistDesign();
+          showToast('已保存到我的作品');
+        } catch (e: any) {
+          Alert.alert('保存失败', e?.message || '请检查登录状态后重试');
+        }
+      }},
+      { text: '发布到动态', onPress: async () => {
+        try {
+          const designId = await persistDesign({ status: 'PUBLISHED' });
+          const fallbackContent = mode === 'ai' ? `AI 生成：${aiPrompt || ''}` : `分享我的拼豆作品（${cols}×${rows}）`;
+          await feedApi.create({ content: fallbackContent.trim(), designId });
+          showToast('已发布到动态');
+        } catch (e: any) {
+          Alert.alert('发布失败', e?.message || '请检查登录状态后重试');
+        }
       }},
       { text: '发布资源到发现页', onPress: () => {
         setPubTitle(mode === 'ai' ? aiPrompt || '' : '');
@@ -300,34 +375,40 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       }},
       { text: '取消', style: 'cancel' },
     ]);
-  }, [navigation, grid, mode, aiPrompt, stats.beadCount]);
+  }, [aiPrompt, cols, mode, persistDesign, rows, showToast, stats.beadCount]);
 
-  const handlePublish = useCallback(() => {
+  const handlePublish = useCallback(async () => {
     if (!pubTitle.trim()) { Alert.alert('提示', '请输入资源标题'); return; }
     const pointsCost = pubAccessMode === 'points' ? Math.max(0, parseInt(pubPoints, 10) || 0) : 0;
     if (pubAccessMode === 'points' && pointsCost <= 0) {
       Alert.alert('提示', '请输入有效的积分数量');
       return;
     }
-    publishPattern({
-      title: pubTitle.trim(),
-      author: '我',
-      authorId: 1,
-      patIdx: 0,
-      cat: pubCat,
-      cols,
-      rows,
-      desc: pubDesc.trim() || `${cols}×${rows} 拼豆资源`,
-      gridData: grid,
-      accessMode: pubAccessMode,
-      pointsCost,
-    });
-    setShowPublish(false);
-    Alert.alert('发布成功', `「${pubTitle.trim()}」已发布到发现页`, [
-      { text: '去发现查看', onPress: () => navigation.navigate('Main' as any, { screen: 'Home' } as any) },
-      { text: '继续创作' },
-    ]);
-  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, navigation]);
+    try {
+      const newId = await publishPattern({
+        title: pubTitle.trim(),
+        author: '我',
+        authorId: 1,
+        patIdx: 0,
+        cat: pubCat,
+        cols,
+        rows,
+        desc: pubDesc.trim() || `${cols}×${rows} 拼豆资源`,
+        gridData: grid,
+        accessMode: pubAccessMode,
+        pointsCost,
+      });
+      setShowPublish(false);
+      if (newId === -1) {
+        Alert.alert('发布失败', '请检查登录状态后重试');
+        return;
+      }
+      showToast(`「${pubTitle.trim()}」已发布到发现页`);
+    } catch (e: any) {
+      setShowPublish(false);
+      Alert.alert('发布失败', e?.message || '请稍后重试');
+    }
+  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, showToast]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -566,6 +647,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           </View>
         </TouchableOpacity>
       </Modal>
+
+      <Toast message={toastMsg} />
     </SafeAreaView>
   );
 };

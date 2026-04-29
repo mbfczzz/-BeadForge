@@ -123,6 +123,20 @@ interface BackendPatternListing {
   downloads: number;
   rating: number;
   createdAt: string;
+  previewData?: string | null;
+}
+
+function parseGridData(raw: string | null | undefined): string[][] | undefined {
+  if (!raw || typeof raw !== 'string') return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every((row) => Array.isArray(row))) {
+      return parsed as string[][];
+    }
+  } catch {
+    /* 老数据可能不是合法 JSON，静默忽略 */
+  }
+  return undefined;
 }
 
 function backendListingToSeed(p: BackendPatternListing): PatternListingSeed {
@@ -140,6 +154,7 @@ function backendListingToSeed(p: BackendPatternListing): PatternListingSeed {
     cols: p.cols || 9,
     rows: p.rows || 9,
     desc: p.description || '',
+    gridData: parseGridData(p.previewData),
     createdAt: typeof p.createdAt === 'string' ? p.createdAt.slice(0, 10) : '',
   };
 }

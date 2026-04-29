@@ -380,7 +380,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                       key={work.id}
                       scale={0.97}
                       style={{ width: workGridSize }}
-                      onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length })}
+                      onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length, initialGrid: pattern })}
                     >
                       <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
                         <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#F8F8FA' }]}>
