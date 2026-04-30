@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Pressable, Alert,
+  View, Text, StyleSheet, ScrollView, Pressable, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
@@ -414,6 +414,8 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
               <View style={$.feedGrid}>
                 {feeds.map((feed) => {
                   const media = getFeedMockMedia(feed);
+                  const thumbW = mediaGridSize;
+                  const thumbH = mediaGridSize / (media.aspectRatio || 1);
                   return (
                     <PressableScale
                       key={feed.id}
@@ -422,8 +424,26 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
                       onPress={() => navigation.navigate('FeedDetail', { feed })}
                     >
                       <View style={[$.mediaGridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        <View style={[$.mediaGridThumb, { borderColor: `${media.accent}20` }]}>
-                          <SvgXml xml={media.svg} width={mediaGridSize} height={mediaGridSize / media.aspectRatio} />
+                        <View style={[$.mediaGridThumb, { borderColor: `${media.accent}20`, width: thumbW, height: thumbH }]}>
+                          {media.uri ? (
+                            <Image source={{ uri: media.uri }} style={{ width: thumbW, height: thumbH }} resizeMode="cover" />
+                          ) : media.beadGrid && media.beadGrid.length > 0 ? (
+                            (() => {
+                              const cols = Math.max(media.beadGrid[0]?.length || 1, 1);
+                              const rows = Math.max(media.beadGrid.length, 1);
+                              const beadSize = Math.max(2, Math.min(
+                                Math.floor((thumbW - wp(8)) / cols) - 1,
+                                Math.floor((thumbH - wp(8)) / rows) - 1,
+                              ));
+                              return (
+                                <View style={{ width: thumbW, height: thumbH, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+                                  <BeadGrid pixels={media.beadGrid} beadSize={beadSize} gap={0.5} round />
+                                </View>
+                              );
+                            })()
+                          ) : media.svg ? (
+                            <SvgXml xml={media.svg} width={thumbW} height={thumbH} />
+                          ) : null}
                           <View style={$.mediaGridBadgeWrap}>
                             <View style={$.mediaGridBadge}>
                               <Text style={$.mediaGridBadgeText}>{feed.media.type === 'video' ? 'VIDEO' : feed.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>

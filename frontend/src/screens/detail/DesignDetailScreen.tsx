@@ -338,7 +338,11 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
         <ActionBtn icon="share-2" label="分享" colors={colors} onPress={doShare} />
         <View style={{ flex: 1 }} />
         <HoverView
-          onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: info.cols, rows: info.rows, initialGrid: pat })}
+          onPress={() => navigation.navigate('Editor', {
+            mode: 'manual', cols: info.cols, rows: info.rows, initialGrid: pat,
+            // 自己作品才透传 designId 让后续保存走 update；他人作品保持新建语义
+            designId: isOwnDesign ? item.id : undefined,
+          })}
           style={[$.makeBtn, { backgroundColor: colors.accent }]}
           hoverScale={1.03} hoverLift={2}
         >

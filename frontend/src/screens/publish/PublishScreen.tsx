@@ -20,7 +20,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SvgXml } from 'react-native-svg';
 import { useTheme } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { Avatar, FilterChip, HoverView, Input, PressableScale } from '../../components/common';
+import { Avatar, BeadGrid, FilterChip, HoverView, Input, PressableScale } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import type { RootStackParamList } from '../../navigation/types';
 import { COMMUNITY_TABS } from '../../mock/community';
@@ -347,9 +347,21 @@ const FeedCard: React.FC<{
               >
                 {item.uri ? (
                   <Image source={{ uri: item.uri }} style={{ width: PREVIEW_WIDTH, height: previewHeight }} resizeMode="cover" />
-                ) : (
+                ) : item.beadGrid && item.beadGrid.length > 0 ? (
+                  <View style={{ width: PREVIEW_WIDTH, height: previewHeight, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+                    <BeadGrid
+                      pixels={item.beadGrid}
+                      beadSize={Math.min(
+                        Math.floor((PREVIEW_WIDTH - 24) / Math.max(item.beadGrid[0]?.length || 1, 1)) - 1,
+                        Math.floor((previewHeight - 24) / Math.max(item.beadGrid.length, 1)) - 1,
+                      )}
+                      gap={1}
+                      round
+                    />
+                  </View>
+                ) : item.svg ? (
                   <SvgXml xml={item.svg} width={PREVIEW_WIDTH} height={previewHeight} />
-                )}
+                ) : null}
               </Pressable>
             ))}
           </ScrollView>

@@ -3,7 +3,6 @@ package com.beadforge.controller;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beadforge.model.dto.ApiResponse;
-import com.beadforge.model.entity.Design;
 import com.beadforge.model.entity.Feed;
 import com.beadforge.model.entity.Follow;
 import com.beadforge.model.entity.Like;
@@ -13,7 +12,6 @@ import com.beadforge.repository.FeedRepository;
 import com.beadforge.repository.FollowRepository;
 import com.beadforge.repository.LikeRepository;
 import com.beadforge.repository.UserRepository;
-import com.beadforge.service.GridImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +34,6 @@ public class FeedController {
     private final FollowRepository followRepo;
     private final LikeRepository likeRepo;
     private final DesignRepository designRepo;
-    private final GridImageService gridImageService;
 
     @Operation(summary = "动态列表", description = "公开；tab: recommend（默认）/ latest")
     @GetMapping("/list")
@@ -112,7 +109,7 @@ public class FeedController {
     }
 
     @Operation(summary = "发布动态",
-            description = "若带 designId 但未带 mediaUrls，会自动把图纸 grid 渲染成 PNG 落到 /uploads，并回填 mediaUrls 让时间线正常显示图")
+            description = "带 designId 的动态由前端用 BeadGrid 直接渲染（enrichFeeds 会把 grid 一起返回），不再服务端写 PNG")
     @PostMapping
     public ApiResponse<Feed> create(@RequestBody Feed feed, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -121,25 +118,7 @@ public class FeedController {
         feed.setLikeCount(0);
         feed.setCommentCount(0);
         feed.setShareCount(0);
-
-        boolean noMedia = feed.getMediaUrls() == null || feed.getMediaUrls().trim().isEmpty();
-        if (noMedia && feed.getDesignId() != null) {
-            try {
-                Design design = designRepo.selectById(feed.getDesignId());
-                if (design != null && design.getDesignData() != null) {
-                    String url = gridImageService.renderToPng(design.getDesignData(), "feed-" + design.getId());
-                    if (url != null) {
-                        feed.setMediaUrls(url);
-                        if (feed.getMediaType() == null || feed.getMediaType().isEmpty()) {
-                            feed.setMediaType("image");
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("根据 designId={} 自动渲染 grid 失败: {}", feed.getDesignId(), e.getMessage());
-            }
-        }
-
+        // mediaUrls 由前端显式上传时才有；带 designId 的图通过 enrichFeeds.beadGrid 给前端 BeadGrid 渲染
         feedRepo.insert(feed);
         return ApiResponse.success("发布成功", feed);
     }
@@ -160,6 +139,19 @@ public class FeedController {
                 .eq("user_id", currentUserId).eq("target_type", "FEED").in("target_id", feedIds)
                 .select("target_id"))
                 .forEach(l -> likedFeedIds.add(l.getTargetId()));
+        }
+
+        // 批量加载所有带 designId 的 design：哪怕 mediaUrls 已设置，也把 grid 一并下发
+        // 让前端在 mediaUrls 指向损坏/丢失文件时仍能用 BeadGrid 兜底显示
+        Set<Long> designIdsNeedGrid = result.getRecords().stream()
+            .filter(f -> f.getDesignId() != null)
+            .map(Feed::getDesignId)
+            .collect(Collectors.toSet());
+        Map<Long, String> designDataMap = new HashMap<>();
+        if (!designIdsNeedGrid.isEmpty()) {
+            designRepo.selectBatchIds(designIdsNeedGrid).forEach(d -> {
+                if (d.getDesignData() != null) designDataMap.put(d.getId(), d.getDesignData());
+            });
         }
 
         String[] accents = {"#FF8DA8", "#6C8BFF", "#8E63FF", "#3FB28D", "#F9B95C", "#FF6F91"};
@@ -191,6 +183,14 @@ public class FeedController {
             media.put("type", mtype);
             media.put("demoAssetId", "feed-" + f.getId());
             media.put("aspectRatio", 1.0);
+            // 带 designId 一律附 grid，让前端用 BeadGrid 渲染（最稳定，不依赖任何文件 IO/编解码）
+            if (f.getDesignId() != null && designDataMap.containsKey(f.getDesignId())) {
+                String[][] grid = parseGridSafely(designDataMap.get(f.getDesignId()));
+                if (grid != null) {
+                    media.put("beadGrid", grid);
+                }
+            }
+            // 真实上传的媒体走 Image 渲染（如用户从相册上传的照片）
             if (f.getMediaUrls() != null && !f.getMediaUrls().trim().isEmpty()) {
                 List<String> uris = Arrays.stream(f.getMediaUrls().split(","))
                     .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
@@ -204,6 +204,32 @@ public class FeedController {
         }).collect(Collectors.toList()));
 
         return mapped;
+    }
+
+    /** 把 designData JSON 解析为二维 hex 数组，失败返回 null。和 GridImageService 内部逻辑同源 */
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+    private String[][] parseGridSafely(String json) {
+        if (json == null || json.trim().isEmpty()) return null;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = JSON.readTree(json);
+            com.fasterxml.jackson.databind.JsonNode gridNode = root.isArray() ? root : root.path("grid");
+            if (!gridNode.isArray() || gridNode.size() == 0) return null;
+            int rows = gridNode.size();
+            int cols = gridNode.get(0).size();
+            if (cols == 0) return null;
+            String[][] grid = new String[rows][cols];
+            for (int r = 0; r < rows; r++) {
+                com.fasterxml.jackson.databind.JsonNode row = gridNode.get(r);
+                if (!row.isArray() || row.size() != cols) return null;
+                for (int c = 0; c < cols; c++) {
+                    grid[r][c] = row.get(c).asText(null);
+                }
+            }
+            return grid;
+        } catch (Exception e) {
+            log.debug("parseGridSafely 失败: {}", e.getMessage());
+            return null;
+        }
     }
 
     private String formatTimeAgo(java.time.LocalDateTime time) {

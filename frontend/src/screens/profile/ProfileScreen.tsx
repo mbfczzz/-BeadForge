@@ -50,6 +50,7 @@ type MineActionKey =
   | 'likes'
   | 'favorites'
   | 'myDesigns'
+  | 'myDrafts'
   | 'myFeeds'
   | 'likedHistory'
   | 'purchased'
@@ -125,6 +126,14 @@ const MINE_TOOL_ITEMS: MineToolItem[] = [
     iconTint: '#2563EB',
     iconBackground: '#E0ECFF',
     actionKey: 'myDesigns',
+  },
+  {
+    id: 'drafts',
+    label: '我的草稿',
+    icon: 'edit-2',
+    iconTint: '#F59E0B',
+    iconBackground: '#FEF3C7',
+    actionKey: 'myDrafts',
   },
   {
     id: 'posts',
@@ -280,10 +289,13 @@ function buildMineStatItems(stats: UserStats, favoritesCount: number): MineStatI
   ];
 }
 
-export const ProfileScreen: React.FC = () => {
+export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
   const { colors, dark } = useTheme();
   const { user, token, stats, fetchStats } = useAuthStore();
   const setTabBarHidden = useNavigationUIStore((state) => state.setTabBarHidden);
+
+  // 别处通过路由参数指定要直接打开的子页（如 CreateScreen「查看全部草稿」→ myDrafts）
+  const initialAction = route?.params?.initialAction as MineActionKey | undefined;
   const pointsBalance = useResourceAccessStore((state) => state.pointsBalance);
   const signIn = useResourceAccessStore((state) => state.signIn);
   const lastSignInDate = useResourceAccessStore((state) => state.lastSignInDate);
@@ -360,6 +372,17 @@ export const ProfileScreen: React.FC = () => {
   const openPage = useCallback((page: RootPageKey) => {
     setSubPage({ key: page });
   }, []);
+
+  // 路由参数 initialAction → 自动打开对应子页（来自 CreateScreen 的"查看全部草稿"等场景）
+  // 注意：不限制必须在根页才生效 —— 用户从外部点过来就是要切到目标页，不论当前在哪个子页
+  useEffect(() => {
+    if (!initialAction) return;
+    if (initialAction === 'tutorial' || initialAction === 'orders') return;
+    setSubPage({ key: initialAction as RootPageKey });
+    // 清掉路由参数，避免下次返回 Profile 又被触发
+    navigation?.setParams?.({ initialAction: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialAction]);
 
   const openFeedbackDetail = useCallback((ticketId: string) => {
     setSubPage({ key: 'feedbackDetail', ticketId });
@@ -519,7 +542,9 @@ export const ProfileScreen: React.FC = () => {
       case 'editProfile':
         return <EditProfileScreen onBack={handleBackToRoot} />;
       case 'myDesigns':
-        return <MyDesignsScreen onBack={handleBackToRoot} />;
+        return <MyDesignsScreen onBack={handleBackToRoot} initialStatus={null} />;
+      case 'myDrafts':
+        return <MyDesignsScreen onBack={handleBackToRoot} initialStatus="DRAFT" />;
       case 'favorites':
         return <FavoritesScreen onBack={handleBackToRoot} />;
       case 'addresses':

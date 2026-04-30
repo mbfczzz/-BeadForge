@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { SvgXml } from 'react-native-svg';
-import { AppHeader, Avatar, StateView } from '../../components/common';
+import { AppHeader, Avatar, BeadGrid, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { feedApi, type FeedItemData } from '../../api/community';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -51,7 +51,25 @@ export const MyFeedsScreen: React.FC<Props> = ({ onBack }) => {
               {item.caption ? <Text style={[$.caption, { color: colors.textHint }]}>{item.caption}</Text> : null}
 
               <View style={[$.mediaCard, { height: mediaHeight, borderColor: `${media.accent}20` }]}>
-                <SvgXml xml={media.svg} width={wp(310)} height={mediaHeight} />
+                {media.uri ? (
+                  <Image source={{ uri: media.uri }} style={{ width: wp(310), height: mediaHeight }} resizeMode="cover" />
+                ) : media.beadGrid && media.beadGrid.length > 0 ? (
+                  (() => {
+                    const cols = Math.max(media.beadGrid[0]?.length || 1, 1);
+                    const rows = Math.max(media.beadGrid.length, 1);
+                    const beadSize = Math.max(3, Math.min(
+                      Math.floor((wp(310) - wp(20)) / cols) - 1,
+                      Math.floor((mediaHeight - wp(20)) / rows) - 1,
+                    ));
+                    return (
+                      <View style={{ width: wp(310), height: mediaHeight, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+                        <BeadGrid pixels={media.beadGrid} beadSize={beadSize} gap={1} round />
+                      </View>
+                    );
+                  })()
+                ) : media.svg ? (
+                  <SvgXml xml={media.svg} width={wp(310)} height={mediaHeight} />
+                ) : null}
                 <View style={$.mediaBadgeRow}>
                   <View style={[$.mediaBadge, { backgroundColor: 'rgba(15,23,42,0.72)' }]}>
                     <Text style={$.mediaBadgeText}>{item.media.type === 'video' ? 'VIDEO' : item.media.type === 'gif' ? 'GIF' : 'PHOTO'}</Text>

@@ -4,6 +4,8 @@ import { resolveUploadUrl } from '../api/upload';
 export interface FeedMockMedia {
   svg: string;
   uri?: string;
+  /** 直接把 grid 给前端 BeadGrid 渲染（后端 PNG 写入失败兜底）*/
+  beadGrid?: string[][];
   aspectRatio: number;
   accent: string;
   type: FeedMediaType;
@@ -148,7 +150,18 @@ function buildFeedMockMedia(feed: FeedItemData, variant = 0): FeedMockMedia {
   return result;
 }
 
+// 编辑器发布到动态的图都用 BeadGrid 渲染：稳定、不依赖文件 IO，就算历史脏 mediaUrls 也不挡住
+// 真实上传的图片才走 Image
 export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
+  if (feed.media.beadGrid && feed.media.beadGrid.length > 0) {
+    return {
+      svg: '',
+      beadGrid: feed.media.beadGrid,
+      aspectRatio: 1,
+      accent: feed.coverAccent || '#3B82F6',
+      type: 'image',
+    };
+  }
   if (feed.media.assetUris?.length) {
     return {
       svg: '',
@@ -162,6 +175,17 @@ export function getFeedMockMedia(feed: FeedItemData): FeedMockMedia {
 }
 
 export function getFeedMockGallery(feed: FeedItemData): FeedMockMedia[] {
+  // BeadGrid 优先：编辑器发布到动态的图永远走这条
+  if (feed.media.beadGrid && feed.media.beadGrid.length > 0) {
+    return [{
+      svg: '',
+      beadGrid: feed.media.beadGrid,
+      aspectRatio: 1,
+      accent: feed.coverAccent || '#3B82F6',
+      type: 'image',
+    }];
+  }
+
   if (feed.media.assetUris?.length) {
     return feed.media.assetUris.map((uri) => ({
       svg: '',

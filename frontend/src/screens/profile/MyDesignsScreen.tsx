@@ -33,20 +33,52 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 interface Props {
   onBack: () => void;
+  /** 进入时强制把 tab 切到这个状态（如从「我的草稿」入口直达 DRAFT） */
+  initialStatus?: string | null;
 }
 
-export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
+const STATUS_TABS: { key: string | null; label: string }[] = [
+  { key: null, label: '全部' },
+  { key: 'DRAFT', label: '草稿' },
+  { key: 'PUBLISHED', label: '已发布' },
+];
+
+export const MyDesignsScreen: React.FC<Props> = ({ onBack, initialStatus }) => {
   const { colors } = useTheme();
-  const { myDesigns, myLoading, myHasMore, fetchMyDesigns } = useDesignStore();
+  const { myDesigns, myLoading, myHasMore, myStatus, setMyStatus, fetchMyDesigns } = useDesignStore();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  // 入口要求预筛某个 status 时（如「我的草稿」直达 DRAFT），同步到 store
   useEffect(() => {
-    void fetchMyDesigns(true);
-  }, [fetchMyDesigns]);
+    if (initialStatus !== undefined && initialStatus !== myStatus) {
+      setMyStatus(initialStatus);
+    } else {
+      void fetchMyDesigns(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <AppHeader title="我的作品" onBack={onBack} />
+
+      <View style={[$.tabRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        {STATUS_TABS.map((t) => {
+          const active = myStatus === t.key;
+          return (
+            <TouchableOpacity
+              key={t.label}
+              activeOpacity={0.85}
+              onPress={() => setMyStatus(t.key)}
+              style={[$.tabBtn, active && { backgroundColor: colors.accent }]}
+            >
+              <Text style={[$.tabText, { color: active ? '#fff' : colors.textSecondary }]}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <FlatList
         data={myDesigns}
@@ -98,7 +130,11 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
         ListEmptyComponent={
           myLoading
             ? <StateView loading />
-            : <StateView empty emptyText="还没有作品，去创作吧" />
+            : <StateView empty emptyText={
+                myStatus === 'DRAFT' ? '暂无草稿，进编辑器画几笔自动会保存到这里'
+                  : myStatus === 'PUBLISHED' ? '还没有已发布的作品'
+                  : '还没有作品，去创作吧'
+              } />
         }
       />
     </SafeAreaView>
@@ -108,6 +144,22 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack }) => {
 const $ = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    paddingHorizontal: PAD,
+    paddingVertical: wp(8),
+    gap: wp(8),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tabBtn: {
+    paddingHorizontal: wp(14),
+    paddingVertical: wp(6),
+    borderRadius: wp(14),
+  },
+  tabText: {
+    fontSize: fp(13),
+    fontWeight: '600',
   },
   nav: {
     flexDirection: 'row',

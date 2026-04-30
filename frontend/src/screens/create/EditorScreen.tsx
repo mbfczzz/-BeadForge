@@ -2,17 +2,19 @@ import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from '
 import {
   View, Text, StyleSheet, ScrollView, Platform, TextInput,
   ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
+  AppState, type AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { HoverView, ALL_PATTERNS, Toast } from '../../components/common';
+import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { designApi } from '../../api/design';
 import { feedApi } from '../../api/community';
 import { usePatternStore } from '../../store/usePatternStore';
+import { useDesignStore } from '../../store/useDesignStore';
 import { hapticSelection, hapticLight } from '../../hooks/useFeedback';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
@@ -88,7 +90,7 @@ const MODE_TITLES = { manual: '手动创作', image: '图片转换', ai: 'AI 生
 
 export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navigation }) => {
   const { colors, dark } = useTheme();
-  const { mode, cols, rows, initialGrid } = route.params;
+  const { mode, cols, rows, initialGrid, designId: incomingDesignId } = route.params;
 
   // 把外部传入的 grid 拉成请求的 cols×rows 尺寸；不一致时居中裁剪 / transparent 补齐
   const fitInitialGrid = useCallback((src: string[][] | undefined): string[][] | null => {
@@ -289,6 +291,15 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     return { beadCount, colorCount: colorSet.size };
   }, [grid]);
 
+  // 监听画布变化标记 dirty；初次/AI生成回填的那次（skipNextDirtyRef=true）不算改动
+  useEffect(() => {
+    if (skipNextDirtyRef.current) {
+      skipNextDirtyRef.current = false;
+      return;
+    }
+    setDirtySinceSave(true);
+  }, [grid]);
+
   /* ---- 保存 / 发布 ---- */
   const [showPublish, setShowPublish] = useState(false);
   const [pubTitle, setPubTitle] = useState('');
@@ -296,86 +307,252 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [pubPoints, setPubPoints] = useState('');
   const [pubCat, setPubCat] = useState('抽象');
   const [pubAccessMode, setPubAccessMode] = useState<'free' | 'points' | 'member'>('free');
+  // 防重复发布：本次编辑会话内，每种目标只能发一次
+  const [hasPublishedToFeed, setHasPublishedToFeed] = useState(false);
+  const [hasPublishedToPattern, setHasPublishedToPattern] = useState(false);
+  // 脏检测：只有当画布相对"上次落库"有新改动时，才显示保存/更新选项
+  // 从草稿进来时 hasSaved 一开始就 true（这条 design 已在后端）
+  const [hasSaved, setHasSaved] = useState(!!incomingDesignId);
+  const [dirtySinceSave, setDirtySinceSave] = useState(false);
+  const skipNextDirtyRef = useRef(true);
   const publishPattern = usePatternStore((s) => s.publish);
 
   // 当前作品在后端的 ID（首次保存后获得；后续保存复用同一条记录，避免重复创建）
-  const savedDesignIdRef = useRef<number | null>(null);
+  // 进编辑器时若带 incomingDesignId（从草稿恢复），直接复用，让保存走 update 而不是新建
+  const savedDesignIdRef = useRef<number | null>(incomingDesignId ?? null);
+  // 串行化锁：保证 persistDesign 永远不会有两路并发（如 autosave 与发布按钮同时触发）
+  // 否则两路都看到 savedDesignIdRef=null 会各自 create 出两条 design
+  const persistQueueRef = useRef<Promise<number>>(Promise.resolve(0));
 
-  // Toast：保留当前页面、不打断流程的轻反馈
-  const [toastMsg, setToastMsg] = useState('');
-  const showToast = useCallback((msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(''), 1800);
-  }, []);
+  // 发布结果：富卡片，3 秒自动消，主操作可选；保持"留在当前页"的承诺
+  const [publishResult, setPublishResult] = useState<PublishResultCardData | null>(null);
 
   // 把本地 grid 落到后端 t_design.design_data；返回 design id
+  // 用 persistQueueRef 串行化：每次调用都接在上一个之后跑，避免并发 create 出重复 design
   const persistDesign = useCallback(async (extra?: { titleHint?: string; status?: 'DRAFT' | 'PUBLISHED' }) => {
-    const fallbackTitle = mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作';
-    const title = extra?.titleHint?.trim() || fallbackTitle;
-    const description = mode === 'ai'
-      ? `AI 生成：${aiPrompt || ''}`
-      : `${cols}×${rows} 手工创作`;
+    const previous = persistQueueRef.current;
+    const next = (async () => {
+      // 等前一个完成，但不要因为前一个失败而拒绝执行后续（catch 吞）
+      await previous.catch(() => undefined);
 
-    // 与 DesignDetailScreen 期望保持一致：直接序列化 grid 二维数组
-    const designData = JSON.stringify(grid);
+      const fallbackTitle = mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作';
+      const title = extra?.titleHint?.trim() || fallbackTitle;
+      const description = mode === 'ai'
+        ? `AI 生成：${aiPrompt || ''}`
+        : `${cols}×${rows} 手工创作`;
 
-    if (savedDesignIdRef.current) {
-      await designApi.update(savedDesignIdRef.current, {
+      // 与 DesignDetailScreen 期望保持一致：直接序列化 grid 二维数组
+      const designData = JSON.stringify(grid);
+
+      if (savedDesignIdRef.current) {
+        await designApi.update(savedDesignIdRef.current, {
+          title,
+          description,
+          category: '抽象',
+          designData,
+          ...(extra?.status ? { status: extra.status } : {}),
+        });
+        return savedDesignIdRef.current;
+      }
+
+      const created = await designApi.create({ title, description, category: '抽象' });
+      const id = created.data?.id;
+      if (!id) throw new Error('创建作品失败');
+      // 创建后立即写入 designData（create 接口不接受 designData）
+      await designApi.update(id, {
         title,
         description,
         category: '抽象',
         designData,
         ...(extra?.status ? { status: extra.status } : {}),
       });
-      return savedDesignIdRef.current;
-    }
-
-    const created = await designApi.create({ title, description, category: '抽象' });
-    const id = created.data?.id;
-    if (!id) throw new Error('创建作品失败');
-    // 创建后立即写入 designData（create 接口不接受 designData）
-    await designApi.update(id, {
-      title,
-      description,
-      category: '抽象',
-      designData,
-      ...(extra?.status ? { status: extra.status } : {}),
-    });
-    savedDesignIdRef.current = id;
-    return id;
+      savedDesignIdRef.current = id;
+      return id;
+    })();
+    persistQueueRef.current = next;
+    return next;
   }, [aiPrompt, cols, grid, mode, rows]);
+
+  const fallbackTitleForMode = useCallback(() => {
+    return mode === 'ai' ? `AI：${aiPrompt || '创意图案'}` : '我的创作';
+  }, [mode, aiPrompt]);
 
   const handleSave = useCallback(() => {
     if (stats.beadCount === 0) { Alert.alert('提示', '画布是空的，先画点什么吧'); return; }
-    Alert.alert('完成', '选择操作', [
-      { text: '保存到我的作品', onPress: async () => {
+
+    // 动态构建菜单：
+    //   - 保存项：仅当从未保存 / 自上次保存后有新改动时才显示
+    //   - 发布到动态 / 发现页：本次会话发过的不再列出，避免重复入库
+    type Btn = { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' };
+    const buttons: Btn[] = [];
+
+    const showSaveOption = !hasSaved || dirtySinceSave;
+    if (showSaveOption) {
+      const saveLabel = hasSaved ? '更新到我的作品' : '保存到我的作品';
+      buttons.push({ text: saveLabel, onPress: async () => {
         try {
           await persistDesign();
-          showToast('已保存到我的作品');
+          setHasSaved(true);
+          setDirtySinceSave(false);
+          setPublishResult({
+            variant: 'save',
+            title: fallbackTitleForMode(),
+            cols, rows,
+            beadCount: stats.beadCount,
+            colorCount: stats.colorCount,
+          });
         } catch (e: any) {
           Alert.alert('保存失败', e?.message || '请检查登录状态后重试');
         }
-      }},
-      { text: '发布到动态', onPress: async () => {
+      }});
+    }
+
+    if (!hasPublishedToFeed) {
+      buttons.push({ text: '发布到动态', onPress: async () => {
         try {
           const designId = await persistDesign({ status: 'PUBLISHED' });
           const fallbackContent = mode === 'ai' ? `AI 生成：${aiPrompt || ''}` : `分享我的拼豆作品（${cols}×${rows}）`;
           await feedApi.create({ content: fallbackContent.trim(), designId });
-          showToast('已发布到动态');
+          setHasPublishedToFeed(true);
+          setHasSaved(true);
+          setDirtySinceSave(false);
+          setPublishResult({
+            variant: 'feed',
+            title: fallbackTitleForMode(),
+            cols, rows,
+            beadCount: stats.beadCount,
+            colorCount: stats.colorCount,
+          });
         } catch (e: any) {
           Alert.alert('发布失败', e?.message || '请检查登录状态后重试');
         }
-      }},
-      { text: '发布资源到发现页', onPress: () => {
+      }});
+    }
+
+    if (!hasPublishedToPattern) {
+      buttons.push({ text: '发布资源到发现页', onPress: () => {
         setPubTitle(mode === 'ai' ? aiPrompt || '' : '');
         setPubDesc('');
         setPubPoints('');
         setPubAccessMode('free');
         setShowPublish(true);
-      }},
-      { text: '取消', style: 'cancel' },
-    ]);
-  }, [aiPrompt, cols, mode, persistDesign, rows, showToast, stats.beadCount]);
+      }});
+    }
+
+    buttons.push({ text: '取消', style: 'cancel' });
+
+    // 全部完成 → 不弹菜单，给一段「无改动」提示，省得用户再点一次只看到取消
+    if (buttons.length === 1) {
+      Alert.alert(
+        '已完成',
+        '本次创作已保存并发布到 动态 / 发现页；继续编辑后再点完成可更新到「我的作品」',
+        [{ text: '好的', style: 'cancel' }],
+      );
+      return;
+    }
+
+    // Alert 副标题：告知已发布到哪 + 当前菜单为啥这样
+    const published: string[] = [];
+    if (hasPublishedToFeed) published.push('动态');
+    if (hasPublishedToPattern) published.push('发现页');
+    const parts: string[] = [];
+    if (published.length > 0) parts.push(`已发布到 ${published.join('、')}`);
+    if (hasSaved && !dirtySinceSave) parts.push('当前画布已保存，无新改动');
+    const subtitle = parts.length > 0 ? parts.join('；') : '选择操作';
+
+    Alert.alert('完成', subtitle, buttons);
+  }, [aiPrompt, cols, dirtySinceSave, fallbackTitleForMode, hasPublishedToFeed, hasPublishedToPattern, hasSaved, mode, persistDesign, rows, stats.beadCount, stats.colorCount]);
+
+  // 顶部「保存草稿」快捷按钮：单击落 DRAFT，无需走完成菜单
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [autoSavedAt, setAutoSavedAt] = useState<number | null>(null);
+  const saveDraft = useCallback(async (silent = false) => {
+    if (savingDraft) return false;
+    if (stats.beadCount === 0) {
+      if (!silent) Alert.alert('提示', '画布是空的，先画点什么吧');
+      return false;
+    }
+    setSavingDraft(true);
+    try {
+      // 注意：不传 status —— 已发布的作品被编辑时也用这个按钮，强制 DRAFT 会把它从"已发布"列表挤下去
+      // 新建场景下 backend createDesign 默认就是 DRAFT，所以省略也安全
+      await persistDesign();
+      setHasSaved(true);
+      setDirtySinceSave(false);
+      setAutoSavedAt(Date.now());
+      // 主动让创作首页"继续创作"区块在用户返回时能立刻看到这条草稿
+      // （否则 useFocusEffect 的 fetch 可能比当前的 save HTTP 先完成，看不见刚保存的）
+      void useDesignStore.getState().loadRecentDrafts();
+      if (!silent) {
+        setPublishResult({
+          variant: 'draft',
+          title: fallbackTitleForMode(),
+          cols, rows,
+          beadCount: stats.beadCount,
+          colorCount: stats.colorCount,
+        });
+      }
+      return true;
+    } catch (e: any) {
+      if (!silent) Alert.alert('保存失败', e?.message || '请检查登录状态后重试');
+      return false;
+    } finally {
+      setSavingDraft(false);
+    }
+  }, [cols, fallbackTitleForMode, persistDesign, rows, savingDraft, stats.beadCount, stats.colorCount]);
+
+  // —— 自动保存：脏 30s 后静默落 DRAFT；切后台立即落
+  const AUTO_SAVE_MS = 30_000;
+  const saveDraftRef = useRef(saveDraft);
+  saveDraftRef.current = saveDraft;
+  const dirtyRef = useRef(dirtySinceSave);
+  dirtyRef.current = dirtySinceSave;
+
+  useEffect(() => {
+    if (!dirtySinceSave) return;
+    const t = setTimeout(() => {
+      void saveDraftRef.current(true /* silent */);
+    }, AUTO_SAVE_MS);
+    return () => clearTimeout(t);
+  }, [dirtySinceSave, grid]);
+
+  // 切到后台 → 强制落一次
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if ((next === 'background' || next === 'inactive') && dirtyRef.current) {
+        void saveDraftRef.current(true /* silent */);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  // 离开编辑器（unmount）时若仍有未保存改动，兜底再保存一次
+  // AppState 不会捕获到应用内的 navigation.goBack，必须靠这条
+  useEffect(() => {
+    return () => {
+      if (dirtyRef.current) {
+        // 不能 await unmount cleanup，best-effort 即可
+        void saveDraftRef.current(true);
+      }
+    };
+  }, []);
+
+  // 顶部"已自动保存 N 秒前"指示
+  const [, tickRender] = useState(0);
+  useEffect(() => {
+    if (!autoSavedAt) return;
+    const t = setInterval(() => tickRender((v) => v + 1), 15_000);
+    return () => clearInterval(t);
+  }, [autoSavedAt]);
+
+  const autoSavedHint = useMemo(() => {
+    if (!autoSavedAt) return '';
+    const sec = Math.floor((Date.now() - autoSavedAt) / 1000);
+    if (sec < 60) return '已保存 · 刚刚';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `已保存 · ${min} 分钟前`;
+    return '已保存 · 较早';
+  }, [autoSavedAt]);
 
   const handlePublish = useCallback(async () => {
     if (!pubTitle.trim()) { Alert.alert('提示', '请输入资源标题'); return; }
@@ -403,12 +580,21 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         Alert.alert('发布失败', '请检查登录状态后重试');
         return;
       }
-      showToast(`「${pubTitle.trim()}」已发布到发现页`);
+      setHasPublishedToPattern(true);
+      // 注意：发现页路径走的是 t_pattern_listing.previewData，并未写 t_design，
+      //       所以这里不更新 hasSaved/dirtySinceSave —— 用户可能还想把 design 落到自己的作品里
+      setPublishResult({
+        variant: 'pattern',
+        title: pubTitle.trim(),
+        cols, rows,
+        beadCount: stats.beadCount,
+        colorCount: stats.colorCount,
+      });
     } catch (e: any) {
       setShowPublish(false);
       Alert.alert('发布失败', e?.message || '请稍后重试');
     }
-  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, showToast]);
+  }, [pubTitle, pubDesc, pubPoints, pubCat, pubAccessMode, cols, rows, grid, publishPattern, stats.beadCount, stats.colorCount]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -421,8 +607,29 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         <View style={$.navActions}>
           <NavAction icon="corner-up-left" onPress={undo} disabled={!history.length} colors={colors} />
           <NavAction icon="corner-up-right" onPress={redo} disabled={!future.length} colors={colors} />
+          <HoverView
+            onPress={() => { void saveDraft(false); }}
+            style={[$.draftBtn, { backgroundColor: dirtySinceSave ? colors.gold : colors.inputBg, opacity: savingDraft ? 0.6 : 1 }]}
+            hoverScale={1.05}
+            hoverLift={0}
+          >
+            {savingDraft
+              ? <ActivityIndicator size="small" color={dirtySinceSave ? '#fff' : colors.text} />
+              : <Feather name="save" size={fp(14)} color={dirtySinceSave ? '#fff' : colors.text} />}
+            <Text style={[$.draftBtnText, { color: dirtySinceSave ? '#fff' : colors.text }]}>
+              {savingDraft ? '保存中' : (hasSaved && !dirtySinceSave ? '已保存' : '草稿')}
+            </Text>
+          </HoverView>
         </View>
       </View>
+
+      {/* ── 自动保存指示条 ── */}
+      {autoSavedHint && !dirtySinceSave ? (
+        <View style={[$.savedHint, { backgroundColor: colors.inputBg }]}>
+          <Feather name="cloud" size={fp(11)} color={colors.success} />
+          <Text style={[$.savedHintText, { color: colors.textSecondary }]}>{autoSavedHint}</Text>
+        </View>
+      ) : null}
 
       {/* ── AI 输入面板 ── */}
       {showAiInput && (
@@ -648,7 +855,19 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         </TouchableOpacity>
       </Modal>
 
-      <Toast message={toastMsg} />
+      <PublishResultCard
+        data={publishResult}
+        onClose={() => setPublishResult(null)}
+        onAction={publishResult ? () => {
+          // 跳到对应 tab 让用户去看新发布的内容；用户主动点才跳，自动消失不跳
+          const targetTab = publishResult.variant === 'feed'
+            ? 'Publish'
+            : publishResult.variant === 'pattern'
+              ? 'Home'
+              : 'Profile';
+          navigation.navigate('Main' as any, { screen: targetTab } as any);
+        } : undefined}
+      />
     </SafeAreaView>
   );
 };
@@ -759,7 +978,17 @@ const $ = StyleSheet.create({
     width: wp(34), height: wp(34), borderRadius: wp(17),
     justifyContent: 'center', alignItems: 'center',
   },
-  navActions: { flexDirection: 'row', gap: wp(6) },
+  navActions: { flexDirection: 'row', gap: wp(6), alignItems: 'center' },
+  draftBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(4),
+    paddingHorizontal: wp(10), height: wp(34), borderRadius: wp(17),
+  },
+  draftBtnText: { fontSize: fp(12), fontWeight: '600' },
+  savedHint: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: wp(4), paddingVertical: wp(4),
+  },
+  savedHintText: { fontSize: fp(10), fontWeight: '500' },
 
   // AI
   aiPanel: {

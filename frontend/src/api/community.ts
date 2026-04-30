@@ -21,6 +21,8 @@ export interface FeedMediaData {
   aspectRatio: number;
   durationSec?: number;
   assetUris?: string[];
+  /** 后端在 mediaUrls 为空且关联 designId 时附带的 grid，前端用 BeadGrid 渲染兜底 */
+  beadGrid?: string[][];
 }
 
 export interface FeedAuthorData {

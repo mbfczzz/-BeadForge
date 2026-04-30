@@ -18,7 +18,15 @@ interface DesignState {
   myPage: number;
   myHasMore: boolean;
   myLoading: boolean;
+  myStatus: string | null;  // null = 全部
+  setMyStatus: (status: string | null) => void;
   fetchMyDesigns: (refresh?: boolean) => Promise<void>;
+
+  // 创作首页用：最近草稿（独立缓存，避免和 myDesigns/tab 状态相互干扰）
+  recentDrafts: DesignItem[];
+  recentDraftsLoading: boolean;
+  recentDraftsStale: boolean;
+  loadRecentDrafts: () => Promise<void>;
 }
 
 const PAGE_SIZE = 10;
@@ -37,6 +45,13 @@ export const useDesignStore = create<DesignState>((set, get) => ({
   myPage: 1,
   myHasMore: true,
   myLoading: false,
+  myStatus: null,
+
+  setMyStatus: (status) => {
+    if (get().myStatus === status) return;
+    set({ myStatus: status, myDesigns: [], myPage: 1, myHasMore: true });
+    void get().fetchMyDesigns(true);
+  },
 
   setFilter: (sortBy, category) => {
     const updates: Partial<DesignState> = {};
@@ -75,6 +90,33 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     }
   },
 
+  recentDrafts: [],
+  recentDraftsLoading: false,
+  recentDraftsStale: false,
+
+  loadRecentDrafts: async () => {
+    // 在跑就标记 stale，跑完会自动再 fetch 一次；避免 saveDraft 完成后想刷新被 loading guard 卡掉
+    if (get().recentDraftsLoading) {
+      set({ recentDraftsStale: true });
+      return;
+    }
+    set({ recentDraftsLoading: true, recentDraftsStale: false });
+    try {
+      const res = await designApi.getMyDesigns(1, 10, 'DRAFT');
+      set({
+        recentDrafts: res.data?.records || [],
+        recentDraftsLoading: false,
+      });
+      // 期间被标记过 stale → 再补一次确保拉到最新（如刚保存完的草稿）
+      if (get().recentDraftsStale) {
+        set({ recentDraftsStale: false });
+        void get().loadRecentDrafts();
+      }
+    } catch {
+      set({ recentDraftsLoading: false, recentDraftsStale: false });
+    }
+  },
+
   fetchMyDesigns: async (refresh = false) => {
     const state = get();
     if (state.myLoading || (!refresh && !state.myHasMore)) return;
@@ -83,7 +125,7 @@ export const useDesignStore = create<DesignState>((set, get) => ({
     set({ myLoading: true });
 
     try {
-      const res = await designApi.getMyDesigns(page, PAGE_SIZE);
+      const res = await designApi.getMyDesigns(page, PAGE_SIZE, state.myStatus || undefined);
       const data = res.data;
       const records = data?.records || [];
       const all = refresh ? records : [...state.myDesigns, ...records];

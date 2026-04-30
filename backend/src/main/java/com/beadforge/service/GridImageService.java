@@ -38,7 +38,11 @@ public class GridImageService {
      */
     public String renderToPng(String designDataJson, String filenameSeed) {
         String[][] grid = parseGrid(designDataJson);
-        if (grid == null) return null;
+        if (grid == null) {
+            log.warn("renderToPng: designData 解析失败或为空，跳过；input head={}",
+                    designDataJson == null ? "null" : designDataJson.substring(0, Math.min(60, designDataJson.length())));
+            return null;
+        }
 
         int rows = grid.length;
         int cols = grid[0].length;
@@ -47,6 +51,7 @@ public class GridImageService {
 
         BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = img.createGraphics();
+        int drawn = 0;
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             // 透明底
@@ -65,10 +70,16 @@ public class GridImageService {
                     // 圆形格子，带豆子的"釉光"暗示
                     g.setColor(color);
                     g.fillOval(x, y, CELL_SIZE, CELL_SIZE);
+                    drawn++;
                 }
             }
         } finally {
             g.dispose();
+        }
+
+        if (drawn == 0) {
+            log.warn("renderToPng: 0 个非透明格子被画出（grid {}x{}），返回 null 让调用方走 mock 兜底", cols, rows);
+            return null;
         }
 
         try {
@@ -78,10 +89,23 @@ public class GridImageService {
             String filename = (filenameSeed == null ? "grid" : filenameSeed) + "-"
                     + UUID.randomUUID().toString().replace("-", "").substring(0, 8) + ".png";
             Path dest = dir.resolve(filename);
-            ImageIO.write(img, "PNG", dest.toFile());
-            return "/uploads/" + monthDir + "/" + filename;
+            // ImageIO.write 在缺 PNG writer 时返回 false 不抛异常，必须显式校验
+            boolean ok = ImageIO.write(img, "PNG", dest.toFile());
+            if (!ok) {
+                log.error("renderToPng: ImageIO.write 返回 false（PNG writer 不可用？）");
+                return null;
+            }
+            // 二次确认文件真的写出来了
+            if (!Files.exists(dest) || Files.size(dest) == 0) {
+                log.error("renderToPng: 写入完成但文件不存在或 0 字节: {}", dest);
+                return null;
+            }
+            String url = "/uploads/" + monthDir + "/" + filename;
+            log.info("renderToPng OK: grid {}x{}, drawn={}, file={} ({}B), url={}",
+                    cols, rows, drawn, dest, Files.size(dest), url);
+            return url;
         } catch (IOException e) {
-            log.warn("renderToPng 写入失败: {}", e.getMessage());
+            log.error("renderToPng 写入异常: {}", e.getMessage(), e);
             return null;
         }
     }

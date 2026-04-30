@@ -13,6 +13,9 @@ public interface DesignService {
 
     Page<DesignDTO> listUserDesigns(Long userId, int page, int size);
 
+    /** 我的作品列表，可按状态过滤（DRAFT / PUBLISHED / ARCHIVED） */
+    Page<DesignDTO> listUserDesigns(Long userId, int page, int size, String status);
+
     /** 别人主页用：只返回 PUBLISHED 状态的作品 */
     Page<DesignDTO> listPublicDesignsByUser(Long userId, int page, int size);
 

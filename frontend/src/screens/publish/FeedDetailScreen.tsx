@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme';
 import type { ThemeColors } from '../../theme';
-import { Avatar, HoverView, AppHeader } from '../../components/common';
+import { Avatar, BeadGrid, HoverView, AppHeader } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { getFeedMockGallery } from '../../utils/feedMedia';
@@ -367,9 +367,21 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
                   >
                     {item.uri ? (
                       <Image source={{ uri: item.uri }} style={{ width: previewW, height: previewH }} resizeMode="cover" />
-                    ) : (
+                    ) : item.beadGrid && item.beadGrid.length > 0 ? (
+                      <View style={{ width: previewW, height: previewH, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+                        <BeadGrid
+                          pixels={item.beadGrid}
+                          beadSize={Math.min(
+                            Math.floor((previewW - 24) / Math.max(item.beadGrid[0]?.length || 1, 1)) - 1,
+                            Math.floor((previewH - 24) / Math.max(item.beadGrid.length, 1)) - 1,
+                          )}
+                          gap={1}
+                          round
+                        />
+                      </View>
+                    ) : item.svg ? (
                       <SvgXml xml={item.svg} width={previewW} height={previewH} />
-                    )}
+                    ) : null}
                   </Pressable>
                 ))}
               </ScrollView>

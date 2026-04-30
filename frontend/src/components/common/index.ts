@@ -15,3 +15,5 @@ export { DanmakuOverlay } from './Danmaku';
 export { DanmakuInput } from './DanmakuInput';
 export type { DanmakuItem, DanmakuConfig } from './Danmaku';
 export { Toast } from './Toast';
+export { PublishResultCard } from './PublishResultCard';
+export type { PublishResultCardData, PublishResultVariant } from './PublishResultCard';

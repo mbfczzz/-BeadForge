@@ -51,14 +51,16 @@ public class DesignController {
         return ApiResponse.success(designService.listPublicDesignsByUser(userId, page, size));
     }
 
-    @Operation(summary = "我的作品列表")
+    @Operation(summary = "我的作品列表",
+            description = "可选 status 过滤：DRAFT / PUBLISHED / ARCHIVED；不传返回全部")
     @GetMapping("/my")
     public ApiResponse<Page<DesignDTO>> myDesigns(
             HttpServletRequest request,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String status) {
         Long userId = (Long) request.getAttribute("userId");
-        return ApiResponse.success(designService.listUserDesigns(userId, page, size));
+        return ApiResponse.success(designService.listUserDesigns(userId, page, size, status));
     }
 
     @Operation(summary = "编辑作品", description = "仅作者本人")

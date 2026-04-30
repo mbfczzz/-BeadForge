@@ -37,8 +37,10 @@ export const designApi = {
   getDetail: (id: number) =>
     client.get<any, ApiRes<DesignItem>>(`/designs/public/${id}`),
 
-  getMyDesigns: (page = 1, size = 10) =>
-    client.get<any, ApiRes<PageData<DesignItem>>>('/designs/my', { params: { page, size } }),
+  getMyDesigns: (page = 1, size = 10, status?: string) =>
+    client.get<any, ApiRes<PageData<DesignItem>>>('/designs/my', {
+      params: { page, size, status: status || undefined },
+    }),
 
   create: (data: { title: string; description: string; category: string }) =>
     client.post<any, ApiRes<DesignItem>>('/designs', data),

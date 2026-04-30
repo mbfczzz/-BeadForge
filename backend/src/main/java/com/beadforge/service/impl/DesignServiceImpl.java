@@ -66,8 +66,17 @@ public class DesignServiceImpl implements DesignService {
 
     @Override
     public Page<DesignDTO> listUserDesigns(Long userId, int page, int size) {
+        return listUserDesigns(userId, page, size, null);
+    }
+
+    @Override
+    public Page<DesignDTO> listUserDesigns(Long userId, int page, int size, String status) {
         QueryWrapper<Design> wrapper = new QueryWrapper<>();
-        wrapper.eq("user_id", userId).orderByDesc("created_at");
+        wrapper.eq("user_id", userId);
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq("status", status);
+        }
+        wrapper.orderByDesc("created_at");
 
         Page<Design> designPage = designRepository.selectPage(new Page<>(page, size), wrapper);
         return enrichAuthorNames(designPage);
