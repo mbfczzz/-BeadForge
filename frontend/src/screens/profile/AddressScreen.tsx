@@ -13,8 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { addressRegionApi, buildRegionSelection } from '../../api/address';
+import type { AddressRegionNode } from '../../api/address';
 import type { ProfileAddressItem } from '../../api/profile';
-import type { AddressRegionNode } from '../../mock/address';
 import { AppHeader, Toggle } from '../../components/common';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';

@@ -22,20 +22,39 @@ import { AddressManageScreen } from './src/screens/profile/AddressManageScreen';
 import { AppAlertProvider } from './src/components/common/AppAlertProvider';
 import type { RootStackParamList } from './src/navigation/types';
 import { useAuthStore } from './src/store/useAuthStore';
+import { useUiConfigStore } from './src/store/useUiConfigStore';
 import { ThemeProvider, useTheme } from './src/theme';
 import { injectWebHoverStyles } from './src/utils/webHover';
+import { getOrCreateDeviceId, describeDeviceName } from './src/utils/deviceId';
+import { userSessionApi } from './src/api/security';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppContent() {
   const loadToken = useAuthStore((state) => state.loadToken);
+  const userId = useAuthStore((state) => state.user?.id);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const loadUiConfig = useUiConfigStore((state) => state.load);
   const { colors, dark } = useTheme();
 
   useEffect(() => {
     void loadToken();
+    void loadUiConfig();
     injectWebHoverStyles();
-  }, [loadToken]);
+  }, [loadToken, loadUiConfig]);
+
+  // 登录后上报设备，让设置页能看到当前设备
+  useEffect(() => {
+    if (!userId) return;
+    void (async () => {
+      try {
+        const deviceId = await getOrCreateDeviceId();
+        await userSessionApi.heartbeat(deviceId, describeDeviceName());
+      } catch {
+        // 静默失败，不影响主流程
+      }
+    })();
+  }, [userId]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') {

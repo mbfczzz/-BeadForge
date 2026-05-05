@@ -23,6 +23,9 @@ export const notificationApi = {
   unreadCount: () =>
     client.get<any, ApiRes<{ count: number }>>('/notifications/unread-count'),
 
+  unreadCountByType: () =>
+    client.get<any, ApiRes<Record<string, number>>>('/notifications/unread-count-by-type'),
+
   markRead: (id: number | string) =>
     client.post<any, ApiRes<void>>(`/notifications/${id}/read`),
 

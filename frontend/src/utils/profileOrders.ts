@@ -33,7 +33,19 @@ export interface ProfileDisplayOrder extends ProfileOrderItem {
   statusNote: string;
 }
 
-export const PROFILE_ORDER_TABS: { key: OrderFilterTab; label: string }[] = [
+export interface ProfileOrderTabConfig {
+  key: OrderFilterTab;
+  label: string;
+}
+
+export interface ProfileOrderStatusMeta {
+  color: string;
+  soft: string;
+  border: string;
+  icon: keyof typeof Feather.glyphMap;
+}
+
+export const FALLBACK_ORDER_TABS: ProfileOrderTabConfig[] = [
   { key: '全部', label: '全部' },
   { key: '待支付', label: '待支付' },
   { key: '待发货', label: '待发货' },
@@ -42,43 +54,13 @@ export const PROFILE_ORDER_TABS: { key: OrderFilterTab; label: string }[] = [
   { key: '已完成', label: '已完成' },
 ];
 
-export const PROFILE_ORDER_STATUS_META: Record<
-  ProfileDisplayOrder['status'],
-  { color: string; soft: string; border: string; icon: keyof typeof Feather.glyphMap }
-> = {
-  待支付: {
-    color: '#F59E0B',
-    soft: '#FFF4DE',
-    border: '#F7D7A0',
-    icon: 'clock',
-  },
-  待发货: {
-    color: '#3B82F6',
-    soft: '#EAF3FF',
-    border: '#CCE0FF',
-    icon: 'package',
-  },
-  待收货: {
-    color: '#10B981',
-    soft: '#E8FBF4',
-    border: '#BCEFD9',
-    icon: 'truck',
-  },
-  '退款/售后': {
-    color: '#EF4444',
-    soft: '#FFE8EA',
-    border: '#FFC7CC',
-    icon: 'rotate-ccw',
-  },
-  已完成: {
-    color: '#94A3B8',
-    soft: '#F3F6FA',
-    border: '#D6E0EA',
-    icon: 'check-circle',
-  },
+export const FALLBACK_ORDER_STATUS_META: Record<ProfileDisplayOrder['status'], ProfileOrderStatusMeta> = {
+  待支付: { color: '#F59E0B', soft: '#FFF4DE', border: '#F7D7A0', icon: 'clock' },
+  待发货: { color: '#3B82F6', soft: '#EAF3FF', border: '#CCE0FF', icon: 'package' },
+  待收货: { color: '#10B981', soft: '#E8FBF4', border: '#BCEFD9', icon: 'truck' },
+  '退款/售后': { color: '#EF4444', soft: '#FFE8EA', border: '#FFC7CC', icon: 'rotate-ccw' },
+  已完成: { color: '#94A3B8', soft: '#F3F6FA', border: '#D6E0EA', icon: 'check-circle' },
 };
-
-// PROFILE_ORDERS mock 数据已迁出，订单数据通过 orderApi 拉取真实后端
 
 export function getProfileOrderActions(status: ProfileDisplayOrder['status']): OrderActionItem[] {
   switch (status) {
@@ -114,22 +96,10 @@ export function toProfileOrderTab(status: ProfileDisplayOrder['status']): Profil
 }
 
 export function resolveProfileTrackingNo(order: ProfileDisplayOrder) {
-  if (order.trackingNo) {
-    return order.trackingNo;
-  }
-
-  if (order.status === '待支付') {
-    return '支付完成后生成物流单号';
-  }
-
-  if (order.status === '待发货') {
-    return '商家出库后更新物流信息';
-  }
-
-  if (order.status === '退款/售后') {
-    return '售后单号处理中';
-  }
-
+  if (order.trackingNo) return order.trackingNo;
+  if (order.status === '待支付') return '支付完成后生成物流单号';
+  if (order.status === '待发货') return '商家出库后更新物流信息';
+  if (order.status === '退款/售后') return '售后单号处理中';
   return '物流单号待更新';
 }
 

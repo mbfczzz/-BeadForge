@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../theme';
-import type { MineStatItem } from '../../mock/profileMine';
+import type { MineStatItem } from '../../api/mine';
 import { ProfileCard } from './ProfileCard';
 
 interface ProfileStatsCardProps {

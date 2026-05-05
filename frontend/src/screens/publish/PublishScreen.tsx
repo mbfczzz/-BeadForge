@@ -23,8 +23,10 @@ import type { ThemeColors } from '../../theme';
 import { Avatar, BeadGrid, FilterChip, HoverView, Input, PressableScale } from '../../components/common';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import type { RootStackParamList } from '../../navigation/types';
-import { COMMUNITY_TABS } from '../../mock/community';
 import { feedApi, likeApi, type FeedItemData } from '../../api/community';
+import { useUiConfig } from '../../store/useUiConfigStore';
+
+const FALLBACK_COMMUNITY_TABS = ['推荐', '关注', '最新'];
 import { useAuthStore } from '../../store/useAuthStore';
 import { getFeedMockGallery } from '../../utils/feedMedia';
 import { shadow } from '../../utils/shadow';
@@ -49,6 +51,7 @@ function formatCount(value: number) {
 export const PublishScreen: React.FC = () => {
   const { colors } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const communityTabs = useUiConfig<string[]>('community.tabs', FALLBACK_COMMUNITY_TABS);
   const [tabIdx, setTabIdx] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -57,24 +60,33 @@ export const PublishScreen: React.FC = () => {
   const [refreshRound, setRefreshRound] = useState(0);
   const [showTop, setShowTop] = useState(false);
   const [remoteFeeds, setRemoteFeeds] = useState<FeedItemData[]>([]);
+  const [loading, setLoading] = useState(true);
   const localFeeds = useCommunityFeedStore((state) => state.localFeeds);
   const scrollRef = useRef<ScrollView>(null);
   const topAnim = useRef(new Animated.Value(0)).current;
 
+  const fetchFeeds = useCallback(async () => {
+    try {
+      const res = tabIdx === 1
+        ? await feedApi.following()
+        : await feedApi.list(tabIdx === 2 ? 'latest' : 'recommend');
+      return res.data?.records || [];
+    } catch {
+      return [] as FeedItemData[];
+    }
+  }, [tabIdx]);
+
   useEffect(() => {
     let alive = true;
-    const fetchFeeds = () => {
-      if (tabIdx === 1) {
-        return feedApi.following();
+    setLoading(true);
+    fetchFeeds().then((records) => {
+      if (alive) {
+        setRemoteFeeds(records);
+        setLoading(false);
       }
-      const tab = tabIdx === 2 ? 'latest' : 'recommend';
-      return feedApi.list(tab);
-    };
-    fetchFeeds()
-      .then((res) => { if (alive) setRemoteFeeds(res.data?.records || []); })
-      .catch(() => { if (alive) setRemoteFeeds([]); });
+    });
     return () => { alive = false; };
-  }, [tabIdx, refreshRound]);
+  }, [fetchFeeds]);
 
   const baseFeeds = useMemo(
     () => [...localFeeds, ...remoteFeeds],
@@ -99,10 +111,11 @@ export const PublishScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    const records = await fetchFeeds();
+    setRemoteFeeds(records);
     setRefreshRound((value) => value + 1);
     setRefreshing(false);
-  }, [refreshing]);
+  }, [refreshing, fetchFeeds]);
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const shouldShow = e.nativeEvent.contentOffset.y > 320;
@@ -127,7 +140,7 @@ export const PublishScreen: React.FC = () => {
       <View style={styles.header}>
         <View style={styles.headerRow}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
-            {COMMUNITY_TABS.map((tab, index) => (
+            {communityTabs.map((tab, index) => (
               <TouchableOpacity
                 key={tab}
                 activeOpacity={0.82}
@@ -184,7 +197,13 @@ export const PublishScreen: React.FC = () => {
         onScroll={onScroll}
         scrollEventThrottle={64}
       >
-        {filteredFeeds.length === 0 ? (
+        {loading && filteredFeeds.length === 0 ? (
+          <View style={{ paddingTop: wp(10) }}>
+            {[0, 1, 2].map((i) => (
+              <FeedCardSkeleton key={`skel-${i}`} colors={colors} isFirst={i === 0} />
+            ))}
+          </View>
+        ) : filteredFeeds.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
               <MCI name={searchText ? 'text-search' : 'tray-alert'} size={fp(30)} color={colors.textHint} />
@@ -485,6 +504,58 @@ const FeedCard: React.FC<{
     </PressableScale>
   );
 });
+
+const FeedCardSkeleton: React.FC<{ colors: ThemeColors; isFirst: boolean }> = ({ colors, isFirst }) => {
+  const pulse = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.6, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const block = (style: any, key?: string) => (
+    <Animated.View
+      key={key}
+      style={[{ backgroundColor: colors.divider, borderRadius: wp(8), opacity: pulse }, style]}
+    />
+  );
+
+  return (
+    <View
+      style={[
+        styles.feedCard,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.divider,
+          marginHorizontal: PAD,
+          marginTop: isFirst ? wp(10) : wp(14),
+        },
+      ]}
+    >
+      <View style={styles.feedHeader}>
+        <View style={styles.feedUserRow}>
+          {block({ width: wp(40), height: wp(40), borderRadius: wp(20) })}
+          <View style={{ marginLeft: wp(9), flex: 1, gap: wp(6) }}>
+            {block({ width: wp(110), height: wp(11) })}
+            {block({ width: wp(70), height: wp(9) })}
+          </View>
+        </View>
+      </View>
+      {block({ width: '100%', height: PREVIEW_WIDTH, borderRadius: 0 })}
+      <View style={{ paddingHorizontal: wp(12), paddingVertical: wp(14), gap: wp(8) }}>
+        {block({ width: wp(80), height: wp(11) })}
+        {block({ width: '92%', height: wp(11) })}
+        {block({ width: '64%', height: wp(11) })}
+      </View>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   root: { flex: 1 },

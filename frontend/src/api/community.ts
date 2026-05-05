@@ -175,6 +175,16 @@ export interface CommentItem {
   };
 }
 
+export interface MyCommentItem {
+  id: string;
+  content: string;
+  target: string;
+  targetType: 'FEED' | 'DESIGN';
+  targetId: number;
+  user: '我';
+  time: string;
+}
+
 export const commentApi = {
   list: (type: CommentTarget, id: number) =>
     client.get<any, ApiRes<CommentItem[]>>('/comments', { params: { type, id } }),
@@ -182,4 +192,7 @@ export const commentApi = {
     client.post<any, ApiRes<CommentItem>>('/comments', { content, parentId }, { params: { type, id } }),
   remove: (id: number) =>
     client.delete<any, ApiRes<null>>(`/comments/${id}`),
+  /** 我发出的评论（通知页 "我评论的" tab） */
+  mine: () =>
+    client.get<any, ApiRes<MyCommentItem[]>>('/comments/mine'),
 };

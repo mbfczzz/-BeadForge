@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { EditorMode } from '../../api/create';
+import type { EditorMode, CreateMethodOption, CreateSizeOption, CreateTipOption } from '../../api/create';
 import type { RootStackParamList } from '../../navigation/types';
 import type { DesignItem } from '../../api/design';
 import { Feather } from '@expo/vector-icons';
@@ -13,7 +13,18 @@ import { useTheme, BorderRadius } from '../../theme';
 import { useDesignStore } from '../../store/useDesignStore';
 import { ALL_PATTERNS, BeadGrid } from '../../components/common';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
-import { CREATE_METHODS, CREATE_SIZES, CREATE_TIPS } from '../../mock/create';
+import { useUiConfig } from '../../store/useUiConfigStore';
+
+const FALLBACK_SIZES: CreateSizeOption[] = [
+  { label: '小', cols: 9, rows: 9, desc: '钥匙扣', icon: 'key' },
+  { label: '中', cols: 16, rows: 16, desc: '杯垫', icon: 'coffee' },
+  { label: '大', cols: 24, rows: 24, desc: '挂画', icon: 'image' },
+  { label: '宽幅', cols: 32, rows: 16, desc: '书签', icon: 'bookmark' },
+];
+const FALLBACK_METHODS: CreateMethodOption[] = [
+  { key: 'manual', icon: 'edit-2', title: '手动创作', desc: '逐颗放置珠子并手动调整结构。', color: '#4B78FF' },
+];
+const FALLBACK_TIPS: CreateTipOption[] = [];
 
 // designData 后端是 JSON 字符串、本地 mock 可能是数组，做容错解析
 function parseDesignGrid(raw: unknown): string[][] | null {
@@ -57,7 +68,10 @@ export const CreateScreen: React.FC = () => {
   const recentDraftsLoading = useDesignStore((s) => s.recentDraftsLoading);
   const loadRecentDrafts = useDesignStore((s) => s.loadRecentDrafts);
 
-  // 每次返回创作 tab 都拉一次，保证刚保存的草稿立即出现
+  const sizes = useUiConfig<CreateSizeOption[]>('create.sizes', FALLBACK_SIZES);
+  const methods = useUiConfig<CreateMethodOption[]>('create.methods', FALLBACK_METHODS);
+  const tips = useUiConfig<CreateTipOption[]>('create.tips', FALLBACK_TIPS);
+
   useFocusEffect(
     useCallback(() => {
       void loadRecentDrafts();
@@ -65,7 +79,7 @@ export const CreateScreen: React.FC = () => {
   );
 
   const go = (mode: EditorMode) => {
-    const size = CREATE_SIZES[sizeIdx];
+    const size = sizes[Math.min(sizeIdx, sizes.length - 1)] || FALLBACK_SIZES[0];
     navigation.navigate('Editor', { mode, cols: size.cols, rows: size.rows });
   };
 
@@ -154,7 +168,7 @@ export const CreateScreen: React.FC = () => {
 
         <Text style={[$.sectionTitle, { color: colors.text }]}>画布尺寸</Text>
         <View style={$.sizeGrid}>
-          {CREATE_SIZES.map((size, index) => {
+          {sizes.map((size, index) => {
             const active = index === sizeIdx;
             return (
               <TouchableOpacity
@@ -178,7 +192,7 @@ export const CreateScreen: React.FC = () => {
         </View>
 
         <Text style={[$.sectionTitle, { color: colors.text }]}>开始创作</Text>
-        {CREATE_METHODS.map((method) => (
+        {methods.map((method) => (
           <TouchableOpacity
             key={method.key}
             activeOpacity={0.8}
@@ -199,7 +213,7 @@ export const CreateScreen: React.FC = () => {
         ))}
 
         <Text style={[$.sectionTitle, { color: colors.text }]}>创作提示</Text>
-        {CREATE_TIPS.map((tip) => (
+        {tips.map((tip) => (
           <TouchableOpacity
             key={tip.title}
             activeOpacity={0.7}

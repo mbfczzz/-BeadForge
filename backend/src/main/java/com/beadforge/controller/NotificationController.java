@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -61,6 +62,18 @@ public class NotificationController {
         return ApiResponse.success(m);
     }
 
+    @Operation(summary = "按 type 分组的未读数",
+            description = "用于通知页 5 个 quick-entry 上的红点")
+    @GetMapping("/unread-count-by-type")
+    public ApiResponse<Map<String, Long>> unreadCountByType(HttpServletRequest request) {
+        Long userId = requireUser(request);
+        List<Notification> rows = notificationRepo.selectList(new QueryWrapper<Notification>()
+            .eq("user_id", userId).eq("unread", 1).select("type"));
+        Map<String, Long> grouped = rows.stream()
+            .collect(Collectors.groupingBy(n -> n.getType() == null ? "" : n.getType(), Collectors.counting()));
+        return ApiResponse.success(grouped);
+    }
+
     @Operation(summary = "标记单条已读")
     @PostMapping("/{id}/read")
     public ApiResponse<Void> markRead(@PathVariable Long id, HttpServletRequest request) {
@@ -103,7 +116,12 @@ public class NotificationController {
             case "系统": return "SYSTEM";
             case "订单": return "ORDER";
             case "互动": return "INTERACT";
-            default: return cn;
+            case "comments": return "COMMENT";
+            case "likes":    return "LIKE";
+            case "follows":  return "FOLLOW";
+            case "orders":   return "ORDER";
+            case "mentions": return "MENTION";
+            default: return cn.toUpperCase();
         }
     }
 

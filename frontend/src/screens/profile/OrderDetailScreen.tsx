@@ -6,12 +6,14 @@ import { AppHeader, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
 import { orderApi, type BackendOrderDTO } from '../../api/order';
 import {
-  PROFILE_ORDER_STATUS_META,
+  FALLBACK_ORDER_STATUS_META,
   buildProfileOrderTimeline,
   getProfileOrderActions,
   resolveProfileTrackingNo,
   type ProfileDisplayOrder,
-} from '../../mock/profileOrders';
+  type ProfileOrderStatusMeta,
+} from '../../utils/profileOrders';
+import { useUiConfig } from '../../store/useUiConfigStore';
 import { fp, wp } from '../../utils/responsive';
 
 function toDisplayOrder(o: BackendOrderDTO): ProfileDisplayOrder {
@@ -69,6 +71,10 @@ interface Props {
 export const OrderDetailScreen: React.FC<Props> = ({ orderId, onBack }) => {
   const { colors, dark } = useTheme();
   const [order, setOrder] = useState<ProfileDisplayOrder | null>(null);
+  const statusMetaMap = useUiConfig<Record<ProfileDisplayOrder['status'], ProfileOrderStatusMeta>>(
+    'profile.orderStatusMeta',
+    FALLBACK_ORDER_STATUS_META,
+  );
 
   useEffect(() => {
     orderApi
@@ -90,7 +96,7 @@ export const OrderDetailScreen: React.FC<Props> = ({ orderId, onBack }) => {
     );
   }
 
-  const statusMeta = PROFILE_ORDER_STATUS_META[order.status];
+  const statusMeta = statusMetaMap[order.status] || FALLBACK_ORDER_STATUS_META[order.status];
   const actions = getProfileOrderActions(order.status);
   const timeline = buildProfileOrderTimeline(order);
   const trackingNo = resolveProfileTrackingNo(order);

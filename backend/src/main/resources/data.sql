@@ -179,3 +179,79 @@ INSERT IGNORE INTO t_dict (dict_type, dict_key, label, sort_order) VALUES
 ('WALLET_LOG_TYPE', 'BUY_PRODUCT',  '购买商品', 3),
 ('WALLET_LOG_TYPE', 'REWARD',       '奖励到账', 4),
 ('WALLET_LOG_TYPE', 'SIGN_IN',      '每日签到', 5);
+
+-- ────────── 通知种子（5 类 quick-entry 各放一条，user_id=1） ──────────
+INSERT IGNORE INTO t_notification (id, user_id, type, title, content, unread, action_type, created_at) VALUES
+(1001, 1, 'COMMENT', '像素研究所 评论了你', '这个边缘处理太干净了，配色也很适合做成动图封面。',     1, NULL, '2026-04-26 09:50:00'),
+(1002, 1, 'COMMENT', '木木手作 评论了你',   '第二张参考图更有层次，建议保留透明珠的高光。',           1, NULL, '2026-04-26 09:00:00'),
+(1003, 1, 'LIKE',    '木木手作 赞了你的作品', '《像素花束卡片》收到了新的点赞。',                       1, 'likes', '2026-04-26 08:30:00'),
+(1004, 1, 'LIKE',    '饰品工作室 收藏了你的动态', '多图参考被加入灵感收藏夹。',                            0, NULL, '2026-04-25 21:00:00'),
+(1005, 1, 'FOLLOW',  '编织研究室 关注了你', '你们现在可以互相查看动态更新。',                           1, NULL, '2026-04-26 09:55:00'),
+(1006, 1, 'FOLLOW',  '小珠设计 关注了你',   '对方常发布原创串珠配色。',                                 0, NULL, '2026-04-26 06:20:00'),
+(1007, 1, 'ORDER',   '订单待支付提醒',     '72 色拼豆新手套装订单尚未支付，库存将为你保留 24 小时。',  1, 'orders', '2026-04-26 09:58:00'),
+(1008, 1, 'ORDER',   '商品已发货',         '5mm 标准珠 48 色补充包已发货，物流正在揽收中。',           0, 'orders', '2026-04-26 09:38:00'),
+(1009, 1, 'MENTION', '像素研究所 提到了你', '在「边缘修图技巧」动态中 @ 了你。',                        1, NULL, '2026-04-26 09:35:00');
+
+-- ────────── 官方推送种子 ──────────
+INSERT IGNORE INTO t_official_message (id, channel, title, content, icon, color, published_at, enabled) VALUES
+(1, 'OFFICIAL', '官方消息', '您的账号安全状态正常，新的社区创作规范已更新。', 'volume-2', '#3B82F6', '2026-04-20 10:00:00', 1),
+(2, 'ACTIVITY', '活动消息', '春日串珠灵感征集开启，发布作品可获得限定徽章。',     'gift',     '#F59E0B', '2026-04-26 09:20:00', 1);
+
+-- ────────── 弹幕种子（关联到 design_id=1，用于详情页演示） ──────────
+INSERT IGNORE INTO t_danmaku (design_id, user_id, text, color) VALUES
+(1, 1, '这个配色很舒服',          '#fff'),
+(1, 1, '这组结构适合新手练习',    '#ffe066'),
+(1, 1, '先收藏，周末试做',        '#7dd3fc'),
+(1, 1, '边缘处理得很干净',        '#fff'),
+(1, 1, '想看完整步骤',            '#fca5a5'),
+(1, 1, '原来拼豆还能这样组合',    '#86efac'),
+(1, 1, '适合做成钥匙扣',          '#fff'),
+(1, 1, '这张图纸需要多大板子',    '#c4b5fd'),
+(1, 1, '颜色层次很稳定',          '#fda4af'),
+(1, 1, '成品发出来看看',          '#fff'),
+(1, 1, '这个主题很适合送礼',      '#fde68a'),
+(1, 1, '我试过一次，还想再优化',  '#7dd3fc'),
+(1, 1, '整体节奏很顺',            '#fff'),
+(1, 1, '这个尺寸刚刚好',          '#86efac'),
+(1, 1, '创意方向不错',            '#c4b5fd');
+
+-- ────────── UI 配置种子（前端启动时一次拉取） ──────────
+INSERT IGNORE INTO t_ui_config (config_key, config_value, description, sort_order) VALUES
+('create.sizes',
+ '[{"label":"小","cols":9,"rows":9,"desc":"钥匙扣","icon":"key"},{"label":"中","cols":16,"rows":16,"desc":"杯垫","icon":"coffee"},{"label":"大","cols":24,"rows":24,"desc":"挂画","icon":"image"},{"label":"宽幅","cols":32,"rows":16,"desc":"书签","icon":"bookmark"}]',
+ '创作页画布尺寸选项', 1),
+('create.methods',
+ '[{"key":"manual","icon":"edit-2","title":"手动创作","desc":"逐颗放置珠子并手动调整结构。","color":"#4B78FF"},{"key":"image","icon":"image","title":"图片转换","desc":"从照片生成基础拼豆图纸。","color":"#F97316"},{"key":"ai","icon":"cpu","title":"AI 生成","desc":"根据描述生成可继续编辑的草稿。","color":"#8B5CF6"}]',
+ '创作页方式选项', 2),
+('create.tips',
+ '[{"icon":"grid","title":"从规则图形开始","desc":"圆形、爱心和字母更容易控制结构。","bg":"#EEF2FF","mode":"manual"},{"icon":"camera","title":"先选高对比图片","desc":"主体清晰的照片转换成功率更高。","bg":"#FEF3C7","mode":"image"},{"icon":"cpu","title":"先写清尺寸和用途","desc":"描述里带尺寸和场景，更容易得到可用草稿。","bg":"#F3E8FF","mode":"ai"}]',
+ '创作页提示卡片', 3),
+('mine.headerActions',
+ '[{"id":"notifications","label":"消息","icon":"message-circle","actionKey":"notifications"},{"id":"settings","label":"设置","icon":"settings","actionKey":"settings"}]',
+ '我的页右上角操作', 4),
+('mine.tools',
+ '[{"id":"designs","label":"我的作品","icon":"grid","iconTint":"#2563EB","iconBackground":"#E0ECFF","actionKey":"myDesigns"},{"id":"posts","label":"我的发布","icon":"radio","iconTint":"#0F9E8A","iconBackground":"#DBF6F1","actionKey":"myFeeds"},{"id":"likes","label":"我的点赞","icon":"heart","iconTint":"#E5486D","iconBackground":"#FFE4EB","actionKey":"likes"},{"id":"favorites","label":"我的收藏","icon":"star","iconTint":"#F59E0B","iconBackground":"#FFF1CF","actionKey":"favorites"},{"id":"history","label":"浏览记录","icon":"clock","iconTint":"#6366F1","iconBackground":"#E6E8FF","actionKey":"likedHistory"},{"id":"orders","label":"已购资源","icon":"shopping-bag","iconTint":"#7C3AED","iconBackground":"#EFE3FF","actionKey":"purchased"},{"id":"wallet","label":"积分钱包","icon":"award","iconTint":"#0EA5E9","iconBackground":"#DFF5FF","actionKey":"wallet"},{"id":"notices","label":"通知中心","icon":"bell","iconTint":"#334155","iconBackground":"#E7EDF7","actionKey":"notifications"}]',
+ '我的页快捷工具网格', 5),
+('mine.orderShortcuts',
+ '[{"id":"pending-payment","label":"待付款","icon":"credit-card","actionKey":"orders","orderTab":"待支付"},{"id":"pending-shipping","label":"待发货","icon":"package","actionKey":"orders","orderTab":"待发货"},{"id":"pending-receipt","label":"待收货","icon":"truck","actionKey":"orders","orderTab":"待收货"},{"id":"completed","label":"已完成","icon":"check-circle","actionKey":"orders"},{"id":"after-sale","label":"售后","icon":"rotate-ccw","actionKey":"orders","orderTab":"退款/售后"}]',
+ '我的页订单状态快捷入口', 6),
+('mine.menus',
+ '[{"id":"addresses","label":"收货地址管理","description":"管理常用地址、默认收件人与联系电话","icon":"map-pin","actionKey":"addresses"},{"id":"tutorial","label":"使用教程","description":"查看新手指南、制作流程与功能操作说明","icon":"book-open","actionKey":"tutorial"},{"id":"feedback","label":"帮助与反馈","description":"提交问题、查看工单进度或联系支持团队","icon":"help-circle","actionKey":"feedback"}]',
+ '我的页底部菜单', 7),
+('community.tabs', '["推荐","关注","最新"]', '社区页 tab', 8),
+('profile.tabs',
+ '[{"label":"作品","icon":"view-grid-outline","iconActive":"view-grid"},{"label":"动态","icon":"text-box-outline","iconActive":"text-box"},{"label":"喜欢","icon":"heart-outline","iconActive":"heart"}]',
+ '用户主页 tab', 9),
+('feedback.ticketTypes', '["功能问题","订单问题","体验建议"]', '工单类型选项', 10),
+('feedback.statusColors',
+ '{"处理中":"#2563EB","待回复":"#F59E0B","已完成":"#10B981"}',
+ '工单状态颜色映射', 11),
+('profile.orderTabs',
+ '[{"key":"全部","label":"全部"},{"key":"待支付","label":"待支付"},{"key":"待发货","label":"待发货"},{"key":"待收货","label":"待收货"},{"key":"退款/售后","label":"退款/售后"},{"key":"已完成","label":"已完成"}]',
+ '订单页 tab', 12),
+('profile.orderStatusMeta',
+ '{"待支付":{"color":"#F59E0B","soft":"#FFF4DE","border":"#F7D7A0","icon":"clock"},"待发货":{"color":"#3B82F6","soft":"#EAF3FF","border":"#CCE0FF","icon":"package"},"待收货":{"color":"#10B981","soft":"#E8FBF4","border":"#BCEFD9","icon":"truck"},"退款/售后":{"color":"#EF4444","soft":"#FFE8EA","border":"#FFC7CC","icon":"rotate-ccw"},"已完成":{"color":"#94A3B8","soft":"#F3F6FA","border":"#D6E0EA","icon":"check-circle"}}',
+ '订单状态颜色与图标', 13),
+('notifications.quickEntries',
+ '[{"key":"comments","label":"所有评论","icon":"comment-text-outline","color":"#6366F1"},{"key":"likes","label":"赞和收藏","icon":"heart-outline","color":"#EF476F"},{"key":"follows","label":"关注消息","icon":"account-plus-outline","color":"#22C55E"},{"key":"orders","label":"订单消息","icon":"package-variant-closed","color":"#F59E0B"},{"key":"mentions","label":"@我的","icon":"at","color":"#06A6C8"}]',
+ '通知页快捷分类', 14);

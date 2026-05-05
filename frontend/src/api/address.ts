@@ -1,9 +1,17 @@
 import localRegionData from 'china-division/dist/pca-code.json';
 import client from './client';
 import { getAddressRegionApiUrl, getAddressRegionProvider, getAmapWebKey } from '../config/env';
-import type { AddressRegionNode } from '../mock/address';
-import { MOCK_ADDRESS_REGIONS } from '../mock/address';
 import type { ProfileAddressItem } from './profile';
+
+export type AddressRegionLevel = 'province' | 'city' | 'district';
+
+export interface AddressRegionNode {
+  code: string;
+  name: string;
+  level: AddressRegionLevel;
+  parentCode?: string;
+  children?: AddressRegionNode[];
+}
 
 interface ApiRes<T> {
   code: number;
@@ -242,7 +250,8 @@ export const addressRegionApi = {
     const provider = this.getProvider();
 
     if (provider === 'mock') {
-      return MOCK_ADDRESS_REGIONS;
+      // mock 模式已下线，回退到本地 china-division 数据
+      return getLocalRegionTree();
     }
 
     if (provider === 'local') {

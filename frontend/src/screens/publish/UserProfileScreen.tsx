@@ -13,7 +13,19 @@ import { getFeedMockMedia } from '../../utils/feedMedia';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
-import { PROFILE_TABS } from '../../mock/community';
+import { useUiConfig } from '../../store/useUiConfigStore';
+
+interface ProfileTabDef {
+  label: string;
+  icon: string;
+  iconActive: string;
+}
+
+const FALLBACK_PROFILE_TABS: ProfileTabDef[] = [
+  { label: '作品', icon: 'view-grid-outline', iconActive: 'view-grid' },
+  { label: '动态', icon: 'text-box-outline', iconActive: 'text-box' },
+  { label: '喜欢', icon: 'heart-outline', iconActive: 'heart' },
+];
 import {
   designApi,
   feedApi,
@@ -66,6 +78,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
   const { userName } = route.params;
   const { colors, dark } = useTheme();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const profileTabs = useUiConfig<ProfileTabDef[]>('profile.tabs', FALLBACK_PROFILE_TABS);
   const [user, setUser] = useState<CommunityUserData>(() => ({
     id: null,
     name: userName,
@@ -349,12 +362,12 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
         </View>
 
         <View style={[$.tabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          {PROFILE_TABS.map((tab, index) => {
+          {profileTabs.map((tab, index) => {
             const active = index === tabIndex;
             return (
               <HoverView key={tab.label} onPress={() => setTabIndex(index)} style={$.tabItem} hoverScale={1.02} hoverLift={0}>
                 <View style={$.tabContent}>
-                  <MCI name={active ? tab.iconActive : tab.icon} size={fp(16)} color={active ? colors.accent : colors.textHint} />
+                  <MCI name={(active ? tab.iconActive : tab.icon) as any} size={fp(16)} color={active ? colors.accent : colors.textHint} />
                   <Text style={[$.tabText, { color: active ? colors.text : colors.textHint }, active && { fontWeight: '700' }]}>{tab.label}</Text>
                 </View>
                 {active && <View style={[$.tabLine, { backgroundColor: colors.accent }]} />}

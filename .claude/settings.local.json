@@ -50,7 +50,15 @@
       "Bash(python scripts/gen_feature_status.py)",
       "Bash(git pull *)",
       "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(ipconfig)",
+      "Read(//c/Program Files/Java/**)",
+      "Read(//c//**)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/Java/jdk*/bin\")",
+      "Bash(kill %1)",
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(git status *)",
+      "Bash(git rebase *)"
     ]
   }
 }

@@ -7,6 +7,7 @@ import com.beadforge.model.dto.DesignDTO;
 import com.beadforge.model.entity.*;
 import com.beadforge.model.enums.ListingStatus;
 import com.beadforge.repository.*;
+import java.time.LocalDateTime;
 import com.beadforge.util.ConvertUtil;
 import com.beadforge.util.SqlUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,6 +33,8 @@ public class AdminController {
     private final PatternListingRepository patternRepo;
     private final FeedRepository feedRepo;
     private final ApiConfigRepository apiConfigRepo;
+    private final OfficialMessageRepository officialMessageRepo;
+    private final UiConfigRepository uiConfigRepo;
 
     // ═══════ 统计 ═══════
 
@@ -225,5 +228,76 @@ public class AdminController {
         if (v == null || v.isEmpty()) return "";
         if (v.length() <= 8) return "****";
         return v.substring(0, 4) + "****" + v.substring(v.length() - 4);
+    }
+
+    // ═══════ 官方推送 ═══════
+
+    @GetMapping("/official-messages")
+    public ApiResponse<List<OfficialMessage>> listOfficialMessages(
+            @RequestParam(required = false) String channel) {
+        QueryWrapper<OfficialMessage> qw = new QueryWrapper<>();
+        if (channel != null && !channel.isEmpty()) qw.eq("channel", channel);
+        qw.orderByDesc("published_at");
+        return ApiResponse.success(officialMessageRepo.selectList(qw));
+    }
+
+    @PostMapping("/official-messages")
+    public ApiResponse<OfficialMessage> addOfficialMessage(@RequestBody OfficialMessage m) {
+        if (m.getChannel() == null || m.getTitle() == null) {
+            return ApiResponse.error(400, "channel / title 不能为空");
+        }
+        if (m.getEnabled() == null) m.setEnabled(1);
+        if (m.getPublishedAt() == null) m.setPublishedAt(LocalDateTime.now());
+        officialMessageRepo.insert(m);
+        return ApiResponse.success("已发布", m);
+    }
+
+    @PutMapping("/official-messages/{id}")
+    public ApiResponse<OfficialMessage> updateOfficialMessage(@PathVariable Long id, @RequestBody OfficialMessage m) {
+        OfficialMessage exist = officialMessageRepo.selectById(id);
+        if (exist == null) return ApiResponse.error(404, "推送不存在");
+        m.setId(id);
+        officialMessageRepo.updateById(m);
+        return ApiResponse.success("已更新", officialMessageRepo.selectById(id));
+    }
+
+    @DeleteMapping("/official-messages/{id}")
+    public ApiResponse<Void> deleteOfficialMessage(@PathVariable Long id) {
+        officialMessageRepo.deleteById(id);
+        return ApiResponse.success("已删除", null);
+    }
+
+    // ═══════ UI 配置 ═══════
+
+    @GetMapping("/ui-config")
+    public ApiResponse<List<UiConfig>> listUiConfig() {
+        return ApiResponse.success(uiConfigRepo.selectList(
+            new QueryWrapper<UiConfig>().orderByAsc("sort_order").orderByAsc("id")));
+    }
+
+    @PostMapping("/ui-config")
+    public ApiResponse<UiConfig> addUiConfig(@RequestBody UiConfig c) {
+        if (c.getConfigKey() == null || c.getConfigValue() == null) {
+            return ApiResponse.error(400, "configKey / configValue 不能为空");
+        }
+        if (c.getEnabled() == null) c.setEnabled(1);
+        if (c.getSortOrder() == null) c.setSortOrder(99);
+        uiConfigRepo.insert(c);
+        return ApiResponse.success("已新建", c);
+    }
+
+    @PutMapping("/ui-config/{id}")
+    public ApiResponse<UiConfig> updateUiConfig(@PathVariable Long id, @RequestBody UiConfig c) {
+        UiConfig exist = uiConfigRepo.selectById(id);
+        if (exist == null) return ApiResponse.error(404, "配置不存在");
+        c.setId(id);
+        uiConfigRepo.updateById(c);
+        return ApiResponse.success("已更新", uiConfigRepo.selectById(id));
+    }
+
+    @DeleteMapping("/ui-config/{id}")
+    public ApiResponse<Void> deleteUiConfig(@PathVariable Long id) {
+        uiConfigRepo.deleteById(id);
+        return ApiResponse.success("已删除", null);
     }
 }

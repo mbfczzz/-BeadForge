@@ -12,11 +12,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import type { FeedbackTicketItem, FeedbackTicketType } from '../../api/feedback';
+import type { FeedbackTicketItem, FeedbackTicketStatus, FeedbackTicketType } from '../../api/feedback';
 import { AppHeader, SurfaceCard } from '../../components/common';
-import { FEEDBACK_STATUS_COLORS, FEEDBACK_TICKET_TYPES } from '../../mock/feedback';
+import { useUiConfig } from '../../store/useUiConfigStore';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
+
+const FALLBACK_TICKET_TYPES: FeedbackTicketType[] = ['功能问题', '订单问题', '体验建议'];
+const FALLBACK_STATUS_COLORS: Record<FeedbackTicketStatus, string> = {
+  处理中: '#2563EB',
+  待回复: '#F59E0B',
+  已完成: '#10B981',
+};
 
 interface Props {
   onBack: () => void;
@@ -32,6 +39,8 @@ export const FeedbackScreen: React.FC<Props> = ({
   onOpenTicket,
 }) => {
   const { colors } = useTheme();
+  const ticketTypes = useUiConfig<FeedbackTicketType[]>('feedback.ticketTypes', FALLBACK_TICKET_TYPES);
+  const statusColors = useUiConfig<Record<FeedbackTicketStatus, string>>('feedback.statusColors', FALLBACK_STATUS_COLORS);
   const [ticketType, setTicketType] = useState<FeedbackTicketType>('功能问题');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -100,7 +109,7 @@ export const FeedbackScreen: React.FC<Props> = ({
           description="描述你遇到的问题或建议，方便我们更快定位和处理。"
         >
           <View style={styles.typeRow}>
-            {FEEDBACK_TICKET_TYPES.map((item) => {
+            {ticketTypes.map((item) => {
               const active = item === ticketType;
               return (
                 <TouchableOpacity
@@ -253,13 +262,13 @@ export const FeedbackScreen: React.FC<Props> = ({
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: `${FEEDBACK_STATUS_COLORS[item.status]}16` },
+                      { backgroundColor: `${statusColors[item.status]}16` },
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        { color: FEEDBACK_STATUS_COLORS[item.status] },
+                        { color: statusColors[item.status] },
                       ]}
                     >
                       {item.status}

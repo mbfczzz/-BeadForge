@@ -16,6 +16,7 @@ import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authApi } from '../../api/auth';
+import { userSessionApi, userBlacklistApi, type UserSessionItem, type BlacklistItem } from '../../api/security';
 import { shadow } from '../../utils/shadow';
 import { clearAppCache, formatCacheBytes, getAppCacheSummary, type CacheSummary } from '../../utils/cacheManager';
 
@@ -23,17 +24,6 @@ const PAD = wp(12);
 
 type SettingsPanel = 'password' | 'devices' | 'dm' | 'blacklist' | 'cache' | 'legal';
 type DmPermission = '所有人' | '关注的人' | '不允许';
-
-const INITIAL_DEVICES = [
-  { id: 'current', name: 'Pixel 8 模拟器', meta: '当前设备 · 上海 · 08:42', current: true },
-  { id: 'ios', name: 'iPhone 15 Pro', meta: '昨天 21:08 · 杭州', current: false },
-  { id: 'web', name: 'Chrome Web', meta: '3 天前 · 北京', current: false },
-];
-
-const INITIAL_BLACKLIST = [
-  { id: 'u1', name: '广告小号', reason: '频繁发送无关私信' },
-  { id: 'u2', name: '搬运账号', reason: '不想看到此用户动态' },
-];
 
 interface SettingRowProps {
   icon: keyof typeof Feather.glyphMap;
@@ -127,8 +117,8 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
   const [cacheSummary, setCacheSummary] = useState<CacheSummary | null>(null);
   const [cacheClearing, setCacheClearing] = useState(false);
   const [cacheMessage, setCacheMessage] = useState('');
-  const [devices, setDevices] = useState(INITIAL_DEVICES);
-  const [blacklist, setBlacklist] = useState(INITIAL_BLACKLIST);
+  const [devices, setDevices] = useState<UserSessionItem[]>([]);
+  const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -152,6 +142,23 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
       mounted = false;
     };
   }, []);
+
+  // 拉登录设备 + 黑名单（首屏 + 用户切换）
+  useEffect(() => {
+    if (!user) {
+      setDevices([]);
+      setBlacklist([]);
+      return;
+    }
+    let alive = true;
+    userSessionApi.list()
+      .then((res) => { if (alive) setDevices(res.data || []); })
+      .catch(() => undefined);
+    userBlacklistApi.list()
+      .then((res) => { if (alive) setBlacklist(res.data || []); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert('退出登录', '确定退出当前账号吗？', [
@@ -226,8 +233,27 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
     }
   };
 
-  const removeDevice = (id: string) => {
-    setDevices((current) => current.filter((item) => item.id !== id || item.current));
+  const removeDevice = async (id: number, isCurrent: boolean) => {
+    if (isCurrent) return;
+    const before = devices;
+    setDevices((current) => current.filter((item) => item.id !== id));
+    try {
+      await userSessionApi.remove(id);
+    } catch (err: any) {
+      setDevices(before);
+      Alert.alert('移除失败', err?.message || '请稍后重试');
+    }
+  };
+
+  const removeFromBlacklist = async (id: string, rawId: number) => {
+    const before = blacklist;
+    setBlacklist((current) => current.filter((item) => item.id !== id));
+    try {
+      await userBlacklistApi.remove(rawId);
+    } catch (err: any) {
+      setBlacklist(before);
+      Alert.alert('移除失败', err?.message || '请稍后重试');
+    }
   };
 
   const clearCache = async () => {
@@ -309,8 +335,14 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
         <AppHeader title="登录设备" onBack={closePanel} />
         <FlatList
           data={devices}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           contentContainerStyle={$.panelContent}
+          ListEmptyComponent={
+            <View style={$.emptyPanel}>
+              <Feather name="monitor" size={fp(24)} color={colors.textHint} />
+              <Text style={[$.emptyText, { color: colors.textHint }]}>暂无登录设备记录</Text>
+            </View>
+          }
           renderItem={({ item }) => (
             <View style={[$.deviceCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={[$.rowIcon, { backgroundColor: colors.inputBg }]}>
@@ -325,7 +357,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
                   <Text style={[$.statusText, { color: colors.accent }]}>当前</Text>
                 </View>
               ) : (
-                <Pressable onPress={() => removeDevice(item.id)} style={[$.miniDangerButton, { borderColor: `${colors.error}40` }]}>
+                <Pressable onPress={() => removeDevice(item.id, item.current)} style={[$.miniDangerButton, { borderColor: `${colors.error}40` }]}>
                   <Text style={[$.miniDangerText, { color: colors.error }]}>移除</Text>
                 </Pressable>
               )}
@@ -387,7 +419,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={[$.rowDesc, { color: colors.textHint }]}>{item.reason}</Text>
               </View>
               <Pressable
-                onPress={() => setBlacklist((current) => current.filter((userItem) => userItem.id !== item.id))}
+                onPress={() => removeFromBlacklist(item.id, item.rawId)}
                 style={[$.miniButton, { backgroundColor: colors.inputBg }]}
               >
                 <Text style={[$.miniButtonText, { color: colors.textSecondary }]}>移除</Text>

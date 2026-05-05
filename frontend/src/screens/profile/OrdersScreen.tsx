@@ -18,14 +18,17 @@ import { useTheme } from '../../theme';
 import type { ProfileOrderFilterTab } from '../../api/profile';
 import { orderApi, type BackendOrderDTO } from '../../api/order';
 import {
-  PROFILE_ORDER_STATUS_META,
-  PROFILE_ORDER_TABS,
+  FALLBACK_ORDER_STATUS_META,
+  FALLBACK_ORDER_TABS,
   getProfileOrderActions,
   toProfileOrderTab,
   type OrderActionItem,
   type OrderFilterTab,
   type ProfileDisplayOrder,
-} from '../../mock/profileOrders';
+  type ProfileOrderStatusMeta,
+  type ProfileOrderTabConfig,
+} from '../../utils/profileOrders';
+import { useUiConfig } from '../../store/useUiConfigStore';
 import { fp, wp } from '../../utils/responsive';
 
 function toDisplayOrder(o: BackendOrderDTO): ProfileDisplayOrder {
@@ -68,16 +71,13 @@ function formatAmount(value: number) {
   return `￥${value.toFixed(2)}`;
 }
 
-function getOrderAccent(status: ProfileDisplayOrder['status']) {
-  if (status === '待支付') {
-    return JD_ORANGE;
-  }
-
-  if (status === '待发货') {
-    return JD_BLUE;
-  }
-
-  return PROFILE_ORDER_STATUS_META[status].color;
+function getOrderAccent(
+  status: ProfileDisplayOrder['status'],
+  metaMap: Record<ProfileDisplayOrder['status'], ProfileOrderStatusMeta>,
+) {
+  if (status === '待支付') return JD_ORANGE;
+  if (status === '待发货') return JD_BLUE;
+  return metaMap[status]?.color || JD_RED;
 }
 
 function OrderTabBar({
@@ -85,11 +85,13 @@ function OrderTabBar({
   counts,
   colors,
   onChange,
+  tabs,
 }: {
   activeTab: OrderFilterTab;
   counts: Record<OrderFilterTab, number>;
   colors: ReturnType<typeof useTheme>['colors'];
   onChange: (tab: OrderFilterTab) => void;
+  tabs: ProfileOrderTabConfig[];
 }) {
   return (
     <ScrollView
@@ -98,7 +100,7 @@ function OrderTabBar({
       contentContainerStyle={styles.tabsRow}
       style={styles.tabsScroll}
     >
-      {PROFILE_ORDER_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = tab.key === activeTab;
 
         return (
@@ -212,15 +214,17 @@ function OrderCard({
   item,
   onOpen,
   onActionPress,
+  statusMeta,
 }: {
   colors: ReturnType<typeof useTheme>['colors'];
   item: ProfileDisplayOrder;
   onOpen: (order: ProfileDisplayOrder) => void;
   onActionPress: (order: ProfileDisplayOrder, action: OrderActionItem) => void;
+  statusMeta: Record<ProfileDisplayOrder['status'], ProfileOrderStatusMeta>;
 }) {
-  const meta = PROFILE_ORDER_STATUS_META[item.status];
+  const meta = statusMeta[item.status] || FALLBACK_ORDER_STATUS_META[item.status];
   const actions = getProfileOrderActions(item.status);
-  const accent = getOrderAccent(item.status);
+  const accent = getOrderAccent(item.status, statusMeta);
   const priceColor = item.status === '已完成' ? colors.text : JD_RED;
 
   return (
@@ -356,6 +360,12 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<ProfileDisplayOrder[]>([]);
 
+  const tabs = useUiConfig<ProfileOrderTabConfig[]>('profile.orderTabs', FALLBACK_ORDER_TABS);
+  const statusMeta = useUiConfig<Record<ProfileDisplayOrder['status'], ProfileOrderStatusMeta>>(
+    'profile.orderStatusMeta',
+    FALLBACK_ORDER_STATUS_META,
+  );
+
   const reload = useCallback(async () => {
     try {
       const res = await orderApi.list();
@@ -460,6 +470,7 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
           item={item.order}
           onOpen={openOrder}
           onActionPress={handleActionPress}
+          statusMeta={statusMeta}
         />
       );
     },
@@ -546,6 +557,7 @@ export const OrdersScreen: React.FC<Props> = ({ onBack, onOpenOrder, initialTab 
               counts={counts}
               colors={colors}
               onChange={setActiveTab}
+              tabs={tabs}
             />
 
             <View style={styles.summaryRow}>

@@ -11,11 +11,12 @@ import { useDanmaku } from '../../hooks/useDanmaku';
 import { useToast } from '../../hooks/useFeedback';
 import { hapticLight, hapticSuccess } from '../../hooks/useFeedback';
 import { Toast } from '../../components/common/Toast';
-import { MOCK_DANMAKU } from '../../mock/danmaku';
 import type { RootScreenProps } from '../../navigation/types';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { likeApi, favoriteApi, followApi } from '../../api/community';
+import { danmakuApi, type DanmakuRow } from '../../api/danmaku';
+import type { DanmakuItem } from '../../components/common/Danmaku';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const PAD = wp(15);
@@ -85,7 +86,24 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
   const [showMore, setShowMore] = useState(false);
   const toast = useToast();
 
-  const danmaku = useDanmaku(MOCK_DANMAKU);
+  const [danmakuItems, setDanmakuItems] = useState<DanmakuItem[]>([]);
+  const danmaku = useDanmaku(danmakuItems, {
+    onSend: async (text, color) => {
+      await danmakuApi.send(item.id, text, color);
+    },
+  });
+
+  useEffect(() => {
+    let alive = true;
+    danmakuApi.list(item.id)
+      .then((res) => {
+        if (!alive) return;
+        const list: DanmakuRow[] = res.data || [];
+        setDanmakuItems(list.map((d) => ({ id: d.id, text: d.text, color: d.color })));
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [item.id]);
 
   const previewW = screenW - PAD * 2 - wp(40);
   const beadSize = Math.floor(previewW / (info.cols || 9)) - 1;

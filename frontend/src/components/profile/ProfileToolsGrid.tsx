@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useTheme } from '../../theme';
-import type { MineToolItem } from '../../mock/profileMine';
+import type { MineToolItem } from '../../api/mine';
 import { ProfileCard } from './ProfileCard';
 
 interface ProfileToolsGridProps {

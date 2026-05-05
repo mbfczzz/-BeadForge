@@ -88,11 +88,13 @@ CREATE TABLE IF NOT EXISTS t_feed (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted INT DEFAULT 0,
     INDEX idx_user_id (user_id),
-    INDEX idx_created_at (created_at)
+    INDEX idx_created_at (created_at),
+    INDEX idx_like_count (like_count)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- 老库升级
 ALTER TABLE t_feed ADD COLUMN media_urls TEXT;
 ALTER TABLE t_feed ADD COLUMN media_type VARCHAR(10);
+ALTER TABLE t_feed ADD INDEX idx_like_count (like_count);
 
 -- 点赞表
 CREATE TABLE IF NOT EXISTS t_like (
@@ -327,7 +329,7 @@ CREATE TABLE IF NOT EXISTS t_discover_setting (
 CREATE TABLE IF NOT EXISTS t_notification (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
-    type VARCHAR(20) NOT NULL COMMENT 'SYSTEM / ORDER / INTERACT',
+    type VARCHAR(20) NOT NULL COMMENT 'SYSTEM / ORDER / INTERACT / LIKE / FOLLOW / MENTION / COMMENT',
     title VARCHAR(100) NOT NULL,
     content VARCHAR(500),
     unread TINYINT DEFAULT 1,
@@ -336,5 +338,94 @@ CREATE TABLE IF NOT EXISTS t_notification (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     deleted INT DEFAULT 0,
     INDEX idx_user_id (user_id),
+    INDEX idx_user_type (user_id, type),
     INDEX idx_user_unread (user_id, unread)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 弹幕（图纸/作品详情页飘屏评论）
+CREATE TABLE IF NOT EXISTS t_danmaku (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    design_id BIGINT NOT NULL,
+    user_id BIGINT,
+    text VARCHAR(80) NOT NULL,
+    color VARCHAR(20) DEFAULT '#ffffff',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    INDEX idx_design_id (design_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 私信会话
+CREATE TABLE IF NOT EXISTS t_dm_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_a_id BIGINT NOT NULL COMMENT '会话发起方/字典序较小的一方',
+    user_b_id BIGINT NOT NULL COMMENT '另一方',
+    last_content VARCHAR(500),
+    last_at DATETIME,
+    unread_a INT DEFAULT 0 COMMENT 'user_a 未读数',
+    unread_b INT DEFAULT 0 COMMENT 'user_b 未读数',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_pair (user_a_id, user_b_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 私信内容
+CREATE TABLE IF NOT EXISTS t_dm_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id BIGINT NOT NULL,
+    from_user_id BIGINT NOT NULL,
+    to_user_id BIGINT NOT NULL,
+    content VARCHAR(2000) NOT NULL,
+    attachment VARCHAR(20) COMMENT 'photo / gif / null',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_session_id (session_id),
+    INDEX idx_to_user (to_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 官方推送（系统/活动）
+CREATE TABLE IF NOT EXISTS t_official_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    channel VARCHAR(20) NOT NULL COMMENT 'OFFICIAL / ACTIVITY',
+    title VARCHAR(100) NOT NULL,
+    content VARCHAR(500),
+    icon VARCHAR(40) COMMENT 'feather icon name',
+    color VARCHAR(20),
+    published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    enabled TINYINT DEFAULT 1,
+    deleted INT DEFAULT 0,
+    INDEX idx_channel_pub (channel, published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 登录设备
+CREATE TABLE IF NOT EXISTS t_user_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    device_id VARCHAR(80) NOT NULL COMMENT '客户端稳定标识，登录时由前端生成或后端 hash(UA+IP)',
+    device_name VARCHAR(80) COMMENT '如 iPhone 15 Pro',
+    device_meta VARCHAR(200) COMMENT '城市 / 时间 等附属信息',
+    is_current TINYINT DEFAULT 0,
+    last_active_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_user_device (user_id, device_id),
+    INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 用户黑名单
+CREATE TABLE IF NOT EXISTS t_user_blacklist (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    owner_user_id BIGINT NOT NULL,
+    blocked_user_id BIGINT NOT NULL,
+    reason VARCHAR(200),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE INDEX uk_owner_blocked (owner_user_id, blocked_user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- UI 配置（首页 tools / menus / create options / order tabs / feedback colors 等前端展示常量）
+CREATE TABLE IF NOT EXISTS t_ui_config (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    config_key VARCHAR(80) NOT NULL UNIQUE COMMENT '如 create.sizes / mine.tools / community.tabs',
+    config_value LONGTEXT NOT NULL COMMENT 'JSON 字符串',
+    description VARCHAR(200),
+    sort_order INT DEFAULT 0,
+    enabled TINYINT DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

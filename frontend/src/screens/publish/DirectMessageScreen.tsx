@@ -16,53 +16,18 @@ import { useTheme } from '../../theme';
 import type { RootScreenProps } from '../../navigation/types';
 import type { CommunityUserData } from '../../api/community';
 import { userApi } from '../../api/user';
+import { directMessageApi, type DmMessageItem } from '../../api/directMessage';
 import { fp, wp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 
-interface MessageItem {
-  id: string;
-  fromMe: boolean;
-  text: string;
-  time: string;
-  attachment?: 'photo' | 'gif';
-}
-
-function buildMessages(userName: string): MessageItem[] {
-  return [
-    {
-      id: 'm1',
-      fromMe: false,
-      text: `你好，我是${userName}。刚刚看到你收藏了我的动态，想看看这组图的配色过程吗？`,
-      time: '08:21',
-    },
-    {
-      id: 'm2',
-      fromMe: false,
-      text: '我把照片和动图预览都整理好了，适合发到动态里做作品记录。',
-      time: '08:22',
-      attachment: 'photo',
-    },
-    {
-      id: 'm3',
-      fromMe: true,
-      text: '可以，我想参考一下边缘高光和背景留白。',
-      time: '08:25',
-    },
-    {
-      id: 'm4',
-      fromMe: false,
-      text: '没问题，下一版我会把动图循环压短一点，看起来会更清爽。',
-      time: '08:27',
-      attachment: 'gif',
-    },
-  ];
-}
+type MessageItem = DmMessageItem;
 
 export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = ({ route, navigation }) => {
   const { userName } = route.params;
   const { colors, dark } = useTheme();
   const insets = useSafeAreaInsets();
   const [user, setUser] = useState<CommunityUserData>(() => ({
+    id: null,
     name: userName,
     title: '创作者',
     bio: '',
@@ -75,30 +40,51 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
   }));
 
   useEffect(() => {
+    let alive = true;
     userApi
       .getCommunityProfile(userName)
+      .then((res) => { if (alive && res.data) setUser(res.data); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [userName]);
+
+  const [messages, setMessages] = useState<MessageItem[]>([]);
+  const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    directMessageApi.threadByName(userName)
       .then((res) => {
-        if (res.data) setUser(res.data);
+        if (!alive) return;
+        setMessages(res.data?.messages || []);
       })
       .catch(() => undefined);
+    return () => { alive = false; };
   }, [userName]);
-  const [messages, setMessages] = useState<MessageItem[]>(() => buildMessages(userName));
-  const [draft, setDraft] = useState('');
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = draft.trim();
-    if (!text) return;
-
+    if (!text || sending) return;
+    setSending(true);
+    const localId = `local-${Date.now()}`;
     setMessages((current) => [
       ...current,
-      {
-        id: `local-${Date.now()}`,
-        fromMe: true,
-        text,
-        time: '刚刚',
-      },
+      { id: localId, fromMe: true, text, time: '刚刚' },
     ]);
     setDraft('');
+    try {
+      const res = await directMessageApi.send(userName, text);
+      if (res.data) {
+        setMessages((current) => current.map((m) => (m.id === localId ? res.data : m)));
+      }
+    } catch {
+      // 失败回退
+      setMessages((current) => current.filter((m) => m.id !== localId));
+      setDraft(text);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (

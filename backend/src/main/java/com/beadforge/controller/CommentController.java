@@ -108,6 +108,52 @@ public class CommentController {
         }).collect(Collectors.toList()));
     }
 
+    @Operation(summary = "我发出的评论",
+            description = "通知页 \"我评论的\" tab 用，按 created_at 倒序，最多 50 条")
+    @GetMapping("/mine")
+    public ApiResponse<List<Map<String, Object>>> mine(HttpServletRequest request) {
+        Long userId = requireUser(request);
+        List<Comment> comments = commentRepo.selectList(new QueryWrapper<Comment>()
+            .eq("user_id", userId).orderByDesc("created_at").last("LIMIT 50"));
+        if (comments.isEmpty()) return ApiResponse.success(Collections.emptyList());
+
+        // 收集 target_id → title
+        Set<Long> feedIds = comments.stream()
+            .filter(c -> "FEED".equals(c.getTargetType()))
+            .map(Comment::getTargetId).collect(Collectors.toSet());
+        Set<Long> designIds = comments.stream()
+            .filter(c -> "DESIGN".equals(c.getTargetType()))
+            .map(Comment::getTargetId).collect(Collectors.toSet());
+
+        Map<Long, String> feedTitles = new HashMap<>();
+        if (!feedIds.isEmpty()) {
+            feedRepo.selectBatchIds(feedIds).forEach(f -> {
+                String txt = f.getContent() == null ? "" : f.getContent();
+                feedTitles.put(f.getId(), txt.length() > 14 ? txt.substring(0, 14) + "…" : txt);
+            });
+        }
+        Map<Long, String> designTitles = new HashMap<>();
+        if (!designIds.isEmpty()) {
+            designRepo.selectBatchIds(designIds).forEach(d ->
+                designTitles.put(d.getId(), d.getTitle() == null ? "" : d.getTitle()));
+        }
+
+        return ApiResponse.success(comments.stream().map(c -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", "cg-" + c.getId());
+            m.put("content", c.getContent());
+            String target = "FEED".equals(c.getTargetType())
+                ? feedTitles.getOrDefault(c.getTargetId(), "动态")
+                : designTitles.getOrDefault(c.getTargetId(), "作品");
+            m.put("target", target);
+            m.put("targetType", c.getTargetType());
+            m.put("targetId", c.getTargetId());
+            m.put("user", "我");
+            m.put("time", formatTimeAgo(c.getCreatedAt()));
+            return m;
+        }).collect(Collectors.toList()));
+    }
+
     @Operation(summary = "发表评论",
             description = "type: feed / design；parentId 非空表示回复某条评论；同步维护目标的 comment_count")
     @PostMapping

@@ -1,11 +1,17 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { FeedbackTicketItem } from '../../api/feedback';
+import type { FeedbackTicketItem, FeedbackTicketStatus } from '../../api/feedback';
 import { AppHeader, SurfaceCard, StateView } from '../../components/common';
-import { FEEDBACK_STATUS_COLORS } from '../../mock/feedback';
+import { useUiConfig } from '../../store/useUiConfigStore';
 import { useTheme } from '../../theme';
 import { fp, wp } from '../../utils/responsive';
+
+const FALLBACK_STATUS_COLORS: Record<FeedbackTicketStatus, string> = {
+  处理中: '#2563EB',
+  待回复: '#F59E0B',
+  已完成: '#10B981',
+};
 
 interface Props {
   ticket?: FeedbackTicketItem;
@@ -14,6 +20,7 @@ interface Props {
 
 export const FeedbackDetailScreen: React.FC<Props> = ({ ticket, onBack }) => {
   const { colors } = useTheme();
+  const statusColors = useUiConfig<Record<FeedbackTicketStatus, string>>('feedback.statusColors', FALLBACK_STATUS_COLORS);
 
   if (!ticket) {
     return (
@@ -42,13 +49,13 @@ export const FeedbackDetailScreen: React.FC<Props> = ({ ticket, onBack }) => {
             <View
               style={[
                 styles.statusBadge,
-                { backgroundColor: `${FEEDBACK_STATUS_COLORS[ticket.status]}16` },
+                { backgroundColor: `${statusColors[ticket.status]}16` },
               ]}
             >
               <Text
                 style={[
                   styles.statusText,
-                  { color: FEEDBACK_STATUS_COLORS[ticket.status] },
+                  { color: statusColors[ticket.status] },
                 ]}
               >
                 {ticket.status}
