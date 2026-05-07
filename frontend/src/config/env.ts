@@ -14,10 +14,16 @@ import { Platform } from 'react-native';
  */
 
 const API_URLS = {
-  local: 'http://192.168.1.4:8085/api',
+  local: 'http://172.16.2.89:8085/api',
   test:  'http://114.66.6.79:6006/api',
   prod:  '/api',
 };
+
+// 功能开关：先在前端隐藏，后续放开
+export const FEATURES = {
+  shop: true,    // 商城 Tab、商品 / 购物车 / 结算
+  orders: false, // 订单状态卡、已购资源、订单列表 / 详情、收货地址管理
+} as const;
 
 export function getAmapWebKey(): string {
   return process.env.EXPO_PUBLIC_AMAP_WEB_KEY || '';

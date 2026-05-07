@@ -18,7 +18,6 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
   const pointsBalance = useResourceAccessStore((state) => state.pointsBalance);
   const pointsLogs = useResourceAccessStore((state) => state.pointsLogs);
   const membershipActive = useResourceAccessStore((state) => state.membershipActive);
-  const addPoints = useResourceAccessStore((state) => state.addPoints);
   const loadWallet = useResourceAccessStore((state) => state.loadWallet);
 
   useEffect(() => {
@@ -50,20 +49,6 @@ export const WalletScreen: React.FC<Props> = ({ onBack }) => {
               <Text style={$.statsValue}>图纸兑换</Text>
             </View>
           </View>
-        </View>
-
-        <View style={$.quickActions}>
-          {[120, 300, 600].map((amount) => (
-            <TouchableOpacity
-              key={amount}
-              activeOpacity={0.8}
-              onPress={() => addPoints(amount)}
-              style={[$.quickAction, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <Text style={[$.quickActionValue, { color: colors.accent }]}>+{amount}</Text>
-              <Text style={[$.quickActionLabel, { color: colors.textHint }]}>增加积分</Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
         <View style={$.section}>
@@ -171,27 +156,6 @@ const $ = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(255,255,255,0.18)',
     marginHorizontal: wp(16),
-  },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: PAD,
-    marginTop: wp(18),
-  },
-  quickAction: {
-    width: '31%' as const,
-    borderRadius: wp(16),
-    borderWidth: 1,
-    paddingVertical: wp(14),
-    alignItems: 'center',
-  },
-  quickActionValue: {
-    fontSize: fp(18),
-    fontWeight: '800',
-  },
-  quickActionLabel: {
-    fontSize: fp(11),
-    marginTop: wp(6),
   },
   section: {
     marginTop: wp(22),

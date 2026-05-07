@@ -24,6 +24,7 @@ import {
   discoveryApi,
   type DiscoverFilterTabDef,
   type DiscoverHomeConfig,
+  type HomeBannerItem,
 } from '../../api/discovery';
 import type { RootStackParamList } from '../../navigation/types';
 import { usePatternStore, type MarketPattern } from '../../store/usePatternStore';
@@ -163,6 +164,10 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('ResourceDetail', { resourceId });
   };
 
+  const handleBannerPress = (banner: HomeBannerItem) => {
+    navigation.navigate('BannerDetail', { banner });
+  };
+
   const renderStatusText = (file: MarketPattern) => {
     if (myListings.has(file.id)) return '已购';
     if (file.accessMode === 'free') return '免费';
@@ -238,7 +243,9 @@ export const HomeScreen: React.FC = () => {
         />
       </View>
 
-      {scopedBanners.length > 0 ? <HomeBannerCarousel banners={scopedBanners} /> : null}
+      {scopedBanners.length > 0 ? (
+        <HomeBannerCarousel banners={scopedBanners} onPressBanner={handleBannerPress} />
+      ) : null}
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
         {tabs.map((item) => {

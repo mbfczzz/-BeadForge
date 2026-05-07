@@ -58,7 +58,10 @@
       "Bash(kill %1)",
       "Bash(npx --no-install tsc --noEmit)",
       "Bash(git status *)",
-      "Bash(git rebase *)"
+      "Bash(git rebase *)",
+      "Bash(command -v mysql)",
+      "Bash(mysql --version)",
+      "Bash(npx --prefix frontend --no-install tsc -p frontend --noEmit)"
     ]
   }
 }

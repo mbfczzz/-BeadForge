@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import type { HomeBannerItem } from '../../api/discovery';
 import { fp, screenW, wp } from '../../utils/responsive';
@@ -13,9 +13,10 @@ const CARD_HEIGHT = wp(150);
 
 interface HomeBannerCarouselProps {
   banners: HomeBannerItem[];
+  onPressBanner?: (banner: HomeBannerItem) => void;
 }
 
-export const HomeBannerCarousel: React.FC<HomeBannerCarouselProps> = ({ banners }) => {
+export const HomeBannerCarousel: React.FC<HomeBannerCarouselProps> = ({ banners, onPressBanner }) => {
   const data = React.useMemo(
     () =>
       [...banners]
@@ -53,7 +54,13 @@ export const HomeBannerCarousel: React.FC<HomeBannerCarouselProps> = ({ banners 
           const subColor = item.textColor ? `${item.textColor}CC` : 'rgba(255,255,255,0.88)';
 
           return (
-            <View style={[styles.card, { backgroundColor: item.bg }]}>
+            <Pressable
+              onPress={() => onPressBanner?.(item)}
+              style={({ pressed }) => [
+                styles.card,
+                { backgroundColor: item.bg, opacity: pressed ? 0.92 : 1 },
+              ]}
+            >
               <View style={styles.textWrap}>
                 <Text style={[styles.eyebrow, { color: subColor }]}>{item.eyebrow || '发现图纸'}</Text>
                 <Text style={[styles.title, { color: textColor }]}>{item.title}</Text>
@@ -67,7 +74,7 @@ export const HomeBannerCarousel: React.FC<HomeBannerCarouselProps> = ({ banners 
               <View style={styles.previewWrap}>
                 <BeadGrid pixels={pixels} beadSize={wp(8)} gap={0.8} round glossy={false} />
               </View>
-            </View>
+            </Pressable>
           );
         }}
       />

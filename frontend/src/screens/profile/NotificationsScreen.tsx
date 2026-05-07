@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader, Avatar } from '../../components/common';
 import { useTheme } from '../../theme';
-import type { ProfileNoticeAction, ProfileNoticeItem } from '../../api/profile';
+import { FEATURES } from '../../config/env';
+import type { ProfileNoticeAction } from '../../api/profile';
 import type { RootStackParamList } from '../../navigation/types';
 import { fp, wp } from '../../utils/responsive';
 import { directMessageApi, type DmChatItem } from '../../api/directMessage';
@@ -25,7 +26,7 @@ interface QuickEntryDef {
 }
 
 // 快捷分类的 icon/label/color 仍是前端 UI 常量，未读计数从后端 unreadCountByType 拉
-const QUICK_ENTRIES: QuickEntryDef[] = [
+const ALL_QUICK_ENTRIES: QuickEntryDef[] = [
   { key: 'comments', label: '所有评论', icon: 'comment-text-outline', color: '#6366F1' },
   { key: 'likes',    label: '赞和收藏', icon: 'heart-outline',         color: '#EF476F' },
   { key: 'follows',  label: '关注消息', icon: 'account-plus-outline',  color: '#22C55E' },
@@ -33,15 +34,21 @@ const QUICK_ENTRIES: QuickEntryDef[] = [
   { key: 'mentions', label: '@我的',   icon: 'at',                    color: '#06A6C8' },
 ];
 
+// 订单链路下线时一并隐订单消息 entry，避免点了 markRead 但跳不进订单详情的体验割裂
+const QUICK_ENTRIES: QuickEntryDef[] = ALL_QUICK_ENTRIES
+  .filter((e) => FEATURES.orders || e.key !== 'orders');
+
 interface NotifItem {
   id: number;
   title: string;
   content: string;
   time: string;
+  action?: ProfileNoticeAction;
 }
 
 interface CommentReceivedItem {
   id: string;
+  noticeId: number;
   user: string;
   content: string;
   target: string;
@@ -49,19 +56,15 @@ interface CommentReceivedItem {
 }
 
 interface Props {
-  notices: ProfileNoticeItem[];
   onBack: () => void;
-  onReadNotice: (id: number) => void;
-  onReadAll: () => void;
-  onOpenAction: (action?: ProfileNoticeAction) => void;
 }
 
-function noticeToReceivedComment(n: ProfileNoticeItem): CommentReceivedItem {
-  // 通知 title 形如 "像素研究所 评论了你"，content 是评论原文
+function noticeToReceivedComment(n: { id: number; title?: string; content?: string; timeAgo?: string }): CommentReceivedItem {
   const title = n.title || '';
   const userName = title.replace(/\s*评论了你.*$/, '').trim() || title;
   return {
     id: `cm-${n.id}`,
+    noticeId: n.id,
     user: userName,
     content: n.content || '',
     target: '',
@@ -69,12 +72,13 @@ function noticeToReceivedComment(n: ProfileNoticeItem): CommentReceivedItem {
   };
 }
 
-function noticeToInfoRow(n: ProfileNoticeItem): NotifItem {
+function noticeToInfoRow(n: { id: number; title?: string; content?: string; timeAgo?: string; action?: ProfileNoticeAction }): NotifItem {
   return {
     id: n.id,
     title: n.title || '',
     content: n.content || '',
     time: n.timeAgo || '',
+    action: n.action,
   };
 }
 
@@ -83,6 +87,7 @@ export const NotificationsScreen: React.FC<Props> = ({ onBack }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeEntry, setActiveEntry] = useState<EntryKey | null>(null);
   const [commentTab, setCommentTab] = useState<CommentTab>('评论我的');
+  const [refreshing, setRefreshing] = useState(false);
 
   const [directChats, setDirectChats] = useState<DmChatItem[]>([]);
   const [officialChannels, setOfficialChannels] = useState<OfficialMessageItem[]>([]);
@@ -95,81 +100,95 @@ export const NotificationsScreen: React.FC<Props> = ({ onBack }) => {
   const [orderItems, setOrderItems] = useState<NotifItem[]>([]);
   const [mentionItems, setMentionItems] = useState<NotifItem[]>([]);
 
-  // 主页 - 私信 + 官方推送 + 红点未读数
-  useEffect(() => {
-    let alive = true;
-    Promise.all([
+  const loadHome = useCallback(async () => {
+    const [sess, official, unread] = await Promise.all([
       directMessageApi.sessions().catch(() => ({ data: [] as DmChatItem[] })),
       officialMessageApi.list().catch(() => ({ data: [] as OfficialMessageItem[] })),
       notificationApi.unreadCountByType().catch(() => ({ data: {} as Record<string, number> })),
-    ]).then(([sess, official, unread]) => {
-      if (!alive) return;
-      setDirectChats(sess.data || []);
-      setOfficialChannels(official.data || []);
-      setUnreadByType(unread.data || {});
-    });
-    return () => { alive = false; };
+    ]);
+    setDirectChats(sess.data || []);
+    setOfficialChannels(official.data || []);
+    setUnreadByType(unread.data || {});
   }, []);
 
-  // 切换 entry → 拉对应 type 列表
+  const loadEntry = useCallback(async (entry: EntryKey, tab: CommentTab) => {
+    if (entry === 'comments') {
+      if (tab === '评论我的') {
+        const res = await notificationApi.list('comments').catch(() => null);
+        setCommentsReceived((res?.data?.records || []).map(noticeToReceivedComment));
+      } else {
+        const res = await commentApi.mine().catch(() => null);
+        setCommentsMine(res?.data || []);
+      }
+    } else if (entry === 'likes') {
+      const res = await notificationApi.list('likes').catch(() => null);
+      setLikeItems((res?.data?.records || []).map(noticeToInfoRow));
+    } else if (entry === 'follows') {
+      const res = await notificationApi.list('follows').catch(() => null);
+      setFollowItems((res?.data?.records || []).map(noticeToInfoRow));
+    } else if (entry === 'orders') {
+      const res = await notificationApi.list('orders').catch(() => null);
+      setOrderItems((res?.data?.records || []).map(noticeToInfoRow));
+    } else if (entry === 'mentions') {
+      const res = await notificationApi.list('mentions').catch(() => null);
+      setMentionItems((res?.data?.records || []).map(noticeToInfoRow));
+    }
+  }, []);
+
+  // 进页面拉首页数据
+  useEffect(() => {
+    void loadHome();
+  }, [loadHome]);
+
+  // 切换 entry → 拉对应列表
   useEffect(() => {
     if (!activeEntry) return;
-    let alive = true;
-    if (activeEntry === 'comments') {
-      if (commentTab === '评论我的') {
-        notificationApi.list('comments').then((res) => {
-          if (!alive) return;
-          setCommentsReceived((res.data?.records || []).map(noticeToReceivedComment));
-        }).catch(() => undefined);
-      } else {
-        commentApi.mine().then((res) => {
-          if (!alive) return;
-          setCommentsMine(res.data || []);
-        }).catch(() => undefined);
+    void loadEntry(activeEntry, commentTab);
+  }, [activeEntry, commentTab, loadEntry]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadHome();
+      if (activeEntry) {
+        await loadEntry(activeEntry, commentTab);
       }
-    } else if (activeEntry === 'likes') {
-      notificationApi.list('likes').then((res) => {
-        if (!alive) return;
-        setLikeItems((res.data?.records || []).map(noticeToInfoRow));
-      }).catch(() => undefined);
-    } else if (activeEntry === 'follows') {
-      notificationApi.list('follows').then((res) => {
-        if (!alive) return;
-        setFollowItems((res.data?.records || []).map(noticeToInfoRow));
-      }).catch(() => undefined);
-    } else if (activeEntry === 'orders') {
-      notificationApi.list('orders').then((res) => {
-        if (!alive) return;
-        setOrderItems((res.data?.records || []).map(noticeToInfoRow));
-      }).catch(() => undefined);
-    } else if (activeEntry === 'mentions') {
-      notificationApi.list('mentions').then((res) => {
-        if (!alive) return;
-        setMentionItems((res.data?.records || []).map(noticeToInfoRow));
-      }).catch(() => undefined);
+    } finally {
+      setRefreshing(false);
     }
-    return () => { alive = false; };
-  }, [activeEntry, commentTab]);
+  }, [activeEntry, commentTab, loadHome, loadEntry]);
 
-  const unreadCount = useMemo(() => {
-    const dmUnread = directChats.reduce((sum, item) => sum + item.unread, 0);
-    const notifUnread = Object.values(unreadByType).reduce((s, n) => s + n, 0);
-    return dmUnread + notifUnread;
-  }, [directChats, unreadByType]);
-  void unreadCount; // 顶部红点目前不展示，但保留以便后续接入
+  // 点击通知行：标记已读 + 刷新未读数
+  const handleOpenNotice = useCallback(async (noticeId: number) => {
+    try {
+      await notificationApi.markRead(noticeId);
+    } catch {
+      // 静默失败：标记失败不影响后续流程
+    }
+    // 刷新红点
+    notificationApi.unreadCountByType()
+      .then((res) => setUnreadByType(res.data || {}))
+      .catch(() => undefined);
+  }, []);
 
-  const openDirectMessage = (userName: string) => {
+  const openDirectMessage = useCallback((chat: DmChatItem) => {
+    // 前端立即清未读，后端调 markRead 持久化
     setDirectChats((current) => current.map((item) => (
-      item.name === userName ? { ...item, unread: 0 } : item
+      item.id === chat.id ? { ...item, unread: 0 } : item
     )));
-    navigation.navigate('DirectMessage', { userName });
-  };
+    void directMessageApi.markRead(chat.sessionId).catch(() => undefined);
+    navigation.navigate('DirectMessage', { userName: chat.name });
+  }, [navigation]);
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <AppHeader title="消息" onBack={onBack} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
+      >
         <View style={[styles.quickPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {QUICK_ENTRIES.map((item) => {
             const active = activeEntry === item.key;
@@ -218,6 +237,7 @@ export const NotificationsScreen: React.FC<Props> = ({ onBack }) => {
             mentionItems={mentionItems}
             colors={colors}
             dark={dark}
+            onOpenNotice={handleOpenNotice}
           />
         ) : (
           <MessageHome
@@ -252,16 +272,19 @@ function MessageHome({
   directChats: DmChatItem[];
   officialChannels: OfficialMessageItem[];
   colors: ReturnType<typeof useTheme>['colors'];
-  onOpenChat: (userName: string) => void;
+  onOpenChat: (chat: DmChatItem) => void;
 }) {
+  const isEmpty = officialChannels.length === 0 && directChats.length === 0;
+
   return (
     <>
       <View style={styles.section}>
         <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {isEmpty ? <EmptyRow text="暂无消息" colors={colors} /> : null}
+          {/* 官方推送：当前没有详情页/已读概念，渲染成纯展示，避免视觉上像可点击却点了没反应 */}
           {officialChannels.map((item, index) => (
-            <TouchableOpacity
+            <View
               key={item.id}
-              activeOpacity={0.82}
               style={[
                 styles.messageRow,
                 styles.pinnedRow,
@@ -277,19 +300,22 @@ function MessageHome({
                   <Text style={[styles.messageTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
                   <Text style={[styles.messageTime, { color: colors.textHint }]}>{item.time}</Text>
                 </View>
-                <Text style={[styles.messagePreview, { color: colors.textHint }]} numberOfLines={1}>{item.content}</Text>
+                <Text style={[styles.messagePreview, { color: colors.textHint }]} numberOfLines={2}>{item.content}</Text>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
 
-          {directChats.map((chat, index) => (
+          {directChats.map((chat, index) => {
+            // 第一条私信前若已有官方消息，仍然要画分隔线；只有整列表第 0 条且没有官方消息时才省略
+            const showTopBorder = index > 0 || officialChannels.length > 0;
+            return (
             <TouchableOpacity
               key={chat.id}
               activeOpacity={0.82}
-              onPress={() => onOpenChat(chat.name)}
+              onPress={() => onOpenChat(chat)}
               style={[
                 styles.messageRow,
-                { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth },
+                showTopBorder && { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth },
               ]}
             >
               <Avatar name={chat.name} size={wp(46)} />
@@ -308,7 +334,8 @@ function MessageHome({
                 </View>
               ) : null}
             </TouchableOpacity>
-          ))}
+            );
+          })}
         </View>
       </View>
     </>
@@ -327,6 +354,7 @@ function EntryPanel({
   mentionItems,
   colors,
   dark,
+  onOpenNotice,
 }: {
   activeEntry: EntryKey;
   commentTab: CommentTab;
@@ -339,11 +367,11 @@ function EntryPanel({
   mentionItems: NotifItem[];
   colors: ReturnType<typeof useTheme>['colors'];
   dark: boolean;
+  onOpenNotice: (noticeId: number) => void;
 }) {
   if (activeEntry === 'comments') {
-    const list = commentTab === '评论我的'
-      ? commentsReceived.map((c) => ({ id: c.id, user: c.user, content: c.content, target: c.target, time: c.time }))
-      : commentsMine.map((c) => ({ id: c.id, user: c.user, content: c.content, target: c.target, time: c.time }));
+    const isReceived = commentTab === '评论我的';
+    const isEmpty = isReceived ? commentsReceived.length === 0 : commentsMine.length === 0;
 
     return (
       <View style={styles.section}>
@@ -365,18 +393,36 @@ function EntryPanel({
           })}
         </View>
         <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {list.map((item, index) => (
-            <InfoRow
-              key={item.id}
-              icon="message-circle"
-              iconColor="#6366F1"
-              title={item.user}
-              content={item.target ? `${item.content} · ${item.target}` : item.content}
-              time={item.time}
-              index={index}
-              colors={colors}
-            />
-          ))}
+          {isEmpty ? (
+            <EmptyRow text={isReceived ? '暂无评论' : '你还没发过评论'} colors={colors} />
+          ) : isReceived ? (
+            commentsReceived.map((item, index) => (
+              <InfoRow
+                key={item.id}
+                icon="message-circle"
+                iconColor="#6366F1"
+                title={item.user}
+                content={item.target ? `${item.content} · ${item.target}` : item.content}
+                time={item.time}
+                index={index}
+                colors={colors}
+                onPress={() => onOpenNotice(item.noticeId)}
+              />
+            ))
+          ) : (
+            commentsMine.map((item, index) => (
+              <InfoRow
+                key={item.id}
+                icon="message-circle"
+                iconColor="#6366F1"
+                title={item.target || '原文已删除'}
+                content={item.content}
+                time={item.time}
+                index={index}
+                colors={colors}
+              />
+            ))
+          )}
         </View>
       </View>
     );
@@ -387,7 +433,9 @@ function EntryPanel({
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textHint }]}>赞和收藏</Text>
         <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {likeItems.map((item, index) => (
+          {likeItems.length === 0 ? (
+            <EmptyRow text="暂无赞和收藏消息" colors={colors} />
+          ) : likeItems.map((item, index) => (
             <InfoRow
               key={item.id}
               icon="heart"
@@ -397,6 +445,7 @@ function EntryPanel({
               time={item.time}
               index={index}
               colors={colors}
+              onPress={() => onOpenNotice(item.id)}
             />
           ))}
         </View>
@@ -409,7 +458,9 @@ function EntryPanel({
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textHint }]}>关注消息</Text>
         <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {followItems.map((item, index) => (
+          {followItems.length === 0 ? (
+            <EmptyRow text="暂无关注消息" colors={colors} />
+          ) : followItems.map((item, index) => (
             <InfoRow
               key={item.id}
               icon="user-plus"
@@ -419,6 +470,7 @@ function EntryPanel({
               time={item.time}
               index={index}
               colors={colors}
+              onPress={() => onOpenNotice(item.id)}
             />
           ))}
         </View>
@@ -431,7 +483,9 @@ function EntryPanel({
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textHint }]}>订单消息</Text>
         <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {orderItems.map((item, index) => (
+          {orderItems.length === 0 ? (
+            <EmptyRow text="暂无订单消息" colors={colors} />
+          ) : orderItems.map((item, index) => (
             <InfoRow
               key={item.id}
               icon="shopping-bag"
@@ -441,6 +495,7 @@ function EntryPanel({
               time={item.time}
               index={index}
               colors={colors}
+              onPress={() => onOpenNotice(item.id)}
             />
           ))}
         </View>
@@ -452,7 +507,9 @@ function EntryPanel({
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: colors.textHint }]}>@我的</Text>
       <View style={[styles.listCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {mentionItems.map((item, index) => (
+        {mentionItems.length === 0 ? (
+          <EmptyRow text="暂无 @ 你的消息" colors={colors} />
+        ) : mentionItems.map((item, index) => (
           <InfoRow
             key={item.id}
             icon="at-sign"
@@ -462,9 +519,24 @@ function EntryPanel({
             time={item.time}
             index={index}
             colors={colors}
+            onPress={() => onOpenNotice(item.id)}
           />
         ))}
       </View>
+    </View>
+  );
+}
+
+function EmptyRow({
+  text,
+  colors,
+}: {
+  text: string;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <View style={styles.emptyRow}>
+      <Text style={[styles.emptyText, { color: colors.textHint }]}>{text}</Text>
     </View>
   );
 }
@@ -477,6 +549,7 @@ function InfoRow({
   time,
   index,
   colors,
+  onPress,
 }: {
   icon: keyof typeof Feather.glyphMap;
   iconColor: string;
@@ -485,10 +558,13 @@ function InfoRow({
   time: string;
   index: number;
   colors: ReturnType<typeof useTheme>['colors'];
+  onPress?: () => void;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.82}
+      onPress={onPress}
+      disabled={!onPress}
       style={[
         styles.messageRow,
         index > 0 && { borderTopColor: colors.divider, borderTopWidth: StyleSheet.hairlineWidth },
@@ -560,26 +636,11 @@ const styles = StyleSheet.create({
   section: {
     marginTop: wp(12),
   },
-  sectionHeader: {
-    marginHorizontal: wp(16),
-    marginBottom: wp(8),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   sectionTitle: {
     marginLeft: wp(16),
     marginBottom: wp(8),
     fontSize: fp(11),
     fontWeight: '900',
-  },
-  sectionHeaderTitle: {
-    fontSize: fp(11),
-    fontWeight: '900',
-  },
-  sectionMeta: {
-    fontSize: fp(10),
-    fontWeight: '800',
   },
   listCard: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -656,5 +717,13 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: fp(11),
     fontWeight: '900',
+  },
+  emptyRow: {
+    paddingHorizontal: wp(16),
+    paddingVertical: wp(28),
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: fp(12),
   },
 });

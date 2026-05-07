@@ -12,9 +12,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
+import { FEATURES } from '../../config/env';
 import { feedbackApi, type FeedbackTicketItem } from '../../api/feedback';
 import type { UserInfo } from '../../api/auth';
-import { profileApi, type ProfileNoticeAction, type ProfileNoticeItem, type ProfileOrderFilterTab } from '../../api/profile';
+import { profileApi, type ProfileNoticeItem, type ProfileOrderFilterTab } from '../../api/profile';
 import { notificationApi } from '../../api/notification';
 import { orderApi, type OrderStatCounts } from '../../api/order';
 import type { UserStats } from '../../api/user';
@@ -400,49 +401,6 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
     setSubPage({ key: 'orderDetail', orderId, tab, returnTo });
   }, []);
 
-  const markNoticeRead = useCallback((id: number) => {
-    setNotices((current) => current.map((item) => (item.id === id ? { ...item, unread: false } : item)));
-    notificationApi.markRead(id).catch(() => undefined);
-  }, []);
-
-  const markAllNoticesRead = useCallback(() => {
-    setNotices((current) => current.map((item) => ({ ...item, unread: false })));
-    notificationApi.markAllRead().catch(() => undefined);
-  }, []);
-
-  const openNoticeAction = useCallback(
-    (action?: ProfileNoticeAction) => {
-      if (!action) {
-        return;
-      }
-
-      if (action.type === 'orders') {
-        openOrders(action.tab, 'notifications');
-        return;
-      }
-
-      if (action.type === 'orderDetail') {
-        openOrderDetail(action.orderId, action.tab, 'notifications');
-        return;
-      }
-
-      if (action.type === 'likes') {
-        openPage('likes');
-        return;
-      }
-
-      if (action.type === 'wallet') {
-        openPage('wallet');
-        return;
-      }
-
-      if (action.type === 'settings') {
-        openPage('settings');
-      }
-    },
-    [openOrderDetail, openOrders, openPage],
-  );
-
   const submitFeedbackTicket = useCallback((
     ticket: Omit<FeedbackTicketItem, 'id' | 'createdAt' | 'status' | 'replies'>,
   ) => {
@@ -491,11 +449,13 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
   );
 
   const toolItems = useMemo<MineToolItem[]>(
-    () => MINE_TOOL_ITEMS.map((item) =>
-      item.id === 'notices'
-        ? { ...item, badgeCount: unreadNoticeCount > 0 ? unreadNoticeCount : undefined }
-        : item,
-    ),
+    () => MINE_TOOL_ITEMS
+      .filter((item) => FEATURES.orders || item.id !== 'orders')
+      .map((item) =>
+        item.id === 'notices'
+          ? { ...item, badgeCount: unreadNoticeCount > 0 ? unreadNoticeCount : undefined }
+          : item,
+      ),
     [unreadNoticeCount],
   );
 
@@ -592,13 +552,7 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
         return <FollowListScreen type="following" onBack={handleBackToRoot} />;
       case 'notifications':
         return (
-          <NotificationsScreen
-            notices={notices}
-            onBack={handleBackToRoot}
-            onReadNotice={markNoticeRead}
-            onReadAll={markAllNoticesRead}
-            onOpenAction={openNoticeAction}
-          />
+          <NotificationsScreen onBack={handleBackToRoot} />
         );
       case 'orders':
         return (
@@ -636,11 +590,7 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
     deleteAddress,
     feedbackTickets,
     handleBackToRoot,
-    markAllNoticesRead,
-    markNoticeRead,
-    notices,
     openFeedbackDetail,
-    openNoticeAction,
     openOrderDetail,
     openOrders,
     setDefaultAddress,
@@ -693,15 +643,20 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
             hasSignedInToday={hasSignedInToday}
           />
 
-          <ProfileOrdersCard
-            items={orderShortcuts}
-            onPressAll={() => openOrders('全部' as ProfileOrderFilterTab)}
-            onPressItem={handleOrderPress}
-          />
+          {FEATURES.orders && (
+            <ProfileOrdersCard
+              items={orderShortcuts}
+              onPressAll={() => openOrders('全部' as ProfileOrderFilterTab)}
+              onPressItem={handleOrderPress}
+            />
+          )}
 
           <ProfileToolsGrid items={toolItems} onPressItem={handleToolPress} />
 
-          <ProfileMenuList items={MINE_MENU_ITEMS} onPressItem={handleMenuPress} />
+          <ProfileMenuList
+            items={MINE_MENU_ITEMS.filter((item) => FEATURES.orders || item.id !== 'addresses')}
+            onPressItem={handleMenuPress}
+          />
         </ScrollView>
       </View>
     </SafeAreaView>

@@ -18,6 +18,7 @@ import { ProductDetailScreen } from './src/screens/market/ProductDetailScreen';
 import { CartScreen } from './src/screens/market/CartScreen';
 import { PaymentScreen } from './src/screens/market/PaymentScreen';
 import { ResourceDetailScreen } from './src/screens/detail/ResourceDetailScreen';
+import { BannerDetailScreen } from './src/screens/detail/BannerDetailScreen';
 import { AddressManageScreen } from './src/screens/profile/AddressManageScreen';
 import { AppAlertProvider } from './src/components/common/AppAlertProvider';
 import type { RootStackParamList } from './src/navigation/types';
@@ -92,6 +93,7 @@ function AppContent() {
         <Stack.Screen name="Payment" component={PaymentScreen} />
         <Stack.Screen name="AddressManage" component={AddressManageScreen} />
         <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
+        <Stack.Screen name="BannerDetail" component={BannerDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

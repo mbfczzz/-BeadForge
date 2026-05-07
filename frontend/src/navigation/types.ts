@@ -14,6 +14,7 @@ export type RootStackParamList = {
   Main: undefined;
   DesignDetail: { item: DesignItem };
   ResourceDetail: { resourceId: number };
+  BannerDetail: { banner: HomeBannerItem };
   Editor: { mode: EditorMode; cols: number; rows: number; initialGrid?: string[][]; designId?: number };
   FeedDetail: { feed: FeedItemData };
   PublishComposer: undefined;
