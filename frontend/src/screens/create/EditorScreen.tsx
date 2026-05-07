@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from '
 import {
   View, Text, StyleSheet, ScrollView, Platform, TextInput,
   ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
-  AppState, type AppStateStatus,
+  AppState, Linking, type AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -173,18 +173,32 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         setGenerating(false);
-        // 把 goBack 绑到 OK 按钮上，否则非阻塞 Alert 会漂在 CreateScreen 上。
+        // canAskAgain=false：用户之前选过"不允许"且系统已不再弹原生 prompt，
+        //                   只能引导去系统设置；
+        // canAskAgain=true ：系统刚弹过、用户这次点了拒绝，下次重试可能还会弹。
+        // 两种情况都给"去设置"捷径（Linking.openSettings 直接跳到本 app 的权限页），
+        // 比让用户自己翻设置友好得多。
+        // 文案不写 "BeadForge"——跑在 Expo Go 里时跳的是 Expo Go 的设置页，
+        // 用户看到的 app 名称是 "Expo Go" 而不是 "BeadForge"，写死会让人困惑
+        const message = permission.canAskAgain === false
+          ? '相册权限已被拒绝。请到系统设置中开启相册权限后重试。'
+          : '需要相册权限才能选择图片。';
+        const buttons: any[] = [
+          {
+            text: '去设置',
+            onPress: () => {
+              void Linking.openSettings();
+              if (isInitial) navigation.goBack();
+            },
+          },
+          {
+            text: '取消',
+            style: 'cancel',
+            onPress: () => { if (isInitial) navigation.goBack(); },
+          },
+        ];
         // cancelable:false 防止 Android 硬件返回键吞掉 alert 让 goBack 不触发。
-        if (isInitial) {
-          Alert.alert(
-            '无法访问相册',
-            '请在系统设置中允许应用访问图片。',
-            [{ text: '好的', onPress: () => navigation.goBack() }],
-            { cancelable: false },
-          );
-        } else {
-          Alert.alert('无法访问相册', '请在系统设置中允许应用访问图片。');
-        }
+        Alert.alert('无法访问相册', message, buttons, { cancelable: false });
         return;
       }
 
