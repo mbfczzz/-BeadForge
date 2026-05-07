@@ -6,11 +6,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
+import { imageToGrid } from '../../api/imageToGrid';
 import { designApi } from '../../api/design';
 import { feedApi } from '../../api/community';
 import { usePatternStore } from '../../store/usePatternStore';
@@ -154,14 +156,79 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     pushHistory(generateMockPattern(cols, rows));
   }, [cols, rows, pushHistory, useRealApi]);
 
+  /* ---- 图片转拼豆：调相册 → 上传 → 拿 grid ---- */
+  // isInitial=true：进页面首次自动唤起；用户取消则退回上一页（不留空白编辑器让人困惑）
+  // isInitial=false：信息栏点"换一张"重新选；取消就留在当前画布
+  const pickingRef = useRef(false);
+  const pickAndConvertImage = useCallback(async (isInitial = false) => {
+    // 重入锁：refresh 按钮在 setGenerating(true) 之前的窗口期还是可见可点的，
+    // 用户连点会让两个 launchImageLibraryAsync 抢着 present，iOS 上是 UB。
+    if (pickingRef.current) return;
+    pickingRef.current = true;
+
+    // 整个 picker + upload 流程包在 try-catch 里：设备存储错误 / Android intent 异常 /
+    // 权限 API 抛错都会被捕获，不会变成 unhandled rejection 让编辑器卡在生成遮罩
+    try {
+      setGenError('');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setGenerating(false);
+        // 把 goBack 绑到 OK 按钮上，否则非阻塞 Alert 会漂在 CreateScreen 上。
+        // cancelable:false 防止 Android 硬件返回键吞掉 alert 让 goBack 不触发。
+        if (isInitial) {
+          Alert.alert(
+            '无法访问相册',
+            '请在系统设置中允许应用访问图片。',
+            [{ text: '好的', onPress: () => navigation.goBack() }],
+            { cancelable: false },
+          );
+        } else {
+          Alert.alert('无法访问相册', '请在系统设置中允许应用访问图片。');
+        }
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        // 让用户先按目标画布比例裁一刀，避免"长方形照片硬拉成正方形"那种压扁感
+        allowsEditing: true,
+        aspect: [cols, rows],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        setGenerating(false);
+        if (isInitial) navigation.goBack();
+        return;
+      }
+
+      const asset = result.assets[0];
+      setGenerating(true);
+      // imageToGrid 失败会抛错，外层 catch 透出 server 的 message
+      const grid = await imageToGrid(asset.uri, cols, rows);
+      pushHistory(grid);
+    } catch (e: any) {
+      console.warn('图片转换链路异常:', e?.message);
+      // 把后端的具体提示原样透给用户（"图片分辨率过高"、"图片解码失败，请换一张" 等）；
+      // 拿不到 message（picker 抛的技术错）才用泛化兜底文案
+      setGenError(e?.message || '图片处理失败，已使用本地图案');
+      pushHistory(generateMockPattern(cols, rows));
+    } finally {
+      setGenerating(false);
+      pickingRef.current = false;
+    }
+  }, [cols, rows, pushHistory, navigation]);
+
   /* ---- 初始化 ---- */
   useEffect(() => {
     // 已经从图纸 / 作品页带 initialGrid 进来：跳过模式默认占位
     if (hasInitialGrid) { setGenerating(false); return; }
 
     if (mode === 'image') {
-      const t = setTimeout(() => { pushHistory(generateMockPattern(cols, rows)); setGenerating(false); }, 1500);
-      return () => clearTimeout(t);
+      // 进页面立刻唤起相册；取消会 goBack 回创作页
+      void pickAndConvertImage(true);
+      return;
     }
     // manual 和 ai 模式都不显示 loading（ai 模式显示输入面板）
     setGenerating(false);
@@ -660,7 +727,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         <View style={[$.aiHintBar, { backgroundColor: colors.surface }]}>
           <View style={[$.aiDot, { backgroundColor: useRealApi ? '#22C55E' : '#FBBF24' }]} />
           <Text style={[$.aiHintText, { color: colors.textHint }]}>
-            {useRealApi ? '已连接豆包 AI' : '未配置 API Key，将使用本地图案'}
+            {useRealApi ? '已连接 AI 服务' : '未配置 API Key，将使用本地图案'}
           </Text>
         </View>
       )}
@@ -678,7 +745,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <View style={[$.genCard, { backgroundColor: colors.surface }]}>
             <ActivityIndicator size="large" color={colors.accent} />
             <Text style={[$.genText, { color: colors.text }]}>
-              {mode === 'image' ? '正在解析图片...' : useRealApi ? '豆包 AI 创作中...' : 'AI 创作中...'}
+              {mode === 'image' ? '正在解析图片...' : 'AI 创作中...'}
             </Text>
             <View style={$.genDots}>
               {[0, 1, 2].map((i) => (
@@ -705,6 +772,15 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           {mode === 'ai' && !showAiInput && (
             <HoverView onPress={() => setShowAiInput(true)} style={[$.infoBtn, { backgroundColor: dark ? '#2a1e4a' : '#F3E8FF' }]} hoverScale={1.05} hoverLift={0}>
               <Feather name="refresh-cw" size={fp(12)} color="#8B5CF6" />
+            </HoverView>
+          )}
+          {mode === 'image' && !generating && (
+            <HoverView
+              onPress={() => { void pickAndConvertImage(false); }}
+              style={[$.infoBtn, { backgroundColor: dark ? '#1d3a2a' : '#ECFDF5' }]}
+              hoverScale={1.05} hoverLift={0}
+            >
+              <Feather name="image" size={fp(12)} color="#22C55E" />
             </HoverView>
           )}
         </View>

@@ -21,8 +21,12 @@ const FALLBACK_SIZES: CreateSizeOption[] = [
   { label: '大', cols: 24, rows: 24, desc: '挂画', icon: 'image' },
   { label: '宽幅', cols: 32, rows: 16, desc: '书签', icon: 'bookmark' },
 ];
+// 当 useUiConfig 拉不到后端 Discovery 配置（断网 / 首次启动 / 后端没种子）时的兜底，
+// 跟 data.sql 里 'create.methods' 种子保持一致，避免线下 dev 看不到 image / ai 入口
 const FALLBACK_METHODS: CreateMethodOption[] = [
   { key: 'manual', icon: 'edit-2', title: '手动创作', desc: '逐颗放置珠子并手动调整结构。', color: '#4B78FF' },
+  { key: 'image',  icon: 'image',  title: '图片转换', desc: '从相册选图，自动转成拼豆图案。', color: '#F97316' },
+  { key: 'ai',     icon: 'cpu',    title: 'AI 生成',  desc: '描述图案，AI 生成可继续编辑的草稿。', color: '#8B5CF6' },
 ];
 const FALLBACK_TIPS: CreateTipOption[] = [];
 

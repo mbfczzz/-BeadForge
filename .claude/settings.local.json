@@ -61,7 +61,8 @@
       "Bash(git rebase *)",
       "Bash(command -v mysql)",
       "Bash(mysql --version)",
-      "Bash(npx --prefix frontend --no-install tsc -p frontend --noEmit)"
+      "Bash(npx --prefix frontend --no-install tsc -p frontend --noEmit)",
+      "Bash(echo \"exit=$?\")"
     ]
   }
 }
