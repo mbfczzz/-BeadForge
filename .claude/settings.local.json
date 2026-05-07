@@ -62,7 +62,8 @@
       "Bash(command -v mysql)",
       "Bash(mysql --version)",
       "Bash(npx --prefix frontend --no-install tsc -p frontend --noEmit)",
-      "Bash(echo \"exit=$?\")"
+      "Bash(echo \"exit=$?\")",
+      "WebFetch(domain:www.pixel-beads.com)"
     ]
   }
 }

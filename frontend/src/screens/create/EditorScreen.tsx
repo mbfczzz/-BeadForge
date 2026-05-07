@@ -23,15 +23,31 @@ import { shadow } from '../../utils/shadow';
 
 const PAD = wp(15);
 
-/* ──────────────── 调色板 — 按色相排列 ──────────────── */
+/* ──────────────── 调色板 — 多套预设，与后端 AiController.PALETTES 镜像 ────────────── */
 
-const PALETTE_ROWS: string[][] = [
-  ['#EF4444', '#F87171', '#FCA5A5', '#FDA4AF', '#F9A8D4', '#EC4899'],
-  ['#F97316', '#FB923C', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'],
-  ['#22C55E', '#16A34A', '#86EFAC', '#0EA5E9', '#7DD3FC', '#3B82F6'],
-  ['#8B5CF6', '#A78BFA', '#C4B5FD', '#1E1B2E', '#6B7280', '#FAFAFA'],
+// "default" 36 色：原 24 + 肤色 / 头发 / 唇色 / 高光，能转人像照片
+// "classic" 24 色：纯卡通 / 抽象用，无肤色
+const PALETTES: Record<string, string[][]> = {
+  default: [
+    ['#EF4444', '#F87171', '#FCA5A5', '#FDA4AF', '#F9A8D4', '#EC4899'], // 红 / 粉
+    ['#F97316', '#FB923C', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'], // 橙 / 黄
+    ['#22C55E', '#16A34A', '#86EFAC', '#0EA5E9', '#7DD3FC', '#3B82F6'], // 绿 / 蓝
+    ['#8B5CF6', '#A78BFA', '#C4B5FD', '#1E1B2E', '#6B7280', '#FAFAFA'], // 紫 / 中性
+    ['#FDD9B4', '#F8C399', '#F4B68F', '#DDA67D', '#C68863', '#8B5A2B'], // 肤色阶
+    ['#2C1810', '#5D4037', '#A0784A', '#DEB887', '#B8534F', '#F8F0E5'], // 头发 / 唇 / 高光
+  ],
+  classic: [
+    ['#EF4444', '#F87171', '#FCA5A5', '#FDA4AF', '#F9A8D4', '#EC4899'],
+    ['#F97316', '#FB923C', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'],
+    ['#22C55E', '#16A34A', '#86EFAC', '#0EA5E9', '#7DD3FC', '#3B82F6'],
+    ['#8B5CF6', '#A78BFA', '#C4B5FD', '#1E1B2E', '#6B7280', '#FAFAFA'],
+  ],
+};
+type PaletteKey = keyof typeof PALETTES;
+const PALETTE_OPTIONS: { key: PaletteKey; label: string; desc: string }[] = [
+  { key: 'default', label: '标准 36', desc: '含肤色，适合人像 / 自拍' },
+  { key: 'classic', label: '经典 24', desc: '无肤色，适合卡通 / 抽象' },
 ];
-const PALETTE = PALETTE_ROWS.flat();
 
 /* ──────────────── 工具定义 ──────────────── */
 
@@ -118,10 +134,16 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [showAiInput, setShowAiInput] = useState(mode === 'ai' && !hasInitialGrid);
   const useRealApi = true; // API Key 存后端数据库，始终尝试调用
 
+  /* ---- 调色板：默认 36（含肤色），用户可切到经典 24 ---- */
+  const [paletteKey, setPaletteKey] = useState<PaletteKey>('default');
+  const PALETTE_ROWS = PALETTES[paletteKey];
+  const PALETTE = useMemo(() => PALETTE_ROWS.flat(), [PALETTE_ROWS]);
+
   /* ---- 画布状态 ---- */
   const [grid, setGrid] = useState<string[][]>(() => fitInitialGrid(initialGrid) || createEmptyGrid(cols, rows));
   const [tool, setTool] = useState<ToolType>('pen');
-  const [color, setColor] = useState(PALETTE[0]);
+  // 初始色用 default 的第一格；切换调色板不会自动改当前色（用户已选的色仍可继续画）
+  const [color, setColor] = useState(PALETTES.default[0][0]);
   const [history, setHistory] = useState<string[][][]>([]);
   const [future, setFuture] = useState<string[][][]>([]);
   const [showGridLine, setShowGridLine] = useState(true);
@@ -142,19 +164,19 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     });
   }, []);
 
-  /* ---- 通用生成：尝试豆包 API → 失败回退 mock ---- */
+  /* ---- 通用生成：尝试 AI → 失败回退 mock ---- */
   const doGenerate = useCallback(async (prompt: string) => {
     setGenError('');
     try {
-      const result = await doubaoGenerate(prompt, cols, rows, PALETTE);
+      const result = await doubaoGenerate(prompt, cols, rows, PALETTE, paletteKey);
       if (result) { pushHistory(result); return; }
     } catch (e: any) {
-      console.warn('豆包 API 失败，使用 mock:', e?.message);
+      console.warn('AI 生成失败，使用 mock:', e?.message);
       setGenError(useRealApi ? '生成失败，已使用本地图案' : '');
     }
     // fallback: mock
     pushHistory(generateMockPattern(cols, rows));
-  }, [cols, rows, pushHistory, useRealApi]);
+  }, [cols, rows, pushHistory, useRealApi, PALETTE, paletteKey]);
 
   /* ---- 图片转拼豆：调相册 → 上传 → 拿 grid ---- */
   // isInitial=true：进页面首次自动唤起；用户取消则退回上一页（不留空白编辑器让人困惑）
@@ -220,7 +242,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       const asset = result.assets[0];
       setGenerating(true);
       // imageToGrid 失败会抛错，外层 catch 透出 server 的 message
-      const grid = await imageToGrid(asset.uri, cols, rows);
+      const grid = await imageToGrid(asset.uri, cols, rows, paletteKey);
       pushHistory(grid);
     } catch (e: any) {
       console.warn('图片转换链路异常:', e?.message);
@@ -232,7 +254,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setGenerating(false);
       pickingRef.current = false;
     }
-  }, [cols, rows, pushHistory, navigation]);
+  }, [cols, rows, pushHistory, navigation, paletteKey]);
 
   /* ---- 初始化 ---- */
   useEffect(() => {
@@ -834,7 +856,32 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
 
         {/* ── 调色板 ── */}
         <View style={$.section}>
-          <Text style={[$.secLabel, { color: colors.textSecondary }]}>调色板</Text>
+          <View style={$.paletteHeader}>
+            <Text style={[$.secLabel, { color: colors.textSecondary }]}>调色板</Text>
+            <View style={$.palettePresetRow}>
+              {PALETTE_OPTIONS.map((opt) => {
+                const active = paletteKey === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    activeOpacity={0.75}
+                    onPress={() => { hapticSelection(); setPaletteKey(opt.key); }}
+                    style={[
+                      $.palettePresetChip,
+                      {
+                        backgroundColor: active ? colors.accent : colors.inputBg,
+                        borderColor: active ? colors.accent : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[$.palettePresetText, { color: active ? '#fff' : colors.textSecondary }]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
           {PALETTE_ROWS.map((row, ri) => (
             <View key={ri} style={$.paletteRow}>
               {row.map((c) => (
@@ -1174,6 +1221,16 @@ const $ = StyleSheet.create({
   // 调色板
   section: { paddingHorizontal: PAD, marginTop: wp(4) },
   secLabel: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: wp(8) },
+  paletteHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: wp(8),
+  },
+  palettePresetRow: { flexDirection: 'row', gap: wp(6) },
+  palettePresetChip: {
+    paddingHorizontal: wp(10), paddingVertical: wp(4),
+    borderRadius: wp(10), borderWidth: 1,
+  },
+  palettePresetText: { fontSize: fp(11), fontWeight: '600' },
   paletteRow: {
     flexDirection: 'row', gap: wp(8), marginBottom: wp(8),
   },
