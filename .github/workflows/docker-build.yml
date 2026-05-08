@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [master]
 
+# 同一 ref 新 push 来时取消正在跑的旧 run，省队列 + 省额度
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ========== Docker 镜像（GHCR + 阿里云 ACR） ==========
   docker:
@@ -57,6 +62,9 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      # Gradle 给足堆内存（runner 7GB），避免 OOM 导致的隐性重试
+      GRADLE_OPTS: -Xmx5g -XX:MaxMetaspaceSize=1g -Dorg.gradle.daemon=false
     steps:
       - uses: actions/checkout@v4
 
@@ -74,15 +82,49 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Gradle 依赖 + build cache，二次构建省 10 分钟+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          gradle-home-cache-cleanup: true
+
+      # 直接缓存 node_modules，命中时跳过 npm ci（省 1-2 分钟）
+      - name: Cache node_modules
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: nm-${{ runner.os }}-node20-${{ hashFiles('frontend/package-lock.json') }}
+
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --legacy-peer-deps
+
+      # 缓存 prebuild 生成的 android/ 目录（依赖原生模块列表与 app.json）
+      - name: Cache prebuild output
+        id: prebuild-cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/android
+          key: prebuild-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json', 'frontend/app.json', 'frontend/app.config.*') }}
 
       - name: Generate native project
+        if: steps.prebuild-cache.outputs.cache-hit != 'true'
         run: APP_ENV=test npx expo prebuild --platform android --no-install
 
+      # 关键优化：
+      # -PreactNativeArchitectures=arm64-v8a  砍掉其他 3 个 ABI 的 NDK 编译（省 5-8 分钟）
+      # -x lint -x lintVitalRelease            跳过 release 必跑的 lint（省 1-2 分钟）
+      # --build-cache --parallel               build cache + 模块并行
+      # --configure-on-demand                  跳过未变更子项目的配置阶段
       - name: Build APK
         working-directory: frontend/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: |
+          ./gradlew assembleRelease \
+            -PreactNativeArchitectures=arm64-v8a \
+            --build-cache --parallel --configure-on-demand \
+            -x lint -x lintVitalRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
