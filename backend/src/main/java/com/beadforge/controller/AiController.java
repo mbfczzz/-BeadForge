@@ -38,7 +38,7 @@ import java.util.List;
 public class AiController {
 
     private final ApiConfigRepository configRepo;
-    // gpt-image-1 单次合成 10–30s 是常态，给 60s 读超时；连接握手 10s
+    // dall-e-2 ~5-10s / dall-e-3 ~15-30s / gpt-image-1 ~10-30s，给 60s 读超时覆盖最慢档；连接握手 10s
     private final RestTemplate restTemplate = buildRestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -112,7 +112,7 @@ public class AiController {
     }
 
     @Operation(summary = "AI 文生图",
-            description = "调 OpenAI 兼容生图 → 双线性缩放 → 24 色拼豆调色板匹配，返回 cols×rows 的 hex 颜色 grid")
+            description = "调 OpenAI 兼容生图 → 双线性缩放 → 拼豆调色板匹配，返回 cols×rows 的 hex 颜色 grid")
     @PostMapping("/generate-image")
     public ApiResponse<Map<String, Object>> generateImage(@RequestBody GenerateRequest req, HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
@@ -144,12 +144,14 @@ public class AiController {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Authorization", "Bearer " + apiKey);
 
-            // 不写 response_format：dall-e 默认 url，gpt-image-1 默认 b64_json，下方都兼容
+            // 显式要 b64_json：避免再发一次 HTTP 下载图（默认 url 模式 1-2s round-trip）。
+            // 下方仍保留 url 解析路径——个别代理会忽略此参数继续返回 url 字段
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("model", model);
             body.put("prompt", "像素风格拼豆图案，简洁可爱，纯色背景，" + prompt.trim());
             body.put("size", "1024x1024");
             body.put("n", 1);
+            body.put("response_format", "b64_json");
 
             log.info("AI生图: prompt={}, cols={}, rows={}, userId={}", prompt.trim(), cols, rows, userId);
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
@@ -181,7 +183,8 @@ public class AiController {
                 return ApiResponse.error(500, "AI未返回图片");
             }
             if (original == null) return ApiResponse.error(500, "AI图片解码失败");
-            String[][] grid = pixelizeToGrid(original, cols, rows, req.getPalette());
+            // AI 文生图路径：图本来就是 AI 出的（已卡通化），跳 k-means
+            String[][] grid = pixelizeToGrid(original, cols, rows, req.getPalette(), false);
 
             Map<String, Object> result = new HashMap<>();
             result.put("grid", grid);
@@ -208,13 +211,15 @@ public class AiController {
     }
 
     @Operation(summary = "图片转拼豆图",
-            description = "上传 jpg/png/webp/gif 图片 → k-means 量化 → 拼豆调色板匹配，返回 cols×rows 的 hex 颜色 grid")
+            description = "上传 jpg/png/webp/gif 图片 → 可选 AI 卡通化 → k-means 量化 → 拼豆调色板匹配，返回 cols×rows 的 hex 颜色 grid")
     @PostMapping("/image-to-grid")
     public ApiResponse<Map<String, Object>> imageToGrid(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "cols", defaultValue = "16") int cols,
             @RequestParam(value = "rows", defaultValue = "16") int rows,
             @RequestParam(value = "palette", defaultValue = "default") String palette,
+            @RequestParam(value = "aiEnhance", defaultValue = "false") boolean aiEnhance,
+            @RequestParam(value = "style", defaultValue = "auto") String style,
             HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
@@ -242,16 +247,36 @@ public class AiController {
                 return ApiResponse.error(400, "图片分辨率过高，请换一张（建议 50MP 以内）");
             }
 
-            log.info("图片转拼豆: filename={}, size={}, sourcePx={}x{}, target={}x{}, palette={}, userId={}",
+            log.info("图片转拼豆: filename={}, size={}, sourcePx={}x{}, target={}x{}, palette={}, aiEnhance={}, style={}, userId={}",
                     file.getOriginalFilename(), file.getSize(),
-                    original.getWidth(), original.getHeight(), c, r, palette, userId);
+                    original.getWidth(), original.getHeight(), c, r, palette, aiEnhance, style, userId);
 
-            String[][] grid = pixelizeToGrid(original, c, r, palette);
+            // AI 增强：把照片喂给配置中的图像模型让它重绘成"简化卡通色块"风格。
+            // 关键 trick：把调色板 hex 列表直接拼进 prompt，AI 会偏向用这些色出图，
+            // 出来的图本身就是"调色板预匹配"，下游 pixelize 几乎恒等映射，
+            // 颜色 1:1 还原 AI 的创作意图。
+            BufferedImage processed = original;
+            boolean aiUsed = false;
+            if (aiEnhance) {
+                BufferedImage stylized = aiStylize(original, style, c, r, palette);
+                if (stylized != null) {
+                    processed = stylized;
+                    aiUsed = true;
+                    log.info("AI 增强成功: stylizedPx={}x{}", stylized.getWidth(), stylized.getHeight());
+                } else {
+                    log.warn("AI 增强失败，降级到本地算法（仍按原图走管线）");
+                }
+            }
+
+            // AI 增强时跳过 k-means（AI 已经把图卡通化成有限色块，再 k-means 是冗余 +
+            // 可能反而把 AI 仔细安排的色块边界给"再聚合"模糊掉）。本地算法路径保留 k-means。
+            String[][] grid = pixelizeToGrid(processed, c, r, palette, !aiUsed);
             Map<String, Object> result = new HashMap<>();
             result.put("grid", grid);
             result.put("cols", c);
             result.put("rows", r);
             result.put("palette", palette);
+            result.put("aiUsed", aiUsed);
             return ApiResponse.success("转换成功", result);
         } catch (OutOfMemoryError e) {
             // ImageIO.read 中途 OOM 也可能发生（解码超大像素阵时）；OOMError 不是 Exception，
@@ -265,46 +290,352 @@ public class AiController {
     }
 
     /**
+     * AI 卡通化（两步法 / 2025-05 版）：
+     *
+     * 之前直接用 /images/edits（图生图）的方案在很多 OpenAI 兼容代理（含 oaipro）
+     * 上不可用——代理路由表没注册"images/edits + gpt-image-1"这条组合，请求被拒
+     * 503 "无可用渠道"。换成全代理都支持的两步组合：
+     *
+     *   Step 1  POST /chat/completions  with  gpt-4o-mini (vision)
+     *           "看这张图，简练描述主体 / 主要特征 / 主色"
+     *           ↓
+     *           description: "Young woman with brown shoulder-length hair, ..."
+     *
+     *   Step 2  POST /images/generations  with  ai_image_model（dall-e-2 / dall-e-3）
+     *           prompt = 风格指令 + 上述描述 + 调色板 hex 列表
+     *           ↓
+     *           AI 卡通图（按描述生成，会偏向调色板色）
+     *
+     * 损失：失去"逐像素 likeness"——AI 看到的是文字描述不是图本身，所以"看起来像
+     * 我"会变成"看起来像描述里那种人"。换来的是任何 OpenAI 代理都能跑通。
+     * 至于 48×48 拼豆本来也表达不出精确人脸，所以这个损失可接受。
+     */
+    private BufferedImage aiStylize(BufferedImage original, String style, int targetCols, int targetRows, String paletteKey) {
+        String apiKey = getConfig("ai_image_api_key");
+        String imageModel = getConfig("ai_image_model");
+        String visionModel = getConfig("ai_vision_model");
+        String baseUrl = getConfig("ai_image_base_url");
+        if (apiKey == null || imageModel == null || baseUrl == null) return null;
+
+        // vision 模型是可选配置，没配就默认 gpt-4o-mini（最便宜的 vision 模型）
+        if (visionModel == null || visionModel.trim().isEmpty()) {
+            visionModel = "gpt-4o-mini";
+        }
+
+        apiKey = apiKey.trim();
+        imageModel = imageModel.trim();
+        visionModel = visionModel.trim();
+        baseUrl = baseUrl.trim().replaceAll("/+$", "");
+        if (apiKey.isEmpty() || imageModel.isEmpty() || baseUrl.isEmpty()) return null;
+
+        try {
+            // Step 1: 让 vision 模型看图写描述（512px 给它看就够，省 token）
+            String description = aiVisionDescribe(original, apiKey, baseUrl, visionModel);
+            if (description == null || description.trim().isEmpty()) {
+                log.warn("AI vision 描述失败 → 降级");
+                return null;
+            }
+            log.info("AI vision 描述({}字): {}",
+                    description.length(),
+                    description.length() > 120 ? description.substring(0, 120) + "..." : description);
+
+            // Step 2: 把 description 喂给 /images/generations 出卡通图
+            // dall-e-2 prompt 上限 1000 字，dall-e-3 是 4000 字 — 给 builder 一个 budget 约束
+            boolean isDallE3 = imageModel.toLowerCase().contains("dall-e-3");
+            int promptBudget = isDallE3 ? 4000 : 1000;
+            String fullPrompt = buildStylePromptWithDescription(description, style, paletteKey, promptBudget);
+            String outputSize = pickOutputSize(targetCols, targetRows, imageModel);
+            return aiGenerateFromText(fullPrompt, imageModel, apiKey, baseUrl, outputSize);
+        } catch (HttpStatusCodeException e) {
+            String msg = extractApiError(e.getResponseBodyAsString());
+            log.warn("AI 风格化被拒({}): {}", e.getRawStatusCode(), msg);
+            return null;
+        } catch (ResourceAccessException e) {
+            log.warn("AI 风格化网络异常: {}", e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.warn("AI 风格化异常: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Vision 描述：调 /chat/completions 让 vision 模型看图写一段简练的视觉描述。
+     * 下一步用这段描述驱动 /images/generations 出卡通图。
+     */
+    private String aiVisionDescribe(BufferedImage img, String apiKey, String baseUrl, String visionModel) throws Exception {
+        // 给 vision 看的图压到 512px，detail:low 模式下 OpenAI 也只看缩略，再大没意义
+        byte[] pngBytes = resizeToPng(img, 512);
+        String dataUrl = "data:image/png;base64,"
+                + java.util.Base64.getEncoder().encodeToString(pngBytes);
+
+        String url = baseUrl + "/chat/completions";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+
+        // OpenAI vision messages 格式：content 是一个数组，含 text + image_url 两段
+        Map<String, Object> textPart = new LinkedHashMap<>();
+        textPart.put("type", "text");
+        textPart.put("text",
+                "Describe the main subject of this image briefly for a cartoon recreation. "
+              + "Include: subject type (person/animal/object), key visual features (hair color, "
+              + "eye color, clothing, expression for portraits; species/pose for animals; shape/"
+              + "material for objects), dominant colors, background. 60 words max, concrete.");
+
+        Map<String, Object> imageUrl = new LinkedHashMap<>();
+        imageUrl.put("url", dataUrl);
+        imageUrl.put("detail", "low");
+        Map<String, Object> imagePart = new LinkedHashMap<>();
+        imagePart.put("type", "image_url");
+        imagePart.put("image_url", imageUrl);
+
+        Map<String, Object> userMsg = new LinkedHashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", Arrays.asList(textPart, imagePart));
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", visionModel);
+        body.put("messages", Arrays.asList(userMsg));
+        body.put("max_tokens", 200);
+
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST,
+                new HttpEntity<>(body, headers), Map.class);
+        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
+
+        List<Map> choices = (List<Map>) response.getBody().get("choices");
+        if (choices == null || choices.isEmpty()) return null;
+        Map firstChoice = choices.get(0);
+        Map message = (Map) firstChoice.get("message");
+        if (message == null) return null;
+        Object content = message.get("content");
+        return content instanceof String ? ((String) content).trim() : null;
+    }
+
+    /** 调 /images/generations 用 prompt 出图；同 generateImage 端点的核心逻辑，抽出来给两步法复用 */
+    private BufferedImage aiGenerateFromText(String prompt, String model, String apiKey, String baseUrl, String size) throws Exception {
+        String url = baseUrl + "/images/generations";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", "Bearer " + apiKey);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("model", model);
+        body.put("prompt", prompt);
+        body.put("size", size);
+        body.put("n", 1);
+        // 同 generateImage：要 b64_json 省一次下载 round-trip
+        body.put("response_format", "b64_json");
+
+        log.info("AI 文生图(两步法 step2): promptLen={}, size={}", prompt.length(), size);
+        ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST,
+                new HttpEntity<>(body, headers), Map.class);
+        if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) return null;
+
+        List<Map> dataList = (List<Map>) response.getBody().get("data");
+        if (dataList == null || dataList.isEmpty()) return null;
+        Map first = dataList.get(0);
+        if (first == null) return null;
+
+        String imageUrl = (String) first.get("url");
+        String b64 = (String) first.get("b64_json");
+        if (imageUrl != null && !imageUrl.isEmpty()) return downloadImage(imageUrl);
+        if (b64 != null && !b64.isEmpty()) {
+            byte[] bytes = Base64.getMimeDecoder().decode(b64);
+            try (ByteArrayInputStream bis = new ByteArrayInputStream(bytes)) {
+                return ImageIO.read(bis);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 两步法 step2 的 prompt 拼装：
+     *   stylePart  + " Subject: " + description + " " + base + " " + palettePart
+     *
+     * stylePart  按风格定制（由 step1 的 description 提供主体细节，stylePart 控制"怎么画"）
+     * description vision 模型刚写的"主体描述"——这是替代 /images/edits 看图的核心
+     * base        共同约束（色块化、纯色背景、无渐变）
+     * palettePart 调色板 hex 列表——让 AI 偏向用我们的色出图，下游匹配近恒等
+     *
+     * budget = 模型可接受的 prompt 字符上限（dall-e-2 = 1000，dall-e-3 = 4000）。
+     * 拼好后若超 budget，按"截 description → 减少调色板色数 → 截尾兜底"顺序压缩。
+     */
+    private String buildStylePromptWithDescription(String description, String style, String paletteKey, int budget) {
+        String stylePart;
+        if (style == null) style = "auto";
+        switch (style.toLowerCase()) {
+            case "portrait":
+                stylePart = "Create a simplified realistic cartoon portrait illustration "
+                          + "with 2-3 solid skin tones, hair as flat color blocks, clear large "
+                          + "facial features (eyes, nose, mouth).";
+                break;
+            case "chibi":
+                stylePart = "Create an adorable chibi (Q-version) character illustration with "
+                          + "big round eyes, simple highlights, small nose, simple mouth, "
+                          + "oversized head and simplified body, pastel solid skin tones, smooth "
+                          + "hair color shapes. Sanrio-like cute aesthetic.";
+                break;
+            case "anime":
+                stylePart = "Create an anime / manga character illustration with large "
+                          + "expressive eyes, clean simplified line art as color blocks, smooth "
+                          + "skin in 2-3 tones, cel-shaded animation quality.";
+                break;
+            case "scene":
+                stylePart = "Create a simplified flat illustration with bold solid color "
+                          + "shapes, clear boundaries, cartoon-style scene rendering.";
+                break;
+            case "auto":
+            default:
+                stylePart = "Create a simplified cartoon illustration suitable for a fuse-bead "
+                          + "craft pattern.";
+        }
+
+        String base = "Use bold flat color blocks, no gradients, no fine details, replace the "
+                    + "background with a single plain solid color.";
+
+        String[] palette = (String[]) resolvePalette(paletteKey)[0];
+
+        // 优先级：stylePart / base 必保留（它们决定"怎么画"），description 可截，palette 可减色
+        // 先用全色板拼一次，超 budget 再降级
+        String desc = description.trim();
+        String prompt = assemblePrompt(stylePart, desc, base, palette);
+        if (prompt.length() <= budget) return prompt;
+
+        // 超了：先把调色板减到 24 色（默认 36 色截前 24 / 等步采样保色相分布）
+        if (palette.length > 24) {
+            String[] sampled = sampleEvenly(palette, 24);
+            prompt = assemblePrompt(stylePart, desc, base, sampled);
+            if (prompt.length() <= budget) return prompt;
+        }
+
+        // 还超：再砍 description 到 200 字
+        if (desc.length() > 200) {
+            desc = desc.substring(0, 200);
+            String[] sampled = palette.length > 24 ? sampleEvenly(palette, 24) : palette;
+            prompt = assemblePrompt(stylePart, desc, base, sampled);
+            if (prompt.length() <= budget) return prompt;
+        }
+
+        // 兜底：硬截。极少触发（chibi stylePart 245 + base 132 + 200 desc + 12 色 palette ≈ 750）
+        return prompt.length() > budget ? prompt.substring(0, budget) : prompt;
+    }
+
+    private String assemblePrompt(String stylePart, String description, String base, String[] palette) {
+        String palettePart = "Limit the output colors to a palette close to: "
+                + String.join(", ", palette) + ".";
+        return stylePart + " Subject: " + description + " " + base + " " + palettePart;
+    }
+
+    /** 等步采样：从 source 均匀取 k 个，保留色相分布（不是简单取前 k 个偏色） */
+    private String[] sampleEvenly(String[] source, int k) {
+        if (source.length <= k) return source;
+        String[] out = new String[k];
+        double step = (double) source.length / k;
+        for (int i = 0; i < k; i++) out[i] = source[(int) (i * step)];
+        return out;
+    }
+
+    /**
+     * 按 target 长宽比 + 模型类型映射到合法输出尺寸。
+     *   dall-e-3：支持 1024×1024 / 1024×1792 / 1792×1024（可按 target 比例选矩形）
+     *   dall-e-2：只支持 256² / 512² / 1024²（**纯方形**），矩形 target 会被均匀拉伸
+     *            下采样后差异会被 mode 滤波吃掉一部分，但极端比例（如 32×16 书签）会失真
+     *   其它未识别模型：保守按 dall-e-2 处理（最大公约数）
+     * 让输出尽量接近 target 比例，下游 mode 滤波缩到 target 时不会拉伸。
+     */
+    private String pickOutputSize(int cols, int rows, String model) {
+        boolean isDallE3 = model != null && model.toLowerCase().contains("dall-e-3");
+        if (!isDallE3) {
+            // dall-e-2 / 未知：只能方形，给最大尺寸保留细节
+            return "1024x1024";
+        }
+        double ratio = (double) cols / rows;
+        if (ratio > 1.3) return "1792x1024";   // 横长（如 32×16 书签）
+        if (ratio < 0.77) return "1024x1792";  // 竖长
+        return "1024x1024";                     // 接近方形
+    }
+
+    /** 缩到 maxDim 内（保持比例），编码为 PNG bytes。送 AI 前的压缩 + 格式归一。 */
+    private byte[] resizeToPng(BufferedImage src, int maxDim) throws java.io.IOException {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage out;
+        if (w <= maxDim && h <= maxDim) {
+            out = src;
+        } else {
+            double scale = Math.min((double) maxDim / w, (double) maxDim / h);
+            int newW = Math.max(1, (int) Math.round(w * scale));
+            int newH = Math.max(1, (int) Math.round(h * scale));
+            out = new BufferedImage(newW, newH, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = out.createGraphics();
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, newW, newH);
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.drawImage(src, 0, 0, newW, newH, null);
+            g.dispose();
+        }
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        ImageIO.write(out, "PNG", bos);
+        return bos.toByteArray();
+    }
+
+    /**
      * 共享的像素化逻辑：BufferedImage → cols×rows 的拼豆 grid。
      *
-     * Pipeline：
-     *   1) 双线性缩放到 cols×rows（白底预填，处理源图含透明通道的情形）
-     *   2) k-means 颜色量化（k=12，LAB 空间）：把渐变像素压成 k 个主色块，
-     *      让真人照片"卡通海报化"——这是单次最关键的视觉提升。
-     *   3) 饱和度 ×1.5：抵消缩放 + 量化对色彩的稀释
-     *   4) 边缘像素聚类找背景色，差异大于阈值视为无清晰背景
-     *   5) 一遍扫：标记每个像素是 transparent 还是要参与调色板匹配
-     *   6) 二遍扫：Floyd-Steinberg 误差扩散 + LAB ΔE 最近色匹配
+     * Pipeline（v3）：
+     *   1) 缩到中间分辨率（max(64, min(4×target, 128))）：给 k-means 留足样本
+     *   2) (可选) k-means 量化（k=12，LAB 空间）：把渐变压成 12 个主色块
+     *      AI 增强已经把图卡通化时跳过此步，避免对 AI 仔细安排的色块二次聚合
+     *   3) Mode 滤波缩到 target：每个格子取源区域内的众数色
+     *   4) 饱和度 ×1.6：k-means 的 centroid 偏灰，恢复鲜艳；AI 路径也兼容
+     *   5) 边缘像素聚类找背景色
+     *   6) transparent 标记
+     *   7) Floyd-Steinberg + LAB ΔE 调色板匹配
      */
-    private String[][] pixelizeToGrid(BufferedImage original, int cols, int rows, String paletteKey) {
+    private String[][] pixelizeToGrid(BufferedImage original, int cols, int rows, String paletteKey, boolean useKMeans) {
         // 解析 palette：拿到对应的 hex / rgb / lab 三件套
         Object[] resolved = resolvePalette(paletteKey);
         String[] palette = (String[]) resolved[0];
         int[][] paletteRgb = (int[][]) resolved[1];
         double[][] paletteLab = (double[][]) resolved[2];
 
-        // 1) 双线性缩放，先白底再画（避开 TYPE_INT_RGB 把透明像素留成黑色）
-        BufferedImage scaled = new BufferedImage(cols, rows, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = scaled.createGraphics();
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, cols, rows);
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(original, 0, 0, cols, rows, null);
-        g.dispose();
+        // 1) 缩到中间分辨率：保证 k-means 至少有 64×64=4096 像素可聚，封顶 128×128
+        //    防止变慢；与 target 等大时退化成 1:1 不再做第二次缩放
+        int interW = Math.max(64, Math.min(cols * 4, 128));
+        int interH = Math.max(64, Math.min(rows * 4, 128));
+        if (interW < cols) interW = cols;
+        if (interH < rows) interH = rows;
 
-        // 2) k-means 量化：自适应找 k 个主色，把每个像素重写成最近主色。
-        //    k=12 是肖像 / 一般物体的经验值，足以保留主体特征又不显杂乱
-        quantizeKMeans(scaled, 12, 8);
+        BufferedImage intermediate = new BufferedImage(interW, interH, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g0 = intermediate.createGraphics();
+        g0.setColor(Color.WHITE);
+        g0.fillRect(0, 0, interW, interH);
+        g0.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g0.drawImage(original, 0, 0, interW, interH, null);
+        g0.dispose();
 
-        // 3) 饱和度增强（抵消平均化 + 量化的稀释）
-        boostSaturation(scaled, 1.5f);
+        // 2) K-means 量化（可跳过）：本地算法路径需要它把渐变压成色块；
+        //    AI 增强路径可跳过，避免对 AI 已安排好的色块再次聚合模糊
+        if (useKMeans) {
+            quantizeKMeans(intermediate, 12, 8);
+        }
 
-        // 4) 检测背景色（边缘像素方差小才认为有背景；null 表示放弃自动透明化）
+        // 3) Mode 滤波缩到 target。intermediate 已经是 12 色色块，nearest 会随机
+        //    采样导致边界抖动；bilinear 会把色块边界平均出新颜色破坏量化成果。
+        //    Mode：每个目标格子在 intermediate 中对应的源区域里找众数色，稳。
+        BufferedImage scaled = (interW == cols && interH == rows)
+                ? intermediate
+                : downsampleMode(intermediate, cols, rows);
+
+        // 4) 饱和度增强（k-means centroid 是均值偏灰，要补色彩）
+        boostSaturation(scaled, 1.6f);
+
+        // 5) 检测背景色（边缘像素方差小才认为有背景；null 表示放弃自动透明化）
         int[] bg = detectBackground(scaled);
         // 阈值：与 bg 的 RGB 欧氏距离平方 < 35² × 3 视为同色背景
         final int BG_THRESHOLD_SQ = 35 * 35 * 3;
 
-        // 5) 一遍扫：标记 transparent / 不 transparent。先确定再 dither，
+        // 6) 一遍扫：标记 transparent / 不 transparent。先确定再 dither，
         //    避免误差扩散把背景边界的像素拉出杂色斑块
         boolean[][] isTransparent = new boolean[rows][cols];
         for (int y = 0; y < rows; y++) {
@@ -322,7 +653,7 @@ public class AiController {
             }
         }
 
-        // 6) 装 float 缓冲做 Floyd-Steinberg。误差是浮点，逐行向后/向下扩散
+        // 7) 装 float 缓冲做 Floyd-Steinberg。误差是浮点，逐行向后/向下扩散
         float[][] rs = new float[rows][cols];
         float[][] gs = new float[rows][cols];
         float[][] bs = new float[rows][cols];
@@ -452,6 +783,48 @@ public class AiController {
                 img.setRGB(x, y, origAlpha | (rgb[0] << 16) | (rgb[1] << 8) | rgb[2]);
             }
         }
+    }
+
+    /**
+     * Mode 滤波下采样：每个目标像素取源图对应区域内的众数颜色。
+     *
+     * 设计 rationale：源图刚走完 k-means 后只剩 12 个独立颜色（色块清晰）。
+     * 这时候用：
+     *   - bilinear：会把相邻色块边界平均出第 13、14 个新颜色，破坏 k-means 成果
+     *   - nearest：每格随机采样源像素，色块边界会"抖"出锯齿
+     *   - mode：找区域里出现最多的色，色块边界稳定保留
+     *
+     * 复杂度：O(targetW × targetH × cellArea)。intermediate 128×128 → 16×16
+     * 时每格 cellArea=64，总 ~16K ops，毫秒级。
+     */
+    private BufferedImage downsampleMode(BufferedImage src, int targetW, int targetH) {
+        int srcW = src.getWidth(), srcH = src.getHeight();
+        BufferedImage out = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
+        Map<Integer, Integer> counter = new HashMap<>();
+        for (int y = 0; y < targetH; y++) {
+            int y0 = (int) ((long) y * srcH / targetH);
+            int y1 = (int) ((long) (y + 1) * srcH / targetH);
+            if (y1 == y0) y1 = y0 + 1;
+            for (int x = 0; x < targetW; x++) {
+                int x0 = (int) ((long) x * srcW / targetW);
+                int x1 = (int) ((long) (x + 1) * srcW / targetW);
+                if (x1 == x0) x1 = x0 + 1;
+
+                counter.clear();
+                int bestCount = 0;
+                int bestColor = src.getRGB(x0, y0) & 0xFFFFFF;
+                for (int yy = y0; yy < y1; yy++) {
+                    for (int xx = x0; xx < x1; xx++) {
+                        int c = src.getRGB(xx, yy) & 0xFFFFFF;
+                        int cnt = counter.getOrDefault(c, 0) + 1;
+                        counter.put(c, cnt);
+                        if (cnt > bestCount) { bestCount = cnt; bestColor = c; }
+                    }
+                }
+                out.setRGB(x, y, 0xFF000000 | bestColor);
+            }
+        }
+        return out;
     }
 
     /** HSB 通道把 S ×factor 后回写，用来抵消下采样把饱和色稀释成灰色调的效果 */

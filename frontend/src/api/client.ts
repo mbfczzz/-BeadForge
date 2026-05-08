@@ -39,6 +39,11 @@ client.interceptors.response.use(
     return body;
   },
   (error) => {
+    // axios 超时（ECONNABORTED）也走"无 response"分支，但语义不同 ——
+    // 单独识别可以让 AI 生图、图片上传这种长任务报"超时"而不是误导成"断网"
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(new Error('请求超时，请稍后重试'));
+    }
     if (!error.response) {
       return Promise.reject(new Error('网络连接失败，请检查网络'));
     }

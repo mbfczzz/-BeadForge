@@ -75,8 +75,9 @@ INSERT IGNORE INTO t_feed (id, user_id, content, design_id, tags, like_count, co
 -- API配置
 INSERT IGNORE INTO t_api_config (config_key, config_value, description) VALUES
 ('ai_image_api_key', 'sk-Cb7PfT5JaojNCoj4pSuBEqrGssASay6hEtnGnjybMkp9EkUoSMUG', 'AI 文生图 API Key'),
-('ai_image_model', 'gpt-image-1', 'AI 文生图模型 ID'),
+('ai_image_model', 'dall-e-2', 'AI 文生图模型 ID'),
 ('ai_image_base_url', 'https://api.oaipro.com/v1', 'AI 文生图 API 地址'),
+('ai_vision_model', 'gpt-4o-mini', 'AI 视觉模型 ID（图片转拼豆 AI 增强用，看图写描述）'),
 ('hot_like_weight', '3', '热度算法-点赞权重'),
 ('hot_view_weight', '1', '热度算法-浏览权重'),
 ('recommend_new_ratio', '0.3', '推荐-新作品占比'),
@@ -131,6 +132,10 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- 确保 test1 用户有 ADMIN 角色（方便管理后台登录）
 UPDATE t_user SET role = 'ADMIN' WHERE username = 'test1' AND (role IS NULL OR role != 'ADMIN');
+
+-- 老库里若还是 gpt-image-1 / dall-e-3，翻成 dall-e-2（速度优先 5-10s 出图）；
+-- 用户在 admin 手动改成其它值则不会被覆盖
+UPDATE t_api_config SET config_value = 'dall-e-2' WHERE config_key = 'ai_image_model' AND config_value IN ('gpt-image-1', 'dall-e-3');
 
 -- ────────── Discovery 配置初始数据 ──────────
 INSERT IGNORE INTO t_discover_banner (id, title, sub, pi, bg, cat, sort_mode, sort_order, eyebrow, button_text, enabled) VALUES
@@ -218,7 +223,7 @@ INSERT IGNORE INTO t_danmaku (design_id, user_id, text, color) VALUES
 -- ────────── UI 配置种子（前端启动时一次拉取） ──────────
 INSERT IGNORE INTO t_ui_config (config_key, config_value, description, sort_order) VALUES
 ('create.sizes',
- '[{"label":"小","cols":9,"rows":9,"desc":"钥匙扣","icon":"key"},{"label":"中","cols":16,"rows":16,"desc":"杯垫","icon":"coffee"},{"label":"大","cols":24,"rows":24,"desc":"挂画","icon":"image"},{"label":"宽幅","cols":32,"rows":16,"desc":"书签","icon":"bookmark"}]',
+ '[{"label":"小","cols":9,"rows":9,"desc":"钥匙扣","icon":"key"},{"label":"中","cols":16,"rows":16,"desc":"杯垫","icon":"coffee"},{"label":"大","cols":32,"rows":32,"desc":"挂画 / 摆件","icon":"image"},{"label":"肖像","cols":48,"rows":48,"desc":"人像 / 头像","icon":"user"},{"label":"宽幅","cols":48,"rows":24,"desc":"书签 / 横幅","icon":"bookmark"},{"label":"巨幅","cols":64,"rows":64,"desc":"挂画大件","icon":"layout"}]',
  '创作页画布尺寸选项', 1),
 ('create.methods',
  '[{"key":"manual","icon":"edit-2","title":"手动创作","desc":"逐颗放置珠子并手动调整结构。","color":"#4B78FF"},{"key":"image","icon":"image","title":"图片转换","desc":"从照片生成基础拼豆图纸。","color":"#F97316"},{"key":"ai","icon":"cpu","title":"AI 生成","desc":"根据描述生成可继续编辑的草稿。","color":"#8B5CF6"}]',

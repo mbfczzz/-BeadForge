@@ -2,11 +2,12 @@ import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from '
 import {
   View, Text, StyleSheet, ScrollView, Platform, TextInput,
   ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
-  AppState, Linking, type AppStateStatus,
+  AppState, Linking, Image, Dimensions, type AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
@@ -47,6 +48,18 @@ type PaletteKey = keyof typeof PALETTES;
 const PALETTE_OPTIONS: { key: PaletteKey; label: string; desc: string }[] = [
   { key: 'default', label: '标准 36', desc: '含肤色，适合人像 / 自拍' },
   { key: 'classic', label: '经典 24', desc: '无肤色，适合卡通 / 抽象' },
+];
+
+// AI 风格预设。和后端 buildStylePrompt 镜像。每个 key 对应一套 prompt 模板，
+// 让 AI 用对应风格重绘原图。市场上 PixelMe 这类工具的核心就是风格预设——
+// 同一张自拍换风格，效果完全不一样。
+type StyleKey = 'auto' | 'portrait' | 'chibi' | 'anime' | 'scene';
+const STYLE_OPTIONS: { key: StyleKey; label: string; desc: string }[] = [
+  { key: 'auto',     label: '通用',     desc: '自适应' },
+  { key: 'portrait', label: '真人头像', desc: '保留辨识度的卡通脸' },
+  { key: 'chibi',    label: 'Q 版萌系', desc: '大眼小嘴可爱风' },
+  { key: 'anime',    label: '动漫风格', desc: 'cel-shading 漫画感' },
+  { key: 'scene',    label: '风景物体', desc: '保留构图扁平化' },
 ];
 
 /* ──────────────── 工具定义 ──────────────── */
@@ -139,6 +152,42 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const PALETTE_ROWS = PALETTES[paletteKey];
   const PALETTE = useMemo(() => PALETTE_ROWS.flat(), [PALETTE_ROWS]);
 
+  /* ---- AI 增强：image 模式专用，让 GPT 先卡通化再 pixelize；默认开启 ---- */
+  // 真人照片 / 复杂背景照片走纯算法效果有限，开启此项让 AI 重绘成"卡通色块"
+  // 再做调色板匹配，能解决"主体识别"和"背景杂乱"两个本地算法做不到的事。
+  // 慢 15-30s 且消耗 OpenAI 配额。卡通图 / 风景画自带色块感，可关闭省时间。
+  const [aiEnhance, setAiEnhance] = useState(true);
+  // AI 风格预设：选不同风格 → 后端用不同 prompt → AI 重绘出不同效果
+  const [stylePreset, setStylePreset] = useState<StyleKey>('auto');
+
+  /* ---- 偏好持久化：palette / style / aiEnhance 跨会话保留，省每次手动配 ---- */
+  const PREFS_KEY = 'beadforge_editor_prefs_v1';
+  const prefsLoadedRef = useRef(false); // 第一次 load 完才 enable 写入，避免覆盖了再读到 default
+  useEffect(() => {
+    AsyncStorage.getItem(PREFS_KEY).then((json) => {
+      if (json) {
+        try {
+          const saved = JSON.parse(json);
+          if (saved.paletteKey === 'default' || saved.paletteKey === 'classic') {
+            setPaletteKey(saved.paletteKey);
+          }
+          if (typeof saved.aiEnhance === 'boolean') setAiEnhance(saved.aiEnhance);
+          const validStyles: StyleKey[] = ['auto', 'portrait', 'chibi', 'anime', 'scene'];
+          if (validStyles.includes(saved.stylePreset)) {
+            setStylePreset(saved.stylePreset);
+          }
+        } catch { /* JSON 损坏忽略，下次写入会覆盖 */ }
+      }
+      prefsLoadedRef.current = true;
+    }).catch(() => { prefsLoadedRef.current = true; });
+  }, []);
+  useEffect(() => {
+    if (!prefsLoadedRef.current) return;
+    void AsyncStorage.setItem(PREFS_KEY, JSON.stringify({
+      paletteKey, aiEnhance, stylePreset,
+    }));
+  }, [paletteKey, aiEnhance, stylePreset]);
+
   /* ---- 画布状态 ---- */
   const [grid, setGrid] = useState<string[][]>(() => fitInitialGrid(initialGrid) || createEmptyGrid(cols, rows));
   const [tool, setTool] = useState<ToolType>('pen');
@@ -182,6 +231,11 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   // isInitial=true：进页面首次自动唤起；用户取消则退回上一页（不留空白编辑器让人困惑）
   // isInitial=false：信息栏点"换一张"重新选；取消就留在当前画布
   const pickingRef = useRef(false);
+  // 缓存最近一次成功选用的 source URI。用 state 而不是 ref，让 UI 能根据它的
+  // 存在条件显示"重做" / "查看原图"按钮。
+  const [lastImageUri, setLastImageUri] = useState<string | null>(null);
+  // 查看原图全屏 modal 的开关
+  const [sourcePreviewOpen, setSourcePreviewOpen] = useState(false);
   const pickAndConvertImage = useCallback(async (isInitial = false) => {
     // 重入锁：refresh 按钮在 setGenerating(true) 之前的窗口期还是可见可点的，
     // 用户连点会让两个 launchImageLibraryAsync 抢着 present，iOS 上是 UB。
@@ -240,10 +294,16 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       }
 
       const asset = result.assets[0];
+      setLastImageUri(asset.uri); // 记下来，让"重做" / "查看原图"能复用
       setGenerating(true);
       // imageToGrid 失败会抛错，外层 catch 透出 server 的 message
-      const grid = await imageToGrid(asset.uri, cols, rows, paletteKey);
-      pushHistory(grid);
+      const result2 = await imageToGrid(asset.uri, cols, rows, paletteKey, aiEnhance, stylePreset);
+      pushHistory(result2.grid);
+      // AI 增强请求了但实际没生效 → 显式告诉用户走的是本地算法
+      // （后端 AI 调用失败时会静默降级，不告诉用户的话他会以为"AI 增强没用"）
+      if (aiEnhance && !result2.aiUsed) {
+        setGenError('AI 增强未生效，已用本地算法。检查后端日志确认 oaipro 是否支持 /images/edits');
+      }
     } catch (e: any) {
       console.warn('图片转换链路异常:', e?.message);
       // 把后端的具体提示原样透给用户（"图片分辨率过高"、"图片解码失败，请换一张" 等）；
@@ -254,7 +314,32 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setGenerating(false);
       pickingRef.current = false;
     }
-  }, [cols, rows, pushHistory, navigation, paletteKey]);
+  }, [cols, rows, pushHistory, navigation, paletteKey, aiEnhance, stylePreset]);
+
+  /* ---- 用上次的图重新生成（不打开 picker，节省一步操作）---- */
+  // 用户在切风格 / 调色板 / 开关 AI 增强后想试新效果时用这个；
+  // 没缓存 URI（首次进来）按钮不显示
+  const regenerateFromCache = useCallback(async () => {
+    const uri = lastImageUri;
+    if (!uri || pickingRef.current) return;
+    pickingRef.current = true;
+    setGenerating(true);
+    setGenError('');
+    try {
+      const result = await imageToGrid(uri, cols, rows, paletteKey, aiEnhance, stylePreset);
+      pushHistory(result.grid);
+      if (aiEnhance && !result.aiUsed) {
+        setGenError('AI 增强未生效，已用本地算法。检查后端日志确认 oaipro 是否支持 /images/edits');
+      }
+    } catch (e: any) {
+      console.warn('重新生成失败:', e?.message);
+      // URI 失效（系统清了 temp 文件）会到这里——提示用户重新选图
+      setGenError(e?.message || '重新生成失败，请换一张图试试');
+    } finally {
+      setGenerating(false);
+      pickingRef.current = false;
+    }
+  }, [lastImageUri, cols, rows, pushHistory, paletteKey, aiEnhance, stylePreset]);
 
   /* ---- 初始化 ---- */
   useEffect(() => {
@@ -781,7 +866,9 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <View style={[$.genCard, { backgroundColor: colors.surface }]}>
             <ActivityIndicator size="large" color={colors.accent} />
             <Text style={[$.genText, { color: colors.text }]}>
-              {mode === 'image' ? '正在解析图片...' : 'AI 创作中...'}
+              {mode === 'image'
+                ? (aiEnhance ? 'AI 卡通化中... 约 20-30 秒' : '正在解析图片...')
+                : 'AI 创作中...'}
             </Text>
             <View style={$.genDots}>
               {[0, 1, 2].map((i) => (
@@ -808,6 +895,24 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           {mode === 'ai' && !showAiInput && (
             <HoverView onPress={() => setShowAiInput(true)} style={[$.infoBtn, { backgroundColor: dark ? '#2a1e4a' : '#F3E8FF' }]} hoverScale={1.05} hoverLift={0}>
               <Feather name="refresh-cw" size={fp(12)} color="#8B5CF6" />
+            </HoverView>
+          )}
+          {mode === 'image' && !generating && lastImageUri && (
+            <HoverView
+              onPress={() => setSourcePreviewOpen(true)}
+              style={[$.infoBtn, { backgroundColor: dark ? '#252a3a' : '#EFF6FF' }]}
+              hoverScale={1.05} hoverLift={0}
+            >
+              <Feather name="eye" size={fp(12)} color="#3B82F6" />
+            </HoverView>
+          )}
+          {mode === 'image' && !generating && lastImageUri && (
+            <HoverView
+              onPress={() => { void regenerateFromCache(); }}
+              style={[$.infoBtn, { backgroundColor: dark ? '#3a2a1d' : '#FEF3C7' }]}
+              hoverScale={1.05} hoverLift={0}
+            >
+              <Feather name="refresh-cw" size={fp(12)} color="#F59E0B" />
             </HoverView>
           )}
           {mode === 'image' && !generating && (
@@ -853,6 +958,73 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
             {tool === 'pen' ? '点击或拖拽绘制' : tool === 'eraser' ? '拖拽擦除珠子' : tool === 'fill' ? '点击区域填充' : '点击拾取颜色'}
           </Text>
         </View>
+
+        {/* ── AI 增强开关（仅 image 模式可见，影响"换一张图"行为）── */}
+        {mode === 'image' && (
+          <View style={[$.aiEnhanceBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[$.aiEnhanceIcon, { backgroundColor: aiEnhance ? '#8B5CF6' : colors.inputBg }]}>
+              <Feather name="zap" size={fp(13)} color={aiEnhance ? '#fff' : colors.textHint} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[$.aiEnhanceTitle, { color: colors.text }]}>AI 增强</Text>
+              <Text style={[$.aiEnhanceDesc, { color: colors.textHint }]} numberOfLines={2}>
+                {aiEnhance
+                  ? 'AI 先把图卡通化再转拼豆，质量更好（人像 / 复杂背景推荐），慢 20-30 秒'
+                  : '直接走本地算法，即时返回（适合卡通图 / 风景）'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => { hapticSelection(); setAiEnhance(!aiEnhance); }}
+              style={[
+                $.aiEnhanceToggle,
+                { backgroundColor: aiEnhance ? '#8B5CF6' : colors.inputBg },
+              ]}
+            >
+              <View style={[
+                $.aiEnhanceToggleThumb,
+                { transform: [{ translateX: aiEnhance ? wp(16) : 0 }] },
+              ]} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── AI 风格预设（仅 image 模式 + AI 增强开启时显示）── */}
+        {mode === 'image' && aiEnhance && (
+          <View style={$.styleBar}>
+            <Text style={[$.styleBarLabel, { color: colors.textSecondary }]}>风格</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={$.styleChipRow}
+            >
+              {STYLE_OPTIONS.map((opt) => {
+                const active = stylePreset === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    activeOpacity={0.75}
+                    onPress={() => { hapticSelection(); setStylePreset(opt.key); }}
+                    style={[
+                      $.styleChip,
+                      {
+                        backgroundColor: active ? '#8B5CF6' : colors.inputBg,
+                        borderColor: active ? '#8B5CF6' : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[$.styleChipLabel, { color: active ? '#fff' : colors.text }]}>
+                      {opt.label}
+                    </Text>
+                    <Text style={[$.styleChipDesc, { color: active ? 'rgba(255,255,255,0.85)' : colors.textHint }]} numberOfLines={1}>
+                      {opt.desc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* ── 调色板 ── */}
         <View style={$.section}>
@@ -915,6 +1087,32 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <Text style={$.saveBtnText}>完成</Text>
         </HoverView>
       </View>
+
+      {/* ── 原图预览全屏 modal ── */}
+      <Modal
+        visible={sourcePreviewOpen && !!lastImageUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSourcePreviewOpen(false)}
+      >
+        <TouchableOpacity
+          style={$.sourcePreviewOverlay}
+          activeOpacity={1}
+          onPress={() => setSourcePreviewOpen(false)}
+        >
+          {lastImageUri ? (
+            <Image
+              source={{ uri: lastImageUri }}
+              style={$.sourcePreviewImage}
+              resizeMode="contain"
+            />
+          ) : null}
+          <View style={$.sourcePreviewHint}>
+            <Feather name="x" size={fp(14)} color="#fff" />
+            <Text style={$.sourcePreviewHintText}>点击空白处关闭</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── 发布资源弹窗 ── */}
       <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
@@ -1218,6 +1416,42 @@ const $ = StyleSheet.create({
   },
   toolHint: { fontSize: FontSize.xs },
 
+  // AI 增强栏（仅 image 模式显示）
+  aiEnhanceBar: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: PAD, marginTop: wp(8),
+    padding: wp(10), borderRadius: BorderRadius.md,
+    borderWidth: 1, gap: wp(10),
+  },
+  aiEnhanceIcon: {
+    width: wp(28), height: wp(28), borderRadius: wp(8),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  aiEnhanceTitle: { fontSize: fp(13), fontWeight: '700' },
+  aiEnhanceDesc: { fontSize: fp(10), marginTop: wp(2), lineHeight: fp(14) },
+  aiEnhanceToggle: {
+    width: wp(36), height: wp(20), borderRadius: wp(10),
+    padding: 2, justifyContent: 'center',
+  },
+  aiEnhanceToggleThumb: {
+    width: wp(16), height: wp(16), borderRadius: wp(8),
+    backgroundColor: '#fff',
+  },
+
+  // AI 风格预设栏
+  styleBar: {
+    marginHorizontal: PAD, marginTop: wp(8),
+  },
+  styleBarLabel: { fontSize: fp(11), fontWeight: '600', marginBottom: wp(6) },
+  styleChipRow: { gap: wp(8), paddingRight: wp(8) },
+  styleChip: {
+    paddingHorizontal: wp(12), paddingVertical: wp(8),
+    borderRadius: BorderRadius.md, borderWidth: 1,
+    minWidth: wp(80),
+  },
+  styleChipLabel: { fontSize: fp(12), fontWeight: '700' },
+  styleChipDesc: { fontSize: fp(9), marginTop: wp(2) },
+
   // 调色板
   section: { paddingHorizontal: PAD, marginTop: wp(4) },
   secLabel: { fontSize: FontSize.sm, fontWeight: '600', marginBottom: wp(8) },
@@ -1266,6 +1500,24 @@ const $ = StyleSheet.create({
     ...shadow(2, 6, 0.15, '#4b78ff', 3),
   },
   saveBtnText: { color: '#fff', fontSize: FontSize.md, fontWeight: '600' },
+
+  // 原图预览
+  sourcePreviewOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  sourcePreviewImage: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.8,
+  },
+  sourcePreviewHint: {
+    position: 'absolute', bottom: wp(40),
+    flexDirection: 'row', alignItems: 'center', gap: wp(6),
+    paddingHorizontal: wp(14), paddingVertical: wp(8),
+    borderRadius: wp(20),
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  sourcePreviewHintText: { color: '#fff', fontSize: fp(11), fontWeight: '500' },
 
   // 发布弹窗
   pubOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },

@@ -23,6 +23,11 @@ export async function doubaoGenerate(
       cols,
       rows,
       palette: paletteKey,
+    }, {
+      // 默认 client timeout 15s 不够 — dall-e-2 ~5-10s / dall-e-3 ~15-30s，
+      // 加上后端 pixelize + 网络往返，60s 兜底。超时会被 axios 抛成 ECONNABORTED，
+      // client.ts 拦截后变成"网络连接失败"误导文案
+      timeout: 60_000,
     });
     const grid = res?.data?.grid;
     if (grid && Array.isArray(grid) && grid.length > 0) return grid;

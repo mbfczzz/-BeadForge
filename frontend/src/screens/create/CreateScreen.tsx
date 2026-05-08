@@ -18,8 +18,10 @@ import { useUiConfig } from '../../store/useUiConfigStore';
 const FALLBACK_SIZES: CreateSizeOption[] = [
   { label: '小', cols: 9, rows: 9, desc: '钥匙扣', icon: 'key' },
   { label: '中', cols: 16, rows: 16, desc: '杯垫', icon: 'coffee' },
-  { label: '大', cols: 24, rows: 24, desc: '挂画', icon: 'image' },
-  { label: '宽幅', cols: 32, rows: 16, desc: '书签', icon: 'bookmark' },
+  { label: '大', cols: 32, rows: 32, desc: '挂画 / 摆件', icon: 'image' },
+  { label: '肖像', cols: 48, rows: 48, desc: '人像 / 头像', icon: 'user' },
+  { label: '宽幅', cols: 48, rows: 24, desc: '书签 / 横幅', icon: 'bookmark' },
+  { label: '巨幅', cols: 64, rows: 64, desc: '挂画大件', icon: 'layout' },
 ];
 // 当 useUiConfig 拉不到后端 Discovery 配置（断网 / 首次启动 / 后端没种子）时的兜底，
 // 跟 data.sql 里 'create.methods' 种子保持一致，避免线下 dev 看不到 image / ai 入口
