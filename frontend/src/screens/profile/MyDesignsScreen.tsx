@@ -10,6 +10,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
+const THUMB_SIZE = wp(72);
 
 // designData 后端是 JSON 字符串、本地 mock 可能是数组，这里做一次容错解析
 function parseDesignData(raw: unknown): string[][] | null {
@@ -89,6 +90,9 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack, initialStatus }) => {
           const realGrid = parseDesignData(item.designData);
           const pattern = realGrid || ALL_PATTERNS[item.id % ALL_PATTERNS.length];
           const status = STATUS_MAP[item.status] || { label: item.status, color: '#6b7280' };
+          // AI 生成可能是 32×32，必须按 grid 尺寸自适应，否则会溢出 thumb
+          const maxDim = Math.max(pattern.length, pattern[0]?.length ?? 1);
+          const beadSize = THUMB_SIZE / maxDim;
 
           return (
             <TouchableOpacity
@@ -97,7 +101,7 @@ export const MyDesignsScreen: React.FC<Props> = ({ onBack, initialStatus }) => {
               style={[$.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <View style={[$.thumb, { backgroundColor: colors.inputBg }]}>
-                <BeadGrid pixels={pattern} beadSize={wp(5)} gap={0.5} round />
+                <BeadGrid pixels={pattern} beadSize={beadSize} gap={0} round />
               </View>
               <View style={$.content}>
                 <Text style={[$.title, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
@@ -189,11 +193,12 @@ const $ = StyleSheet.create({
     marginBottom: wp(12),
   },
   thumb: {
-    width: wp(72),
-    height: wp(72),
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
     borderRadius: wp(16),
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   content: {
     flex: 1,
