@@ -1303,6 +1303,18 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           </View>
         )}
 
+        {/* ── 用当前设置重新生成（仅 image 模式 + 已上过图）── */}
+        {mode === 'image' && lastImageUri && !generating && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => { hapticSelection(); void regenerateFromCache(); }}
+            style={[$.regenBtn, { backgroundColor: colors.accent }]}
+          >
+            <Feather name="refresh-cw" size={fp(15)} color="#fff" />
+            <Text style={$.regenBtnText}>用当前设置重新生成</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── 调色板（4 品牌横向滚动 + 当前品牌精选/全部色板） ── */}
         <View style={$.section}>
           <View style={$.paletteHeader}>
@@ -1820,6 +1832,17 @@ const $ = StyleSheet.create({
     fontSize: fp(10), color: 'rgba(255,255,255,0.75)',
     marginTop: wp(8), textAlign: 'center',
   },
+
+  // 重新生成按钮（image 模式 + 已上过图时显示）
+  regenBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: wp(8),
+    marginHorizontal: PAD, marginTop: wp(10),
+    paddingVertical: wp(12),
+    borderRadius: BorderRadius.md,
+    ...shadow(2, 6, 0.12, '#000', 3),
+  },
+  regenBtnText: { fontSize: fp(13), fontWeight: '700', color: '#fff' },
 
   // 画笔大小 + 对称栏
   brushBar: {
