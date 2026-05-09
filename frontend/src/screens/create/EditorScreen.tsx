@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useMemo, useEffect, memo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform, TextInput,
-  ActivityIndicator, GestureResponderEvent, Alert, Modal, TouchableOpacity,
+  ActivityIndicator, Alert, Modal, TouchableOpacity,
   AppState, Linking, Image, Dimensions, type AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
+import { SkiaBeadCanvas, type SkiaBeadCanvasHandle } from '../../components/editor/SkiaBeadCanvas';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { imageToGrid } from '../../api/imageToGrid';
@@ -197,12 +198,43 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [future, setFuture] = useState<string[][][]>([]);
   const [showGridLine, setShowGridLine] = useState(true);
 
-  /* ---- 拖拽绘画 ---- */
+  /* ---- W1：画笔大小 / 对称 / 最近用色 / hover 坐标 ---- */
+  const [brushSize, setBrushSize] = useState<1 | 3 | 5>(1);
+  const [mirrorX, setMirrorX] = useState(false);
+  const [mirrorY, setMirrorY] = useState(false);
+  const [recentColors, setRecentColors] = useState<string[]>([]);
+  const [hoverCoord, setHoverCoord] = useState<{ r: number; c: number } | null>(null);
+
+  // 启动时拉一次 AsyncStorage 中的最近用色
+  useEffect(() => {
+    AsyncStorage.getItem('beadforge.recent-colors').then((raw) => {
+      if (!raw) return;
+      try {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) setRecentColors(arr.filter((c) => typeof c === 'string').slice(0, 10));
+      } catch { /* ignore corrupt */ }
+    });
+  }, []);
+
+  // 用户选色：更新当前色 + 推入最近用色 + 持久化
+  const selectColor = useCallback((c: string) => {
+    setColor(c);
+    setRecentColors((prev) => {
+      const next = [c, ...prev.filter((x) => x !== c)].slice(0, 10);
+      AsyncStorage.setItem('beadforge.recent-colors', JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  /* ---- 拖拽绘画（Skia 画布回调用） ---- */
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const drawingRef = useRef(false);
   const drawGridRef = useRef(grid);
-  const lastCellRef = useRef<string | null>(null);
   drawGridRef.current = grid;
+  // 一笔（pen/eraser drag）开始时的快照，用于结束时整体压一次 history（一次撤销回到笔触前）
+  const gestureBaseGridRef = useRef<string[][] | null>(null);
+  // fill/picker 是单次行为，避免 onUpdate 反复触发
+  const gestureFiredRef = useRef(false);
+  const skiaCanvasRef = useRef<SkiaBeadCanvasHandle>(null);
 
   /* ---- 历史操作 ---- */
   const pushHistory = useCallback((newGrid: string[][]) => {
@@ -384,90 +416,90 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     setGenerating(false);
   }, [aiPrompt, doGenerate]);
 
-  /* ---- 画布尺寸计算 ---- */
+  /* ---- 画布视口尺寸（Skia Canvas 节点大小，正方形）---- */
   const canvasW = screenW - PAD * 2 - wp(24); // 减去 canvasWrap padding
-  const gap = showGridLine ? 1 : 0;
-  const cellSize = Math.min(Math.floor((canvasW - gap * (cols - 1)) / cols), wp(28));
 
-  /* ---- 触摸 → 坐标转换 ---- */
-  const canvasRef = useRef<View>(null);
-  const canvasLayoutRef = useRef({ x: 0, y: 0 });
-
-  const touchToCell = useCallback((pageX: number, pageY: number): [number, number] | null => {
-    const { x, y } = canvasLayoutRef.current;
-    const localX = pageX - x;
-    const localY = pageY - y;
-    const c = Math.floor(localX / (cellSize + gap));
-    const r = Math.floor(localY / (cellSize + gap));
-    if (r < 0 || r >= rows || c < 0 || c >= cols) return null;
-    return [r, c];
-  }, [cellSize, gap, rows, cols]);
-
-  /* ---- 绘画操作（单格） ---- */
-  const applyTool = useCallback((row: number, col: number, currentGrid: string[][]): string[][] | null => {
-    if (tool === 'picker') {
-      const c = currentGrid[row]?.[col];
-      if (c && c !== 'transparent') { setColor(c); setTool('pen'); }
-      return null;
-    }
-    if (tool === 'fill') return floodFill(currentGrid, row, col, color);
-    const newColor = tool === 'eraser' ? 'transparent' : color;
-    if (currentGrid[row][col] === newColor) return null;
-    const g = cloneGrid(currentGrid);
-    g[row][col] = newColor;
-    return g;
-  }, [tool, color]);
-
-  /* ---- 拖拽绘画手势 ---- */
-  const handleTouchStart = useCallback((e: GestureResponderEvent) => {
+  /* ---- 画布回调：单笔开始 / 单格命中 / 单笔结束 ---- */
+  const handleDrawStart = useCallback(() => {
     if (generating) return;
-    const { pageX, pageY } = e.nativeEvent;
-    const cell = touchToCell(pageX, pageY);
-    if (!cell) return;
-
-    drawingRef.current = true;
-    lastCellRef.current = `${cell[0]},${cell[1]}`;
+    gestureBaseGridRef.current = drawGridRef.current;
+    gestureFiredRef.current = false;
     setScrollEnabled(false);
+  }, [generating]);
 
-    // fill 和 picker 只在 start 时触发
-    if (tool === 'fill' || tool === 'picker') {
-      const result = applyTool(cell[0], cell[1], drawGridRef.current);
-      if (result) pushHistory(result);
-      drawingRef.current = false;
+  // 把 (row, col) 按 brushSize + mirror 展开成所有要落笔的目标格
+  const expandTargets = useCallback((row: number, col: number): Array<[number, number]> => {
+    const out: Array<[number, number]> = [];
+    const seen = new Set<number>();
+    const radius = Math.floor((brushSize - 1) / 2);
+    const push = (r: number, c: number) => {
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+      const k = r * cols + c;
+      if (seen.has(k)) return;
+      seen.add(k);
+      out.push([r, c]);
+    };
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        const baseR = row + dy;
+        const baseC = col + dx;
+        push(baseR, baseC);
+        if (mirrorX) push(baseR, cols - 1 - baseC);
+        if (mirrorY) push(rows - 1 - baseR, baseC);
+        if (mirrorX && mirrorY) push(rows - 1 - baseR, cols - 1 - baseC);
+      }
+    }
+    return out;
+  }, [brushSize, mirrorX, mirrorY, rows, cols]);
+
+  const handleCellPaint = useCallback((row: number, col: number) => {
+    if (generating) return;
+
+    // picker：只在第一次触发，吸色后切回 pen
+    if (tool === 'picker') {
+      if (gestureFiredRef.current) return;
+      gestureFiredRef.current = true;
+      const c = drawGridRef.current[row]?.[col];
+      if (c && c !== 'transparent') { selectColor(c); setTool('pen'); }
       return;
     }
 
-    const result = applyTool(cell[0], cell[1], drawGridRef.current);
-    if (result) {
-      // 拖拽期间直接 setGrid 不推历史，结束时再推
-      setHistory((h) => [...h.slice(-MAX_HISTORY), drawGridRef.current]);
-      setFuture([]);
-      setGrid(result);
+    // fill：只在第一次触发，整片填充压一次 history（brush/mirror 不影响 fill）
+    if (tool === 'fill') {
+      if (gestureFiredRef.current) return;
+      gestureFiredRef.current = true;
+      const result = floodFill(drawGridRef.current, row, col, color);
+      pushHistory(result);
+      return;
     }
-  }, [generating, touchToCell, tool, applyTool, pushHistory]);
 
-  const handleTouchMove = useCallback((e: GestureResponderEvent) => {
-    if (!drawingRef.current || tool === 'fill' || tool === 'picker') return;
-    const { pageX, pageY } = e.nativeEvent;
-    const cell = touchToCell(pageX, pageY);
-    if (!cell) return;
-
-    const cellKey = `${cell[0]},${cell[1]}`;
-    if (cellKey === lastCellRef.current) return;
-    lastCellRef.current = cellKey;
-
+    // pen / eraser：按 brush + mirror 展开成多格，结束时由 handleDrawEnd 压一次 history
     const newColor = tool === 'eraser' ? 'transparent' : color;
-    if (drawGridRef.current[cell[0]][cell[1]] === newColor) return;
-    const g = cloneGrid(drawGridRef.current);
-    g[cell[0]][cell[1]] = newColor;
-    setGrid(g);
-  }, [touchToCell, tool, color]);
+    const targets = expandTargets(row, col);
+    let g = drawGridRef.current;
+    let cloned = false;
+    for (const [r, c] of targets) {
+      if (g[r]?.[c] === newColor) continue;
+      if (!cloned) { g = cloneGrid(g); cloned = true; }
+      g[r][c] = newColor;
+    }
+    if (cloned) {
+      setGrid(g);
+      drawGridRef.current = g;
+    }
+  }, [generating, tool, color, pushHistory, expandTargets, selectColor]);
 
-  const handleTouchEnd = useCallback(() => {
-    drawingRef.current = false;
-    lastCellRef.current = null;
+  const handleDrawEnd = useCallback(() => {
     setScrollEnabled(true);
-  }, []);
+    // pen/eraser 一笔结束：把笔触前的快照塞进 history（一次撤销回到笔触前）
+    const base = gestureBaseGridRef.current;
+    if (base && base !== drawGridRef.current && (tool === 'pen' || tool === 'eraser')) {
+      setHistory((h) => [...h.slice(-MAX_HISTORY), base]);
+      setFuture([]);
+    }
+    gestureBaseGridRef.current = null;
+    gestureFiredRef.current = false;
+  }, [tool]);
 
   /* ---- 统计 ---- */
   const stats = useMemo(() => {
@@ -889,6 +921,13 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <HoverView onPress={() => setShowGridLine(!showGridLine)} style={[$.infoBtn, { backgroundColor: showGridLine ? colors.accentLight : colors.inputBg }]} hoverScale={1.05} hoverLift={0}>
             <Feather name="grid" size={fp(12)} color={showGridLine ? colors.accent : colors.textHint} />
           </HoverView>
+          <HoverView
+            onPress={() => skiaCanvasRef.current?.reset()}
+            style={[$.infoBtn, { backgroundColor: colors.inputBg }]}
+            hoverScale={1.05} hoverLift={0}
+          >
+            <Feather name="maximize-2" size={fp(12)} color={colors.textHint} />
+          </HoverView>
           <HoverView onPress={clearCanvas} style={[$.infoBtn, { backgroundColor: colors.inputBg }]} hoverScale={1.05} hoverLift={0}>
             <Feather name="trash-2" size={fp(12)} color={colors.error} />
           </HoverView>
@@ -926,27 +965,68 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           )}
         </View>
 
-        {/* ── 画布 ── */}
-        <View
-          ref={canvasRef}
-          onLayout={() => {
-            canvasRef.current?.measureInWindow((x, y) => {
-              canvasLayoutRef.current = { x, y };
-            });
-          }}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={handleTouchStart}
-          onResponderMove={handleTouchMove}
-          onResponderRelease={handleTouchEnd}
-          style={[$.canvasWrap, { backgroundColor: dark ? '#1a1a1a' : '#f0f0f0' }]}
-        >
-          <CanvasGrid
+        {/* ── 画布（Skia 底座：单指画 / 双指捏 + 平移 / 右上角"回中"按钮 reset） ── */}
+        <View style={[$.canvasWrap, { backgroundColor: dark ? '#1a1a1a' : '#f0f0f0' }]}>
+          <SkiaBeadCanvas
+            ref={skiaCanvasRef}
             grid={grid}
-            cellSize={cellSize}
-            gap={gap}
-            colors={colors}
+            cols={cols}
+            rows={rows}
+            width={canvasW}
+            height={canvasW}
+            showGridLine={showGridLine}
+            bgColor={dark ? '#1a1a1a' : '#f0f0f0'}
+            gridColor={dark ? '#3a3a3a' : '#cccccc'}
+            hoverColor={colors.accent}
+            brushSize={brushSize}
+            mirrorX={mirrorX}
+            mirrorY={mirrorY}
+            onCellPaint={handleCellPaint}
+            onCellHover={(r, c) => setHoverCoord(r != null && c != null ? { r, c } : null)}
+            onDrawStart={handleDrawStart}
+            onDrawEnd={handleDrawEnd}
+            enabled={!generating}
           />
+          {hoverCoord && (
+            <View style={[$.coordBadge, { backgroundColor: colors.accent }]} pointerEvents="none">
+              <Text style={$.coordText}>{hoverCoord.c + 1}, {hoverCoord.r + 1}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── 画笔大小 + 对称 ── */}
+        <View style={[$.brushBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[$.brushBarLabel, { color: colors.textHint }]}>笔</Text>
+          {([1, 3, 5] as const).map((s) => {
+            const active = brushSize === s;
+            const dotPx = wp(4 + s * 1.5);
+            return (
+              <TouchableOpacity
+                key={s}
+                activeOpacity={0.7}
+                onPress={() => { hapticSelection(); setBrushSize(s); }}
+                style={[$.brushBtn, { backgroundColor: active ? colors.accent : colors.inputBg, borderColor: active ? colors.accent : colors.border }]}
+              >
+                <View style={{ width: dotPx, height: dotPx, borderRadius: dotPx / 2, backgroundColor: active ? '#fff' : colors.textSecondary }} />
+              </TouchableOpacity>
+            );
+          })}
+          <View style={$.brushDivider} />
+          <Text style={[$.brushBarLabel, { color: colors.textHint }]}>对称</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => { hapticSelection(); setMirrorX(!mirrorX); }}
+            style={[$.mirrorBtn, { backgroundColor: mirrorX ? colors.accent : colors.inputBg, borderColor: mirrorX ? colors.accent : colors.border }]}
+          >
+            <Feather name="more-vertical" size={fp(14)} color={mirrorX ? '#fff' : colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() => { hapticSelection(); setMirrorY(!mirrorY); }}
+            style={[$.mirrorBtn, { backgroundColor: mirrorY ? colors.accent : colors.inputBg, borderColor: mirrorY ? colors.accent : colors.border }]}
+          >
+            <Feather name="more-horizontal" size={fp(14)} color={mirrorY ? '#fff' : colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
         {/* ── 当前颜色 + 工具提示 ── */}
@@ -1054,13 +1134,32 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
               })}
             </View>
           </View>
+          {recentColors.length > 0 && (
+            <View style={$.recentRow}>
+              <Text style={[$.recentLabel, { color: colors.textHint }]}>最近</Text>
+              {recentColors.slice(0, 8).map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  activeOpacity={0.6}
+                  onPress={() => { hapticSelection(); selectColor(c); if (tool === 'eraser') setTool('pen'); }}
+                  style={[
+                    $.recentChip,
+                    { backgroundColor: c },
+                    c === color && { borderColor: colors.accent, borderWidth: 2 },
+                  ]}
+                >
+                  {c === color && <Feather name="check" size={fp(10)} color={isLightColor(c) ? '#333' : '#fff'} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           {PALETTE_ROWS.map((row, ri) => (
             <View key={ri} style={$.paletteRow}>
               {row.map((c) => (
                 <TouchableOpacity
                   key={c}
                   activeOpacity={0.6}
-                  onPress={() => { hapticSelection(); setColor(c); if (tool === 'eraser') setTool('pen'); }}
+                  onPress={() => { hapticSelection(); selectColor(c); if (tool === 'eraser') setTool('pen'); }}
                   style={[
                     $.paletteCell,
                     { backgroundColor: c },
@@ -1236,53 +1335,6 @@ const InfoChip: React.FC<{ icon: string; text: string; colors: ThemeColors }> = 
   </View>
 );
 
-/* ──────────────── 画布网格（纯渲染） ──────────────── */
-
-const CanvasGrid: React.FC<{
-  grid: string[][]; cellSize: number; gap: number; colors: ThemeColors;
-}> = memo(({ grid, cellSize, gap, colors }) => {
-  const r = cellSize / 2;
-  const hlSize = Math.max(cellSize * 0.28, 2);
-  const hlOff = Math.max(cellSize * 0.15, 1);
-
-  return (
-    <View style={{ alignItems: 'center', gap }}>
-      {grid.map((row, y) => (
-        <View key={y} style={{ flexDirection: 'row', gap }}>
-          {row.map((c, x) => {
-            const empty = c === 'transparent';
-            return (
-              <View
-                key={x}
-                style={[
-                  { width: cellSize, height: cellSize, borderRadius: r },
-                  empty
-                    ? { borderWidth: 0.5, borderColor: colors.border }
-                    : {
-                        backgroundColor: c,
-                        ...(Platform.OS === 'web'
-                          ? { boxShadow: '0 0.5px 1px rgba(0,0,0,0.12)' }
-                          : { shadowColor: '#000', shadowOffset: { width: 0, height: 0.5 }, shadowOpacity: 0.12, shadowRadius: 0.5 }
-                        ) as any,
-                      },
-                ]}
-              >
-                {!empty && cellSize >= 6 && (
-                  <View style={{
-                    position: 'absolute', top: hlOff, left: hlOff,
-                    width: hlSize, height: hlSize, borderRadius: hlSize / 2,
-                    backgroundColor: 'rgba(255,255,255,0.4)',
-                  }} />
-                )}
-              </View>
-            );
-          })}
-        </View>
-      ))}
-    </View>
-  );
-});
-
 /* ──────────────── 工具按钮 ──────────────── */
 
 const ToolBtn: React.FC<{
@@ -1398,6 +1450,42 @@ const $ = StyleSheet.create({
     margin: PAD, borderRadius: BorderRadius.lg,
     padding: wp(12), alignItems: 'center', justifyContent: 'center',
     ...shadow(2, 8, 0.06, '#000', 2),
+  },
+  coordBadge: {
+    position: 'absolute', top: wp(8), right: wp(8),
+    paddingHorizontal: wp(8), paddingVertical: wp(3),
+    borderRadius: wp(8),
+  },
+  coordText: { fontSize: FontSize.xs, fontWeight: '600', color: '#fff', fontVariant: ['tabular-nums'] },
+
+  // 画笔大小 + 对称栏
+  brushBar: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: PAD, marginTop: wp(2),
+    paddingHorizontal: wp(10), paddingVertical: wp(6),
+    borderRadius: BorderRadius.md, borderWidth: 1, gap: wp(6),
+  },
+  brushBarLabel: { fontSize: FontSize.xs, fontWeight: '600' },
+  brushBtn: {
+    width: wp(30), height: wp(28), borderRadius: wp(8),
+    borderWidth: 1, justifyContent: 'center', alignItems: 'center',
+  },
+  brushDivider: { width: 1, height: wp(16), backgroundColor: 'rgba(120,120,120,0.25)', marginHorizontal: wp(4) },
+  mirrorBtn: {
+    width: wp(30), height: wp(28), borderRadius: wp(8),
+    borderWidth: 1, justifyContent: 'center', alignItems: 'center',
+  },
+
+  // 最近用色行
+  recentRow: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(6),
+    paddingVertical: wp(6), marginBottom: wp(6),
+    flexWrap: 'wrap',
+  },
+  recentLabel: { fontSize: FontSize.xs, fontWeight: '600', marginRight: wp(2) },
+  recentChip: {
+    width: wp(22), height: wp(22), borderRadius: wp(6),
+    justifyContent: 'center', alignItems: 'center',
   },
 
   // 当前颜色栏
