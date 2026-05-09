@@ -60,6 +60,10 @@ export interface SkiaBeadCanvasProps {
   mirrorY?: boolean;
   /** hover 高亮颜色（一般传 accent 色） */
   hoverColor?: string;
+  /** 几何工具拖拽时的预览格列表（line/rect/circle 用），父组件计算后传入 */
+  previewCells?: Array<[number, number]>;
+  /** 预览色（一般传当前 paint color），默认 hoverColor */
+  previewColor?: string;
 }
 
 export const SkiaBeadCanvas = forwardRef<SkiaBeadCanvasHandle, SkiaBeadCanvasProps>((props, ref) => {
@@ -70,6 +74,7 @@ export const SkiaBeadCanvas = forwardRef<SkiaBeadCanvasHandle, SkiaBeadCanvasPro
     enabled = true,
     brushSize = 1, mirrorX = false, mirrorY = false,
     hoverColor = '#4B78FF',
+    previewCells, previewColor,
   } = props;
 
   // 等比缩放珠子大小：让整个 grid 居中铺满 viewport 短边
@@ -149,6 +154,25 @@ export const SkiaBeadCanvas = forwardRef<SkiaBeadCanvasHandle, SkiaBeadCanvasPro
     p.addRect(Skia.XYWHRect(0, 0, contentW, contentH));
     return p;
   }, [contentW, contentH]);
+
+  // 几何工具预览路径（line/rect/circle 拖拽时的"将要落下"的格子）
+  const previewPath = useMemo(() => {
+    if (!previewCells || previewCells.length === 0) return null;
+    const p = Skia.Path.Make();
+    const inset = Math.max(cellSize * 0.05, 0.3);
+    const r = cellSize * 0.45;
+    for (const [row, col] of previewCells) {
+      if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
+      const rect = Skia.XYWHRect(
+        col * cellSize + inset,
+        row * cellSize + inset,
+        cellSize - inset * 2,
+        cellSize - inset * 2,
+      );
+      p.addRRect(Skia.RRectXY(rect, r, r));
+    }
+    return p;
+  }, [previewCells, cellSize, rows, cols]);
 
   // 屏幕坐标 → 网格坐标（worklet，跑在 UI 线程）
   const screenToCell = useCallback((screenX: number, screenY: number): [number, number] | null => {
@@ -309,6 +333,10 @@ export const SkiaBeadCanvas = forwardRef<SkiaBeadCanvasHandle, SkiaBeadCanvasPro
                 <Path path={gridPaths.minor} color={gridColor} style="stroke" strokeWidth={minorWidth} opacity={0.4} />
                 <Path path={gridPaths.major} color={gridColor} style="stroke" strokeWidth={majorWidth} opacity={0.7} />
               </>
+            )}
+            {/* 几何工具拖拽预览（line/rect/circle）。半透明，让用户看清落点 */}
+            {previewPath && (
+              <Path path={previewPath} color={previewColor || hoverColor} opacity={0.55} />
             )}
             {/* hover 高亮：画笔 footprint + 镜像位置 */}
             <Path path={hoverPath} color={hoverColor} style="stroke" strokeWidth={hoverWidth} />

@@ -13,6 +13,7 @@ import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
 import { SkiaBeadCanvas, type SkiaBeadCanvasHandle } from '../../components/editor/SkiaBeadCanvas';
 import { exportGridAsPng, exportGridAsPdf, savePngToAlbum, shareFile } from '../../utils/exporter';
+import { lineCells, rectCells, ellipseCells, applyMirror } from '../../utils/shapes';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { imageToGrid } from '../../api/imageToGrid';
@@ -66,14 +67,21 @@ const STYLE_OPTIONS: { key: StyleKey; label: string; desc: string }[] = [
 
 /* ──────────────── 工具定义 ──────────────── */
 
-type ToolType = 'pen' | 'eraser' | 'fill' | 'picker';
+type ToolType = 'pen' | 'eraser' | 'fill' | 'picker' | 'line' | 'rect' | 'rect-fill' | 'circle' | 'circle-fill';
 
 const TOOLS: { key: ToolType; icon: string; label: string }[] = [
   { key: 'pen', icon: 'edit-3', label: '画笔' },
   { key: 'eraser', icon: 'x-circle', label: '橡皮' },
   { key: 'fill', icon: 'droplet', label: '填充' },
   { key: 'picker', icon: 'crosshair', label: '取色' },
+  { key: 'line', icon: 'minus', label: '直线' },
+  { key: 'rect', icon: 'square', label: '矩形' },
+  { key: 'rect-fill', icon: 'stop-circle', label: '实心矩' },
+  { key: 'circle', icon: 'circle', label: '圆环' },
+  { key: 'circle-fill', icon: 'disc', label: '实心圆' },
 ];
+
+const SHAPE_TOOLS: ReadonlySet<ToolType> = new Set(['line', 'rect', 'rect-fill', 'circle', 'circle-fill']);
 
 /* ──────────────── 工具函数 ──────────────── */
 
@@ -205,6 +213,26 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [mirrorY, setMirrorY] = useState(false);
   const [recentColors, setRecentColors] = useState<string[]>([]);
   const [hoverCoord, setHoverCoord] = useState<{ r: number; c: number } | null>(null);
+
+  /* ---- W3：几何工具（line / rect / circle）拖拽预览 ---- */
+  const [shapeStart, setShapeStart] = useState<{ r: number; c: number } | null>(null);
+  const [shapeEnd, setShapeEnd] = useState<{ r: number; c: number } | null>(null);
+
+  // 拖拽期间根据 tool + start + end + brushSize + mirror 实时算出预览格
+  const previewCells = useMemo<Array<[number, number]> | null>(() => {
+    if (!shapeStart || !shapeEnd) return null;
+    if (!SHAPE_TOOLS.has(tool)) return null;
+    const { r: r0, c: c0 } = shapeStart;
+    const { r: r1, c: c1 } = shapeEnd;
+    let cells: Array<[number, number]>;
+    if (tool === 'line') cells = lineCells(r0, c0, r1, c1);
+    else if (tool === 'rect') cells = rectCells(r0, c0, r1, c1, false);
+    else if (tool === 'rect-fill') cells = rectCells(r0, c0, r1, c1, true);
+    else if (tool === 'circle') cells = ellipseCells(r0, c0, r1, c1, false);
+    else if (tool === 'circle-fill') cells = ellipseCells(r0, c0, r1, c1, true);
+    else return null;
+    return applyMirror(cells, rows, cols, mirrorX, mirrorY);
+  }, [tool, shapeStart, shapeEnd, rows, cols, mirrorX, mirrorY]);
 
   /* ---- W2：导出（PNG / PDF） ---- */
   const [exportSheetOpen, setExportSheetOpen] = useState(false);
@@ -478,7 +506,12 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     gestureBaseGridRef.current = drawGridRef.current;
     gestureFiredRef.current = false;
     setScrollEnabled(false);
-  }, [generating]);
+    // 几何工具开新一笔时清掉旧的预览（onCellPaint 会立刻填上 start）
+    if (SHAPE_TOOLS.has(tool)) {
+      setShapeStart(null);
+      setShapeEnd(null);
+    }
+  }, [generating, tool]);
 
   // 把 (row, col) 按 brushSize + mirror 展开成所有要落笔的目标格
   const expandTargets = useCallback((row: number, col: number): Array<[number, number]> => {
@@ -526,6 +559,13 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       return;
     }
 
+    // 几何工具：拖拽期间不落笔，只更新 shapeStart / shapeEnd，预览由 previewCells useMemo 算
+    if (SHAPE_TOOLS.has(tool)) {
+      if (!shapeStart) setShapeStart({ r: row, c: col });
+      setShapeEnd({ r: row, c: col });
+      return;
+    }
+
     // pen / eraser：按 brush + mirror 展开成多格，结束时由 handleDrawEnd 压一次 history
     const newColor = tool === 'eraser' ? 'transparent' : color;
     const targets = expandTargets(row, col);
@@ -540,19 +580,50 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setGrid(g);
       drawGridRef.current = g;
     }
-  }, [generating, tool, color, pushHistory, expandTargets, selectColor]);
+  }, [generating, tool, color, pushHistory, expandTargets, selectColor, shapeStart]);
 
   const handleDrawEnd = useCallback(() => {
     setScrollEnabled(true);
-    // pen/eraser 一笔结束：把笔触前的快照塞进 history（一次撤销回到笔触前）
     const base = gestureBaseGridRef.current;
-    if (base && base !== drawGridRef.current && (tool === 'pen' || tool === 'eraser')) {
+
+    // 几何工具：松手时把预览的格子真正落到 grid，并压一次 history
+    if (SHAPE_TOOLS.has(tool) && base && shapeStart && shapeEnd) {
+      const { r: r0, c: c0 } = shapeStart;
+      const { r: r1, c: c1 } = shapeEnd;
+      let cells: Array<[number, number]> = [];
+      if (tool === 'line') cells = lineCells(r0, c0, r1, c1);
+      else if (tool === 'rect') cells = rectCells(r0, c0, r1, c1, false);
+      else if (tool === 'rect-fill') cells = rectCells(r0, c0, r1, c1, true);
+      else if (tool === 'circle') cells = ellipseCells(r0, c0, r1, c1, false);
+      else if (tool === 'circle-fill') cells = ellipseCells(r0, c0, r1, c1, true);
+      cells = applyMirror(cells, rows, cols, mirrorX, mirrorY);
+
+      const newColor = color;
+      let g = base;
+      let cloned = false;
+      for (const [r, c] of cells) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+        if (g[r][c] === newColor) continue;
+        if (!cloned) { g = cloneGrid(g); cloned = true; }
+        g[r][c] = newColor;
+      }
+      if (cloned) {
+        setHistory((h) => [...h.slice(-MAX_HISTORY), base]);
+        setFuture([]);
+        setGrid(g);
+        drawGridRef.current = g;
+      }
+      setShapeStart(null);
+      setShapeEnd(null);
+    } else if (base && base !== drawGridRef.current && (tool === 'pen' || tool === 'eraser')) {
+      // pen/eraser 一笔结束：把笔触前的快照塞进 history（一次撤销回到笔触前）
       setHistory((h) => [...h.slice(-MAX_HISTORY), base]);
       setFuture([]);
     }
+
     gestureBaseGridRef.current = null;
     gestureFiredRef.current = false;
-  }, [tool]);
+  }, [tool, shapeStart, shapeEnd, color, rows, cols, mirrorX, mirrorY]);
 
   /* ---- 统计 ---- */
   const stats = useMemo(() => {
@@ -1035,6 +1106,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
             brushSize={brushSize}
             mirrorX={mirrorX}
             mirrorY={mirrorY}
+            previewCells={previewCells || undefined}
+            previewColor={color}
             onCellPaint={handleCellPaint}
             onCellHover={(r, c) => setHoverCoord(r != null && c != null ? { r, c } : null)}
             onDrawStart={handleDrawStart}
@@ -1229,12 +1302,17 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         </View>
       </ScrollView>
 
-      {/* ── 底部工具栏 ── */}
+      {/* ── 底部工具栏（9 个工具横向滚动 + 完成按钮固定右侧） ── */}
       <View style={[$.toolbar, { backgroundColor: colors.navBg, borderTopColor: colors.navBorder }]}>
-        {TOOLS.map((t) => (
-          <ToolBtn key={t.key} icon={t.icon} label={t.label} active={tool === t.key} colors={colors} onPress={() => { hapticSelection(); setTool(t.key); }} />
-        ))}
-        <View style={{ flex: 1 }} />
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={$.toolbarScroll}
+        >
+          {TOOLS.map((t) => (
+            <ToolBtn key={t.key} icon={t.icon} label={t.label} active={tool === t.key} colors={colors} onPress={() => { hapticSelection(); setTool(t.key); }} />
+          ))}
+        </ScrollView>
         <HoverView onPress={handleSave} style={[$.saveBtn, { backgroundColor: colors.accent }]} hoverScale={1.03} hoverLift={2}>
           <Feather name="check" size={fp(14)} color="#fff" />
           <Text style={$.saveBtnText}>完成</Text>
@@ -1711,6 +1789,7 @@ const $ = StyleSheet.create({
     paddingBottom: Math.max(BOTTOM_SAFE_H, wp(8)),
     borderTopWidth: 1, gap: wp(6),
   },
+  toolbarScroll: { gap: wp(6), alignItems: 'center', paddingRight: wp(6) },
   toolBtn: {
     alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: wp(12), paddingVertical: wp(8),
