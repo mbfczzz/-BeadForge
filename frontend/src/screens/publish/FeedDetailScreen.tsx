@@ -524,9 +524,11 @@ const CommentRow: React.FC<{
   onReply: (commentId: number, userName: string) => void;
   onDelete: (commentId: number) => void;
 }> = memo(({ comment, colors, canDelete, currentUser, onReply, onDelete }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [liked, setLiked] = useState(!!comment.liked);
   const [likeCount, setLikeCount] = useState(comment.likeCount || 0);
   const [busy, setBusy] = useState(false);
+  const goUserProfile = () => navigation.navigate('UserProfile', { userName: comment.user.name });
 
   const handleLike = async () => {
     if (busy) return;
@@ -551,13 +553,15 @@ const CommentRow: React.FC<{
 
   return (
     <View style={$.commentItem}>
-      <Avatar name={comment.user.name} size={wp(34)} />
+      <Pressable onPress={goUserProfile} hitSlop={4}>
+        <Avatar name={comment.user.name} size={wp(34)} />
+      </Pressable>
       <View style={$.commentBody}>
         <View style={$.commentTop}>
-          <View style={{ flex: 1 }}>
+          <Pressable style={{ flex: 1 }} onPress={goUserProfile}>
             <Text style={[$.commentUser, { color: colors.text }]}>{comment.user.name}</Text>
             <Text style={[$.commentMeta, { color: colors.textHint }]}>{comment.user.title} · {comment.timeAgo}</Text>
-          </View>
+          </Pressable>
           <Pressable style={$.commentLikeBtn} onPress={handleLike} hitSlop={6}>
             <MCI name={liked ? 'heart' : 'heart-outline'} size={fp(15)} color={liked ? '#EF4444' : colors.textHint} />
             {likeCount > 0 ? (

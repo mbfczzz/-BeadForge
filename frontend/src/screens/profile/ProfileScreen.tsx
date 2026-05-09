@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  BackHandler,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,6 +12,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Feather, MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import { FEATURES } from '../../config/env';
 import { feedbackApi, type FeedbackTicketItem } from '../../api/feedback';
@@ -352,6 +354,26 @@ export const ProfileScreen: React.FC<any> = ({ route, navigation }) => {
   }, [setTabBarHidden, token]);
 
   useTabBarVisibility(subPage.key !== 'none');
+
+  // 焦点回到 ProfileScreen 时（从 UserProfile / DesignDetail 等 stack 屏 back 回来），
+  // 强行把 tabBarHidden 跟 subPage 对齐——否则原 useEffect 因 dep 没变不会重跑，
+  // tab 栏状态可能停留在 stale=true，看起来"导航栏消失了"
+  // 同时拦截硬件返回键：在子页时退到根，而不是直接退出 App
+  useFocusEffect(
+    useCallback(() => {
+      setTabBarHidden(subPage.key !== 'none');
+      const onHwBack = () => {
+        if (subPage.key !== 'none') {
+          setSubPage({ key: 'none' });
+          setTabBarHidden(false);
+          return true;
+        }
+        return false;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onHwBack);
+      return () => sub.remove();
+    }, [subPage.key, setTabBarHidden]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

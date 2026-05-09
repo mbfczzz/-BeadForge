@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
   ALL_PATTERNS,
+  Avatar,
   BeadGrid,
   HomeBannerCarousel,
   Input,
@@ -212,6 +213,22 @@ export const HomeScreen: React.FC = () => {
                 </View>
               </View>
               <Text style={[styles.cardDesc, { color: colors.textHint }]} numberOfLines={1}>{item.desc}</Text>
+              {/* 作者行 — 头像 + 用户名，点击进对方主页 */}
+              {item.author ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    navigation.navigate('UserProfile', { userName: item.author });
+                  }}
+                  style={styles.authorRow}
+                >
+                  <Avatar name={item.author} size={wp(18)} />
+                  <Text style={[styles.authorName, { color: colors.textSecondary }]} numberOfLines={1}>
+                    {item.author}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <View style={styles.cardFooter}>
                 <Text style={[styles.metaText, { color: colors.textHint }]}>{item.cols}x{item.rows}</Text>
                 <Text style={[styles.statusText, { color: renderStatusColor(item) }]}>{renderStatusText(item)}</Text>
@@ -416,6 +433,16 @@ const styles = StyleSheet.create({
   },
   cardDesc: {
     fontSize: fp(11),
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(4),
+    marginTop: wp(4),
+  },
+  authorName: {
+    flex: 1,
+    fontSize: fp(10),
   },
   cardFooter: {
     flexDirection: 'row',

@@ -254,11 +254,18 @@ export const DesignDetailScreen: React.FC<RootScreenProps<'DesignDetail'>> = ({ 
 
         {/* 作者信息 */}
         <View style={[$.authorRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Avatar name={item.authorName} size={wp(38)} />
-          <View style={{ flex: 1, marginLeft: wp(10) }}>
-            <Text style={[$.authorName, { color: colors.text }]}>{item.authorName || '创作者'}</Text>
-            <Text style={[$.authorSub, { color: colors.textHint }]}>拼豆创作者</Text>
-          </View>
+          <Pressable
+            style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+            onPress={() => {
+              if (item.authorName) navigation.navigate('UserProfile', { userName: item.authorName });
+            }}
+          >
+            <Avatar name={item.authorName} size={wp(38)} />
+            <View style={{ flex: 1, marginLeft: wp(10) }}>
+              <Text style={[$.authorName, { color: colors.text }]}>{item.authorName || '创作者'}</Text>
+              <Text style={[$.authorSub, { color: colors.textHint }]}>拼豆创作者</Text>
+            </View>
+          </Pressable>
           {isOwnDesign ? null : (
             <HoverView
               onPress={toggleFollow}

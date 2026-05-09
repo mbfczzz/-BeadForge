@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -92,12 +93,6 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
       <AppHeader
         title={user.name}
         onBack={() => navigation.goBack()}
-        right={(
-          <View style={[styles.onlinePill, { backgroundColor: dark ? '#13233A' : '#ECFDF5' }]}>
-            <View style={styles.onlineDot} />
-            <Text style={[styles.onlineText, { color: dark ? '#A7F3D0' : '#047857' }]}>在线</Text>
-          </View>
-        )}
       />
 
       <View style={[styles.profileStrip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -114,7 +109,11 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      >
         <FlatList
           data={messages}
           keyExtractor={(item) => item.id}
@@ -179,7 +178,10 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
             },
           ]}
         >
-          <Pressable style={[styles.toolButton, { backgroundColor: colors.inputBg }]}>
+          <Pressable
+            style={[styles.toolButton, { backgroundColor: colors.inputBg }]}
+            onPress={() => Alert.alert('图片消息', '功能开发中，即将上线')}
+          >
             <MCI name="image-plus-outline" size={fp(18)} color={colors.textSecondary} />
           </Pressable>
           <View style={[styles.inputWrap, { backgroundColor: colors.inputBg }]}>

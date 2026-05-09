@@ -62,6 +62,20 @@ function getGenderBadgeMeta(gender?: string | null) {
   return { icon: 'gender-male-female', color: '#64748B', bg: '#EEF4FF' };
 }
 
+// 后端 designData 是 JSON 字符串（也可能是 mock 路径下的数组），统一解析成 string[][]
+function parseUserDesignGrid(raw: unknown): string[][] | null {
+  if (Array.isArray(raw) && raw.length > 0 && Array.isArray(raw[0])) return raw as string[][];
+  if (typeof raw === 'string' && raw.length > 0) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every((row) => Array.isArray(row))) {
+        return parsed as string[][];
+      }
+    } catch { /* ignore corrupt */ }
+  }
+  return null;
+}
+
 function inferCommunityGender(name: string) {
   if (name.includes('木木') || name.includes('清晨') || name.includes('饰品')) {
     return '女';
@@ -385,15 +399,37 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
             ) : (
               <View style={$.worksGrid}>
                 {works.map((work) => {
-                  const pattern = ALL_PATTERNS[work.id % ALL_PATTERNS.length];
-                  const beadSize = Math.max(Math.floor((workGridSize - wp(14)) / (pattern[0]?.length || 9)) - 1, 4);
+                  // 优先用真实 designData（后端 DesignDTO 已经返），缺就用 mock 占位
+                  const realGrid = parseUserDesignGrid(work.designData);
+                  const pattern = realGrid || ALL_PATTERNS[work.id % ALL_PATTERNS.length];
+                  // 大网格用更小的珠子让整张图能塞进 thumb，避免 100×100 溢出
+                  const cols = pattern[0]?.length || 9;
+                  const rows = pattern.length;
+                  const maxDim = Math.max(cols, rows);
+                  const beadSize = Math.max(Math.floor((workGridSize - wp(14)) / maxDim) - 1, 2);
 
                   return (
                     <PressableScale
                       key={work.id}
                       scale={0.97}
                       style={{ width: workGridSize }}
-                      onPress={() => navigation.navigate('Editor', { mode: 'manual', cols: pattern[0]?.length || 9, rows: pattern.length, initialGrid: pattern })}
+                      onPress={() => navigation.navigate('DesignDetail', {
+                        // 把 PublicDesignItem 适配成 DesignItem 形状（缺字段给默认）
+                        item: {
+                          id: work.id,
+                          userId: user.id ?? 0,
+                          authorName: work.authorName ?? user.name,
+                          title: work.title,
+                          description: work.description ?? '',
+                          category: work.category ?? '',
+                          coverImage: work.coverImage ?? null,
+                          designData: (work.designData as any) ?? null,
+                          status: work.status,
+                          likeCount: work.likeCount,
+                          viewCount: work.viewCount,
+                          createdAt: '',
+                        } as any,
+                      })}
                     >
                       <View style={[$.workCard, { backgroundColor: colors.surface, ...shadow(1, 5, 0.06, '#000', 2) }]}>
                         <View style={[$.workPreview, { backgroundColor: dark ? '#222' : '#F8F8FA' }]}>

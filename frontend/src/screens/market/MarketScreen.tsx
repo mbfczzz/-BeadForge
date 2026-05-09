@@ -1,5 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -23,6 +24,7 @@ import type { ProductData, RootStackParamList } from '../../navigation/types';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { useCartStore } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const MARKET_RED = '#F2270C';
 const MARKET_ORANGE = '#FF8A00';
@@ -231,6 +233,13 @@ export const MarketScreen: React.FC = () => {
           onPress={() => {
             if (dragEnabled || suppressPressRef.current) {
               suppressPressRef.current = false;
+              return;
+            }
+            if (!useAuthStore.getState().token) {
+              Alert.alert('请先登录', '查看购物车需要登录账号', [
+                { text: '取消', style: 'cancel' },
+                { text: '去登录', onPress: () => navigation.navigate('Main' as any, { screen: 'Profile' } as any) },
+              ]);
               return;
             }
             navigation.navigate('Cart');

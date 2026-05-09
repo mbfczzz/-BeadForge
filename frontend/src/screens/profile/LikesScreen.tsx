@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
 import { Avatar, StateView } from '../../components/common';
 import { useTheme } from '../../theme';
 import { profileApi, type ProfileReceivedLikeItem } from '../../api/profile';
+import type { RootStackParamList } from '../../navigation/types';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -15,6 +18,7 @@ interface Props {
 
 export const LikesScreen: React.FC<Props> = ({ onBack }) => {
   const { colors } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [items, setItems] = useState<ProfileReceivedLikeItem[]>([]);
 
   useEffect(() => {
@@ -53,9 +57,18 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
                 },
               ]}
             >
-              <Avatar name={item.userName} size={wp(44)} />
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('UserProfile', { userName: item.username })}
+              >
+                <Avatar name={item.userName} size={wp(44)} />
+              </TouchableOpacity>
 
-              <View style={$.content}>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('UserProfile', { userName: item.username })}
+                style={$.content}
+              >
                 <View style={$.headlineRow}>
                   <Text style={[$.headline, { color: colors.text }]} numberOfLines={1}>
                     <Text style={$.userName}>{item.userName}</Text>
@@ -72,7 +85,7 @@ export const LikesScreen: React.FC<Props> = ({ onBack }) => {
                 <Text style={[$.target, { color: colors.textSecondary }]} numberOfLines={1}>
                   {item.targetType}：{item.targetTitle}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               <View style={$.right}>
                 <View style={$.heartRow}>

@@ -104,6 +104,8 @@ export interface PublicDesignItem {
   category?: string;
   coverImage?: string;
   authorName?: string;
+  /** 后端返的是 JSON 字符串（cols×rows hex 数组），前端 parse 后画缩略图 */
+  designData?: string | string[][] | null;
   likeCount: number;
   viewCount: number;
   status: string;

@@ -8,6 +8,7 @@ import { fp, wp } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { useCartStore } from '../../store/useCartStore';
 import { useAddressStore } from '../../store/useAddressStore';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const DETAIL_RED = '#F2270C';
 const DETAIL_ORANGE = '#FF8A00';
@@ -339,7 +340,20 @@ export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = (
             <Feather name="message-circle" size={fp(18)} color={colors.text} />
             <Text style={[styles.toolText, { color: colors.textHint }]}>客服</Text>
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.78} onPress={() => navigation.navigate('Cart')} style={styles.tool}>
+          <TouchableOpacity
+            activeOpacity={0.78}
+            onPress={() => {
+              if (!useAuthStore.getState().token) {
+                Alert.alert('请先登录', '查看购物车需要登录账号', [
+                  { text: '取消', style: 'cancel' },
+                  { text: '去登录', onPress: () => navigation.navigate('Main' as any, { screen: 'Profile' } as any) },
+                ]);
+                return;
+              }
+              navigation.navigate('Cart');
+            }}
+            style={styles.tool}
+          >
             <Feather name="shopping-cart" size={fp(18)} color={colors.text} />
             <Text style={[styles.toolText, { color: colors.textHint }]}>购物车</Text>
           </TouchableOpacity>

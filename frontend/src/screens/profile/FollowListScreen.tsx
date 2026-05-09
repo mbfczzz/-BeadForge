@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppHeader, Avatar, Button, StateView, SurfaceCard } from '../../components/common';
 import { useTheme } from '../../theme';
 import { profileApi, type ProfileFollowUser } from '../../api/profile';
 import { followApi } from '../../api/community';
+import type { RootStackParamList } from '../../navigation/types';
 import { fp, wp } from '../../utils/responsive';
 
 const PAD = wp(16);
@@ -16,6 +19,7 @@ interface Props {
 
 export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
   const { colors } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [list, setList] = useState<ProfileFollowUser[]>([]);
   // 每个 userId 是否被「我」关注。followers tab 跟随后端 followed 字段，following tab 默认全 true。
   const [followingMap, setFollowingMap] = useState<Record<number, boolean>>({});
@@ -67,12 +71,19 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
           return (
             <SurfaceCard style={$.card} bodyStyle={$.cardBody}>
               <View style={$.row}>
-                <Avatar name={item.nickname} size={wp(48)} />
-                <View style={$.textWrap}>
-                  <Text style={[$.name, { color: colors.text }]}>{item.nickname}</Text>
-                  <Text style={[$.account, { color: colors.textHint }]}>账号：{item.username}</Text>
-                  <Text style={[$.bio, { color: colors.textHint }]} numberOfLines={1}>{item.bio}</Text>
-                </View>
+                {/* 头像 + 名字区可点击进对方主页（关注按钮在外面，单独可点）*/}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('UserProfile', { userName: item.username })}
+                  style={$.userTapArea}
+                >
+                  <Avatar name={item.nickname} size={wp(48)} />
+                  <View style={$.textWrap}>
+                    <Text style={[$.name, { color: colors.text }]}>{item.nickname}</Text>
+                    <Text style={[$.account, { color: colors.textHint }]}>账号：{item.username}</Text>
+                    <Text style={[$.bio, { color: colors.textHint }]} numberOfLines={1}>{item.bio}</Text>
+                  </View>
+                </TouchableOpacity>
                 <Button
                   title={buttonTitle}
                   variant={isFollowing ? 'outline' : 'primary'}
@@ -114,6 +125,11 @@ const $ = StyleSheet.create({
     gap: 0,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  userTapArea: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },
