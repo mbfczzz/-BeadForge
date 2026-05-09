@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
   ScrollView,
   StyleSheet,
   Text,
@@ -103,6 +104,7 @@ export const FeedbackScreen: React.FC<Props> = ({
     <SafeAreaView style={styles.root} edges={['top']}>
       <AppHeader title="意见反馈" onBack={onBack} />
 
+      <KeyboardAvoidingView style={styles.root} behavior="padding">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <SurfaceCard
           title="提交工单"
@@ -304,6 +306,7 @@ export const FeedbackScreen: React.FC<Props> = ({
           </View>
         </SurfaceCard>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

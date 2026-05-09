@@ -66,7 +66,7 @@ export const RegisterScreen: React.FC<Props> = ({ onSwitchToLogin }) => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={$.root} behavior="padding">
         <ScrollView
           contentContainerStyle={$.content}
           keyboardShouldPersistTaps="handled"

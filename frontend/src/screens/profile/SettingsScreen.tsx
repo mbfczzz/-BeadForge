@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -278,6 +279,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
     return (
       <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>
         <AppHeader title="登录密码" onBack={closePanel} />
+        <KeyboardAvoidingView style={$.root} behavior="padding">
         <ScrollView contentContainerStyle={$.panelContent} showsVerticalScrollIndicator={false}>
           <View style={[$.panelCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TextInput
@@ -325,6 +327,7 @@ export const SettingsScreen: React.FC<Props> = ({ onBack }) => {
             </Pressable>
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }

@@ -170,7 +170,7 @@ function BottomSheetPicker({
   const { colors } = useTheme();
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable
           style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -285,7 +285,7 @@ function BirthdayPicker({
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable
           style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -301,7 +301,7 @@ function BirthdayPicker({
           <View style={styles.dateColumns}>
             <View style={styles.dateColumn}>
               <Text style={[styles.dateColumnLabel, { color: colors.textHint }]}>年</Text>
-              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {years.map((item) => {
                   const active = item === year;
                   return (
@@ -330,7 +330,7 @@ function BirthdayPicker({
 
             <View style={styles.dateColumn}>
               <Text style={[styles.dateColumnLabel, { color: colors.textHint }]}>月</Text>
-              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {months.map((item) => {
                   const active = item === month;
                   return (
@@ -359,7 +359,7 @@ function BirthdayPicker({
 
             <View style={styles.dateColumn}>
               <Text style={[styles.dateColumnLabel, { color: colors.textHint }]}>日</Text>
-              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.dateScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {days.map((item) => {
                   const active = item === day;
                   return (
@@ -491,7 +491,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <KeyboardAvoidingView
         style={styles.root}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <View
           style={[
@@ -598,6 +598,7 @@ export const EditProfileScreen: React.FC<Props> = ({ onBack }) => {
         visible={leaveConfirmVisible}
         animationType="fade"
         transparent
+        statusBarTranslucent
         onRequestClose={() => setLeaveConfirmVisible(false)}
       >
         <Pressable

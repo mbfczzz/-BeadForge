@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as MCI } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -105,6 +105,7 @@ export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>>
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
       <AppHeader title="发布动态" onBack={() => navigation.goBack()} />
 
+      <KeyboardAvoidingView style={styles.root} behavior="padding">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <TextInput
           value={content}
@@ -175,6 +176,7 @@ export const PublishComposerScreen: React.FC<RootScreenProps<'PublishComposer'>>
           <Text style={styles.publishButtonText}>{publishing ? (progress || '发布中…') : '发布'}</Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

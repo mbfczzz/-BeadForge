@@ -113,7 +113,7 @@ export const AppAlertProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   return (
     <>
       {children}
-      <Modal visible={!!alertState} transparent animationType="none" onRequestClose={dismiss}>
+      <Modal visible={!!alertState} transparent statusBarTranslucent animationType="none" onRequestClose={dismiss}>
         <Animated.View style={[styles.overlay, { opacity }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} />
           <Animated.View

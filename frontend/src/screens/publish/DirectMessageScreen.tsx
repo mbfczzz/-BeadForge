@@ -112,7 +112,7 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
       <KeyboardAvoidingView
         style={styles.flex}
         behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+        keyboardVerticalOffset={0}
       >
         <FlatList
           data={messages}
@@ -187,6 +187,7 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
               placeholderTextColor={colors.textHint}
               style={[styles.input, { color: colors.text }]}
               multiline
+              textAlignVertical="top"
             />
           </View>
           <Pressable

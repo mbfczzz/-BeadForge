@@ -379,7 +379,7 @@ export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = (
         </View>
       ) : null}
 
-      <Modal visible={selectorVisible} transparent animationType="slide" onRequestClose={closeSelector}>
+      <Modal visible={selectorVisible} transparent statusBarTranslucent animationType="slide" onRequestClose={closeSelector}>
         <View style={styles.modalRoot}>
           <TouchableOpacity style={styles.mask} activeOpacity={1} onPress={closeSelector} />
 

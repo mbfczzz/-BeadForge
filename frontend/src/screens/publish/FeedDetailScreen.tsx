@@ -305,7 +305,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
         </Pressable>
       ) : null}
 
-      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={$.root} behavior="padding">
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: wp(110) + BOTTOM_SAFE_H }}>
           <View style={$.contentWrap}>
             <Pressable style={$.userRow} onPress={() => navigation.navigate('UserProfile', { userName: feed.user.name })}>

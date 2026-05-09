@@ -366,7 +366,7 @@ export const AddressScreen: React.FC<Props> = ({
         ) : null}
       </ScrollView>
 
-      <Modal visible={editorVisible} animationType="slide" transparent onRequestClose={requestCloseEditor}>
+      <Modal visible={editorVisible} animationType="slide" transparent statusBarTranslucent onRequestClose={requestCloseEditor}>
         <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={requestCloseEditor}>
           <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={() => undefined}>
             <View style={styles.sheetHeader}>
@@ -479,7 +479,7 @@ export const AddressScreen: React.FC<Props> = ({
         </Pressable>
       </Modal>
 
-      <Modal visible={regionPickerVisible} animationType="fade" transparent onRequestClose={() => setRegionPickerVisible(false)}>
+      <Modal visible={regionPickerVisible} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setRegionPickerVisible(false)}>
         <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={() => setRegionPickerVisible(false)}>
           <Pressable style={[styles.regionSheet, { backgroundColor: colors.surface }]} onPress={() => undefined}>
             <View style={styles.sheetHeader}>
@@ -494,7 +494,7 @@ export const AddressScreen: React.FC<Props> = ({
             </View>
 
             <View style={styles.regionColumns}>
-              <ScrollView style={[styles.regionColumn, { borderColor: colors.divider }]} showsVerticalScrollIndicator={false}>
+              <ScrollView style={[styles.regionColumn, { borderColor: colors.divider }]} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {provinceOptions.map((item) => {
                   const active = item.name === tempProvince;
                   return (
@@ -515,7 +515,7 @@ export const AddressScreen: React.FC<Props> = ({
                 })}
               </ScrollView>
 
-              <ScrollView style={[styles.regionColumn, { borderColor: colors.divider }]} showsVerticalScrollIndicator={false}>
+              <ScrollView style={[styles.regionColumn, { borderColor: colors.divider }]} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {cityOptions.map((item) => {
                   const active = item.name === tempCity;
                   return (
@@ -534,7 +534,7 @@ export const AddressScreen: React.FC<Props> = ({
                 })}
               </ScrollView>
 
-              <ScrollView style={styles.regionColumn} showsVerticalScrollIndicator={false}>
+              <ScrollView style={styles.regionColumn} showsVerticalScrollIndicator={false} nestedScrollEnabled>
                 {districtOptions.map((item) => {
                   const active = item.name === tempDistrict;
                   return (

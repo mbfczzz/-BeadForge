@@ -51,7 +51,7 @@ export const LoginScreen: React.FC<Props> = ({ onSwitchToRegister }) => {
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView style={$.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={$.root} behavior="padding">
         <View style={$.content}>
           <View style={$.hero}>
             <View style={[$.brandIcon, { backgroundColor: colors.accent }]}>

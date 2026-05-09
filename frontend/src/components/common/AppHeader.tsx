@@ -20,6 +20,7 @@ export const AppHeader: React.FC<Props> = ({ title, onBack, right, style }) => {
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onBack}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.iconButton}
         >
           <Feather name="arrow-left" size={fp(18)} color={colors.text} />

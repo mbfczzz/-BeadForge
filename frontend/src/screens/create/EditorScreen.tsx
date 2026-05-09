@@ -1430,6 +1430,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       <Modal
         visible={!!colorInfo}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setColorInfo(null)}
       >
@@ -1454,6 +1455,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       <Modal
         visible={exportSheetOpen}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => !exporting && setExportSheetOpen(false)}
       >
@@ -1536,6 +1538,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       <Modal
         visible={sourcePreviewOpen && !!lastImageUri}
         transparent
+        statusBarTranslucent
         animationType="fade"
         onRequestClose={() => setSourcePreviewOpen(false)}
       >
@@ -1559,7 +1562,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       </Modal>
 
       {/* ── 发布资源弹窗 ── */}
-      <Modal visible={showPublish} animationType="fade" transparent onRequestClose={() => setShowPublish(false)}>
+      <Modal visible={showPublish} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setShowPublish(false)}>
         <TouchableOpacity style={$.pubOverlay} activeOpacity={1} onPress={() => setShowPublish(false)}>
           <View style={[$.pubSheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
             <Text style={[$.pubTitle, { color: colors.text }]}>发布资源到发现页</Text>
@@ -1572,7 +1575,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>描述</Text>
             <TextInput style={[$.pubInput, $.pubInputMulti, { backgroundColor: colors.inputBg, color: colors.text }]}
               placeholder="简单描述你的资源（选填）" placeholderTextColor={colors.textHint}
-              value={pubDesc} onChangeText={setPubDesc} multiline maxLength={100} />
+              value={pubDesc} onChangeText={setPubDesc} multiline textAlignVertical="top" maxLength={100} />
 
             <Text style={[$.pubLabel, { color: colors.textSecondary }]}>分类</Text>
             <View style={$.pubCatRow}>
