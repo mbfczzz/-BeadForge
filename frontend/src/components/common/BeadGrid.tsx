@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View } from 'react-native';
+import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 
 interface Props {
   pixels: string[][];
@@ -11,43 +12,86 @@ interface Props {
 }
 
 /**
- * 拼豆像素网格
- * - glossy=true: 带高光+阴影（用于详情页大预览）
- * - glossy=false: 纯色块（用于卡片缩略图，性能优先）
+ * 拼豆像素网格 — Skia 重写版
+ *
+ * 旧版每颗珠子一个 <View>，100×100 缩略图渲染 10000 个节点，
+ * 列表里出现几张就直接卡顿（drafts / MyDesigns / Feed 这些场景）。
+ *
+ * 新版策略：
+ * - 单 <Canvas> 节点
+ * - 同色珠子合并到同一条 SkPath（最多 ~36 条 path，跟调色板色数一致）
+ * - 100×100 也只发 ~36 次绘制调用，列表里随便堆几十张都流畅
+ *
+ * - glossy=true: 每颗珠子加白色高光（详情页大预览，beadSize >= 8 才显示）
+ * - glossy=false: 纯色块（卡片缩略图，性能优先）
+ *
+ * Props 与旧版完全一致，调用方零改动。
  */
 export const BeadGrid = memo<Props>(({ pixels, beadSize = 8, gap = 1, round = true, glossy = false }) => {
-  const r = round ? beadSize / 2 : 1;
+  const rows = pixels.length;
+  const cols = pixels[0]?.length ?? 0;
 
-  const rows = useMemo(() =>
-    pixels.map((row, y) => (
-      <View key={y} style={[styles.row, { gap }]}>
-        {row.map((color, x) => {
-          if (color === 'transparent') {
-            return <View key={x} style={{ width: beadSize, height: beadSize }} />;
-          }
-          return (
-            <View key={x} style={{
-              width: beadSize, height: beadSize, borderRadius: r,
-              backgroundColor: color,
-            }}>
-              {glossy && beadSize >= 8 && (
-                <View style={{
-                  position: 'absolute',
-                  top: Math.max(beadSize * 0.15, 1),
-                  left: Math.max(beadSize * 0.15, 1),
-                  width: Math.max(beadSize * 0.28, 2),
-                  height: Math.max(beadSize * 0.28, 2),
-                  borderRadius: beadSize * 0.14,
-                  backgroundColor: 'rgba(255,255,255,0.4)',
-                }} />
-              )}
-            </View>
-          );
-        })}
-      </View>
-    )), [pixels, beadSize, gap, r, glossy]);
+  const { width, height, beadPaths, glossyPath } = useMemo(() => {
+    if (rows === 0 || cols === 0) {
+      return { width: 0, height: 0, beadPaths: [] as Array<[string, ReturnType<typeof Skia.Path.Make>]>, glossyPath: null as ReturnType<typeof Skia.Path.Make> | null };
+    }
+    const stride = beadSize + gap;
+    const w = cols * stride - gap;
+    const h = rows * stride - gap;
 
-  return <View style={styles.grid}>{rows}</View>;
+    // 按颜色聚合珠子。Map 保留插入顺序，绘制顺序与首次出现一致
+    const map = new Map<string, ReturnType<typeof Skia.Path.Make>>();
+    // 高光只在 glossy 且珠子够大时画，避免缩略图上点状高光糊成一团
+    const hl = (glossy && beadSize >= 8) ? Skia.Path.Make() : null;
+    const hlSize = Math.max(beadSize * 0.28, 2);
+    const hlOff = Math.max(beadSize * 0.15, 1);
+    const hlR = beadSize * 0.14;
+    const r = beadSize / 2;
+
+    for (let y = 0; y < rows; y++) {
+      const row = pixels[y];
+      if (!row) continue;
+      for (let x = 0; x < cols; x++) {
+        const c = row[x];
+        if (!c || c === 'transparent') continue;
+        let p = map.get(c);
+        if (!p) { p = Skia.Path.Make(); map.set(c, p); }
+        const px = x * stride;
+        const py = y * stride;
+        if (round) {
+          p.addCircle(px + r, py + r, r);
+        } else {
+          p.addRect(Skia.XYWHRect(px, py, beadSize, beadSize));
+        }
+        if (hl) {
+          const rect = Skia.XYWHRect(px + hlOff, py + hlOff, hlSize, hlSize);
+          hl.addRRect(Skia.RRectXY(rect, hlR, hlR));
+        }
+      }
+    }
+
+    return {
+      width: w,
+      height: h,
+      beadPaths: Array.from(map.entries()),
+      glossyPath: hl,
+    };
+  }, [pixels, beadSize, gap, round, glossy, rows, cols]);
+
+  if (width === 0 || height === 0) return null;
+
+  return (
+    <View style={{ width, height }}>
+      <Canvas style={{ width, height }}>
+        {beadPaths.map(([color, path]) => (
+          <Path key={color} path={path} color={color} />
+        ))}
+        {glossyPath && (
+          <Path path={glossyPath} color="#FFFFFF66" />
+        )}
+      </Canvas>
+    </View>
+  );
 });
 
 export const HEART_PATTERN: string[][] = [
@@ -146,7 +190,3 @@ export const ALL_PATTERNS = [
   CHERRY_PATTERN, DIAMOND_PATTERN, RAINBOW_PATTERN,
 ];
 
-const styles = StyleSheet.create({
-  grid: { alignItems: 'center', gap: 1 },
-  row: { flexDirection: 'row' },
-});
