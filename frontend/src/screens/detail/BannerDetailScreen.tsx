@@ -19,7 +19,7 @@ const HERO_BODY_H = wp(220);
 function sortPatterns(items: MarketPattern[], mode: 'latest' | 'hot' = 'hot') {
   const sorted = [...items];
   if (mode === 'latest') {
-    sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    sorted.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return sorted;
   }
   sorted.sort((a, b) => b.downloads - a.downloads);

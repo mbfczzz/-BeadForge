@@ -432,7 +432,7 @@ export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = (
                       <Feather name="minus" size={fp(12)} color="#334155" />
                     </TouchableOpacity>
                     <Text style={styles.qtySheetNum}>{qty}</Text>
-                    <TouchableOpacity activeOpacity={0.78} onPress={() => setQty(qty + 1)} style={styles.qtySheetBtn}>
+                    <TouchableOpacity activeOpacity={0.78} onPress={() => setQty(Math.min(999, qty + 1))} style={styles.qtySheetBtn}>
                       <Feather name="plus" size={fp(12)} color="#334155" />
                     </TouchableOpacity>
                   </View>

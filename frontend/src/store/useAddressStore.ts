@@ -37,8 +37,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
         isDefault: data.isDefault,
       });
       await get().loadAddresses();
-    } catch {
-      // 静默失败，UI 维持原状
+    } catch (e) {
+      throw e; // 冒到 UI 层显示真实失败原因
     }
   },
 
@@ -53,8 +53,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
         isDefault: data.isDefault,
       });
       await get().loadAddresses();
-    } catch {
-      // 静默失败
+    } catch (e) {
+      throw e;
     }
   },
 
@@ -62,8 +62,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
     try {
       await addressApi.remove(id);
       await get().loadAddresses();
-    } catch {
-      // 静默失败
+    } catch (e) {
+      throw e;
     }
   },
 
@@ -71,8 +71,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
     try {
       await addressApi.setDefault(id);
       await get().loadAddresses();
-    } catch {
-      // 静默失败
+    } catch (e) {
+      throw e;
     }
   },
 }));

@@ -128,7 +128,7 @@ export interface UserLikedItem {
 }
 
 export type LikeTarget = 'design' | 'feed' | 'pattern' | 'comment';
-export type FavoriteTarget = 'design' | 'pattern';
+export type FavoriteTarget = 'design' | 'pattern' | 'feed';
 
 export const likeApi = {
   like: (type: LikeTarget, id: number) =>

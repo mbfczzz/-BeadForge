@@ -23,6 +23,8 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
   const [list, setList] = useState<ProfileFollowUser[]>([]);
   // 每个 userId 是否被「我」关注。followers tab 跟随后端 followed 字段，following tab 默认全 true。
   const [followingMap, setFollowingMap] = useState<Record<number, boolean>>({});
+  // 防止用户连点同一个用户的关注按钮发出多个相反请求互相覆盖
+  const [busyMap, setBusyMap] = useState<Record<number, boolean>>({});
   const title = type === 'followers' ? '粉丝' : '关注';
 
   useEffect(() => {
@@ -39,8 +41,9 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
   }, [type]);
 
   const toggleFollow = useCallback(async (userId: number) => {
+    if (busyMap[userId]) return; // 防双击
     const wasFollowing = followingMap[userId] === true;
-    // 乐观更新
+    setBusyMap((prev) => ({ ...prev, [userId]: true }));
     setFollowingMap((prev) => ({ ...prev, [userId]: !wasFollowing }));
     try {
       if (wasFollowing) {
@@ -49,10 +52,11 @@ export const FollowListScreen: React.FC<Props> = ({ type, onBack }) => {
         await followApi.follow(userId);
       }
     } catch {
-      // 失败回滚
       setFollowingMap((prev) => ({ ...prev, [userId]: wasFollowing }));
+    } finally {
+      setBusyMap((prev) => ({ ...prev, [userId]: false }));
     }
-  }, [followingMap]);
+  }, [followingMap, busyMap]);
 
   return (
     <SafeAreaView style={[$.root, { backgroundColor: colors.bg }]} edges={['top']}>

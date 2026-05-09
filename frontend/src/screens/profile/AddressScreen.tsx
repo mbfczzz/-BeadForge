@@ -213,7 +213,7 @@ export const AddressScreen: React.FC<Props> = ({
     setRegionPickerVisible(false);
   };
 
-  const saveAddress = () => {
+  const saveAddress = async () => {
     const payload = {
       receiver: draft.receiver.trim(),
       phone: normalizePhone(draft.phone),
@@ -238,15 +238,18 @@ export const AddressScreen: React.FC<Props> = ({
       return;
     }
 
-    if (editingId) {
-      onUpdate(editingId, payload);
-      showToast('地址已更新');
-    } else {
-      onCreate(payload);
-      showToast('地址已新增');
+    try {
+      if (editingId) {
+        await Promise.resolve(onUpdate(editingId, payload));
+        showToast('地址已更新');
+      } else {
+        await Promise.resolve(onCreate(payload));
+        showToast('地址已新增');
+      }
+      closeEditor();
+    } catch (e: any) {
+      showToast(e?.message || '保存失败，请重试');
     }
-
-    closeEditor();
   };
 
   const confirmDelete = (id: string) => {

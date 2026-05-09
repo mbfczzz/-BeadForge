@@ -28,6 +28,7 @@ import { ThemeProvider, useTheme } from './src/theme';
 import { injectWebHoverStyles } from './src/utils/webHover';
 import { getOrCreateDeviceId, describeDeviceName } from './src/utils/deviceId';
 import { userSessionApi } from './src/api/security';
+import { setOnUnauthorized } from './src/api/client';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -42,6 +43,10 @@ function AppContent() {
     void loadToken();
     void loadUiConfig();
     injectWebHoverStyles();
+    // 401 时自动 logout（清 token / user / store），避免后端拒绝后前端仍按已登录走
+    setOnUnauthorized(() => {
+      void useAuthStore.getState().logout();
+    });
   }, [loadToken, loadUiConfig]);
 
   // 登录后上报设备，让设置页能看到当前设备

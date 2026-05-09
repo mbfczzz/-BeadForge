@@ -54,7 +54,7 @@ function matchesTab(item: MarketPattern, tab?: DiscoverFilterTabDef) {
 function sortDiscoveryItems(items: MarketPattern[], sort: 'latest' | 'hot' = 'hot') {
   const sorted = [...items];
   if (sort === 'latest') {
-    sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    sorted.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     return sorted;
   }
   sorted.sort((a, b) => b.downloads - a.downloads);

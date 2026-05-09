@@ -72,7 +72,7 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
     likeApi.check('feed', feed.id)
       .then((res) => { if (alive) setLiked(!!res.data?.liked); })
       .catch(() => undefined);
-    favoriteApi.check('design', feed.id)
+    favoriteApi.check('feed', feed.id)
       .then((res) => { if (alive) setBookmarked(!!res.data?.favorited); })
       .catch(() => undefined);
     if (feed.user.id && !isOwnFeed) {
@@ -143,9 +143,9 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
     setBookmarkBusy(true);
     try {
       if (next) {
-        await favoriteApi.add('design', feed.id);
+        await favoriteApi.add('feed', feed.id);
       } else {
-        await favoriteApi.remove('design', feed.id);
+        await favoriteApi.remove('feed', feed.id);
       }
     } catch (err: any) {
       setBookmarked(!next);

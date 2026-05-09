@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ProductData } from '../api/market';
 
 export interface CartItem {
@@ -20,8 +22,11 @@ interface CartState {
 }
 
 const buildItemId = (productId: number, variant: string) => `${productId}:${variant}`;
+const MAX_QTY = 999;
 
-export const useCartStore = create<CartState>((set) => ({
+export const useCartStore = create<CartState>()(
+  persist(
+    (set) => ({
   items: [],
 
   addItem: (product, options) => {
@@ -60,7 +65,7 @@ export const useCartStore = create<CartState>((set) => ({
     set((state) => ({
       items: state.items.map((item) => (
         item.id === id
-          ? { ...item, qty: Math.max(1, qty) }
+          ? { ...item, qty: Math.max(1, Math.min(MAX_QTY, qty)) }
           : item
       )),
     }));
@@ -93,4 +98,12 @@ export const useCartStore = create<CartState>((set) => ({
       items: state.items.filter((item) => !item.selected),
     }));
   },
-}));
+    }),
+    {
+      name: 'beadforge-cart',
+      storage: createJSONStorage(() => AsyncStorage),
+      // 只 persist items；方法重新声明
+      partialize: (state) => ({ items: state.items }) as any,
+    },
+  ),
+);

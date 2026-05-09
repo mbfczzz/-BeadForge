@@ -42,7 +42,9 @@ function analyzePattern(pixels: string[][]) {
 }
 
 function fmtDate(d: string) {
+  if (!d) return '';
   const dt = new Date(d);
+  if (isNaN(dt.getTime())) return ''; // 防 Invalid Date 显示成 NaN/NaN/NaN
   return `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')}`;
 }
 
