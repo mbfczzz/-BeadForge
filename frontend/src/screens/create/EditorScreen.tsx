@@ -465,12 +465,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     // 已经从图纸 / 作品页带 initialGrid 进来：跳过模式默认占位
     if (hasInitialGrid) { setGenerating(false); return; }
 
-    if (mode === 'image') {
-      // 进页面立刻唤起相册；取消会 goBack 回创作页
-      void pickAndConvertImage(true);
-      return;
-    }
-    // manual 和 ai 模式都不显示 loading（ai 模式显示输入面板）
+    // 所有模式都不自动唤起相册 / 不显示 loading：让用户先配置（AI 增强 / 抖动 / 调色板）
+    // 再决定何时上传。image 模式空画布上有"选择图片"CTA 引导。
     setGenerating(false);
   }, []);
 
@@ -1125,6 +1121,26 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
               <Text style={$.coordText}>{hoverCoord.c + 1}, {hoverCoord.r + 1}</Text>
             </View>
           )}
+          {mode === 'image' && !lastImageUri && !generating && (
+            <View style={$.imageCtaWrap} pointerEvents="box-none">
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => { void pickAndConvertImage(false); }}
+                style={[$.imageCta, { backgroundColor: colors.accent }]}
+              >
+                <View style={$.imageCtaIcon}>
+                  <Feather name="image" size={fp(26)} color="#fff" />
+                </View>
+                <Text style={$.imageCtaTitle}>选择图片开始</Text>
+                <Text style={$.imageCtaDesc} numberOfLines={2}>
+                  {aiEnhance ? '已开 AI 增强 · 先卡通化再转拼豆' : '未开 AI 增强 · 直接像素化'}
+                </Text>
+                <Text style={$.imageCtaHint} numberOfLines={1}>
+                  ↓ 下方可调 AI 增强 / 细节 / 调色板
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* ── 画笔大小 + 对称 ── */}
@@ -1716,6 +1732,36 @@ const $ = StyleSheet.create({
     borderRadius: wp(8),
   },
   coordText: { fontSize: FontSize.xs, fontWeight: '600', color: '#fff', fontVariant: ['tabular-nums'] },
+  // image 模式空画布的"选择图片"CTA：absolute 全覆盖 + 内层居中
+  // pointerEvents 在 wrap 上设 box-none，让非按钮区域穿透到 canvas（虽然空画布也接收不到啥，但留个安全口）
+  imageCtaWrap: {
+    position: 'absolute',
+    top: 0, bottom: 0, left: 0, right: 0,
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: wp(16),
+  },
+  imageCta: {
+    alignItems: 'center',
+    paddingHorizontal: wp(24), paddingVertical: wp(20),
+    borderRadius: BorderRadius.lg,
+    ...shadow(4, 16, 0.22, '#000', 6),
+    maxWidth: '100%',
+  },
+  imageCtaIcon: {
+    width: wp(56), height: wp(56), borderRadius: wp(28),
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: wp(8),
+  },
+  imageCtaTitle: { fontSize: fp(15), fontWeight: '700', color: '#fff' },
+  imageCtaDesc: {
+    fontSize: fp(11), color: 'rgba(255,255,255,0.9)',
+    marginTop: wp(4), textAlign: 'center',
+  },
+  imageCtaHint: {
+    fontSize: fp(10), color: 'rgba(255,255,255,0.75)',
+    marginTop: wp(8), textAlign: 'center',
+  },
 
   // 画笔大小 + 对称栏
   brushBar: {
