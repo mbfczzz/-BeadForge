@@ -72,14 +72,109 @@ public class AiController {
         "#8B5CF6","#A78BFA","#C4B5FD","#1E1B2E","#6B7280","#FAFAFA"
     };
 
+    // 真实品牌色板（来自 maxcleme/beadcolors，MIT，2026-05-08 抓取）
+    // 与 frontend/src/data/palettes.ts 镜像，让 image-to-grid 能匹配真实 SKU 色
+    private static final String[] PALETTE_ARTKAL_C = {
+        "#EAEEF3", "#292A2B", "#FFA630", "#E68739", "#CB3531", "#B61927",
+        "#E182B0", "#DC519A", "#DA4383", "#EADE7F", "#EAC125", "#97CF87",
+        "#8BB23A", "#009053", "#00765F", "#F96F40", "#EB6027", "#A7CDDE",
+        "#2EABD8", "#0084CE", "#004FA4", "#F2BFB8", "#DCA384", "#EED39E",
+        "#8A7EC2", "#9165B2", "#48337E", "#B27938", "#B35540", "#9A4541",
+        "#895D49", "#65463D", "#959698", "#70757B", "#676B73", "#CE6D83",
+        "#0078BF", "#55A4D9", "#9EC9CD", "#CDC03F", "#E1D367", "#E1C835",
+        "#B11836", "#EE927C", "#E2E65D", "#E9C1A6", "#ECC03D", "#EF67B2",
+        "#C0B7D7", "#DFDABD", "#4F3989", "#8EC324", "#00A5A1", "#82878B",
+        "#36384D", "#B2D7CE", "#383E44", "#153838", "#E8AE00", "#D9B35E",
+        "#BB6833", "#CDB277", "#AA744E", "#EC625E", "#BE5D65", "#99323A",
+        "#68C4D2", "#0093A9", "#5AB0BF", "#009EC2", "#0084B2", "#ADAD29",
+        "#8F8E3C", "#007D2B", "#D4D8D3", "#C2C4C2", "#A7ACAD", "#565A5E",
+        "#CEA433", "#DCB794", "#DD9285", "#E07B69", "#EF7F61", "#DC772B",
+        "#6AAEDB", "#61BBD3", "#279BBE", "#00A7E3", "#0077CA", "#005AA9",
+        "#007F9E", "#007D91", "#00649A", "#006C9F", "#CFC179", "#C4AE64",
+        "#AB9745", "#978138", "#907C41", "#B6AE84", "#A59F65", "#938D54",
+        "#8D8B51", "#7F7E49", "#5B6E35", "#8AD5C9", "#7CD2A5", "#72AC9A",
+        "#00B26F", "#3EB724", "#0D7535", "#007D6E", "#006E69", "#DFC3E1",
+        "#D38ED4", "#D5A6BA", "#D6668E", "#B8AAD9", "#DF486D", "#BC3CA6",
+        "#803897", "#A7BAE1", "#AFB8DF", "#6B9AD4", "#5A89CE", "#658AD0",
+        "#566CBD", "#4D74C6", "#416DBE", "#30429E", "#024288", "#D6CA6A",
+        "#9D1A38", "#80B7A1", "#7A594F", "#EFDBA1", "#8884D0", "#345621",
+        "#AEADDC", "#BCC3E1", "#E3C09A", "#C58B60", "#5A5F65", "#4C5156",
+        "#3A3E42", "#5DDB5D", "#6CC24A", "#BC0423", "#531A23", "#F1EB9C",
+        "#FC3F3F", "#EABEDB", "#A50050", "#EF7E2E", "#FC6C85", "#B14EB5",
+        "#69C2EE", "#C3CED6", "#9AB2DB", "#5D88B2", "#02BDD1", "#52CAAC",
+        "#2D6DB2", "#C2A3B7", "#8A5877", "#68355D", "#B84FA8", "#B02FA4",
+        "#E2A365", "#BE8E59", "#A87443", "#A06E52", "#F9C1D7", "#59292B"
+    };
+    private static final String[] PALETTE_ARTKAL_R = {
+        "#EAEEF3", "#EE927C", "#FFA630", "#EB6027", "#CB3531", "#EF67B2",
+        "#959698", "#1FC467", "#00685E", "#2EABD8", "#004FA4", "#9165B2",
+        "#292A2B", "#E1C835", "#9A4541", "#65463D", "#895D49", "#DCA384",
+        "#F2BFB8", "#009053", "#8BB23A", "#48337E", "#644FA4", "#0078BF",
+        "#DC519A", "#DA4383", "#EAC125", "#DDA1CC", "#E1D367", "#9EC9CD",
+        "#B2D7CE", "#EED39E", "#C0B7D7", "#B61927", "#E1CCD2", "#CE6D83",
+        "#60BFCB", "#A3134A", "#E68739", "#E182B0", "#9D5B2E", "#676B73",
+        "#70757B", "#A7CDDE", "#00A5A1", "#8EC324", "#B27938", "#ECC03D",
+        "#921E5D", "#E2A488", "#DFDABD", "#EADE7F", "#55A4D9", "#0084CE",
+        "#36384D", "#97CF87", "#E2E65D", "#F96F40", "#E5533C", "#E9C1A6",
+        "#B35540", "#B11836", "#8A7EC2", "#CDC03F", "#00765F", "#696046",
+        "#CC9B74", "#383E44", "#007D2B", "#68C4D2", "#009EC2", "#0093A9",
+        "#D4D8D3", "#C2C4C2", "#A7ACAD", "#D9B35E", "#BF9168", "#AA744E",
+        "#BB6833", "#BE5D65", "#99323A", "#E8AE00", "#EC625E", "#565A5E",
+        "#ADAD29", "#8F8E3C", "#5AB0BF", "#0084B2", "#153838"
+    };
+    private static final String[] PALETTE_PERLER = {
+        "#305545", "#B3BAB8", "#AF9FCE", "#008F53", "#0065B1", "#2F3C55",
+        "#A9CDD5", "#F2AFB7", "#E1747A", "#C9A385", "#94A19D", "#4F595A",
+        "#DEDACE", "#B1628E", "#D14337", "#D9593A", "#F5A168", "#D8E47C",
+        "#93B0BD", "#4AC0D8", "#00A4AC", "#047F8A", "#7F971A", "#696E31",
+        "#9D2B3A", "#EAEFEE", "#E1E2BB", "#E7CE3E", "#EB7B31", "#B0353C",
+        "#D8729A", "#684B86", "#0E5092", "#278CC9", "#007B4E", "#18C7B1",
+        "#674C44", "#909497", "#323234", "#995043", "#936848", "#E9BFB9",
+        "#C5AC90", "#E04284", "#4A9CCF", "#6DCC94", "#937FBF", "#E9E290",
+        "#FBB146", "#96D1D4", "#DD595B", "#A75D9D", "#69B845", "#0098C5",
+        "#F99297", "#6683B7", "#E1BCCE", "#4DAB64", "#D45496", "#983864",
+        "#DA9964", "#009188", "#585C61", "#85A8E3", "#843947", "#BBC938",
+        "#E5BE9E", "#B3EED5", "#A3DE6F", "#F479B0", "#503B9C", "#D25D72",
+        "#4E56A3", "#FD5918", "#005D57", "#6F3255", "#DA8C2C", "#7E5446",
+        "#8C8CA7", "#5E6D7B", "#4C6388", "#9AA98E", "#EFB79B", "#CA3B65",
+        "#CB59B9", "#714875", "#C8C85C", "#988C8C", "#14313B", "#392928",
+        "#C685B1", "#6CC8AD", "#CDB7C3", "#FC9574", "#F6CA69", "#0090AC",
+        "#F8C7C9", "#406AE1", "#DEBA0B", "#F6D901", "#BED4A6", "#C8B693",
+        "#FF9A8B"
+    };
+    private static final String[] PALETTE_HAMA_MIDI = {
+        "#E5ECF1", "#E4E4C5", "#E9C704", "#D14803", "#B4060E", "#EA8AA5",
+        "#712297", "#0239A3", "#025BC3", "#027643", "#19CDA7", "#3E271A",
+        "#C02435", "#E4AA32", "#37B876", "#838F98", "#141315", "#D8D2CE",
+        "#8D2A0F", "#BE6C21", "#91020A", "#683E9A", "#87593D", "#E8A498",
+        "#DCB18E", "#1E2C1C", "#BF0142", "#4E0C1B", "#489AB9", "#FF208D",
+        "#FF3956", "#E5EF13", "#FF2833", "#2353B0", "#06B73C", "#FD8600",
+        "#F1F21C", "#FE630B", "#2659B2", "#0CBD51", "#E7E45A", "#F96160",
+        "#8E69CD", "#51AEE4", "#80DF96", "#D67AD1", "#0FACD1", "#F0981E",
+        "#A5B3C0", "#445059", "#B78C6D", "#8A5937", "#CED1C8", "#F7C1AA",
+        "#F87633", "#91175A", "#037A9F", "#687836", "#DD9BA3", "#B491AD",
+        "#8AAFC2", "#94CCA4", "#487ED5", "#FAF8ED", "#EDBF9F", "#C4D0E3",
+        "#D99350", "#48474A", "#42312F", "#EFEBE4", "#F097B0", "#59AEF5",
+        "#5B55BD", "#A9C39B", "#356B2D", "#FFE660", "#BCD122", "#FFAC78",
+        "#CCC5ED", "#6A87C1", "#2A2536", "#8A847F", "#838956", "#835854",
+        "#AD8A82", "#5F887B", "#9A2C31", "#6E975F", "#222838", "#777169",
+        "#612932", "#4167B4"
+    };
+
     // 调色板的 RGB 与 LAB 表示。类加载时为每套预设各算一份，请求时按 key 查表。
     // LAB 用于 ΔE 最近色匹配（比 RGB 欧氏更贴近人眼）；RGB 用于 Floyd-Steinberg 误差扩散。
     private static final Map<String, String[]> PALETTES = new HashMap<>();
     private static final Map<String, int[][]> PALETTE_RGB_MAP = new HashMap<>();
     private static final Map<String, double[][]> PALETTE_LAB_MAP = new HashMap<>();
     static {
+        // 老 key 保留兼容（已发布作品 / 旧客户端可能仍传这些）
         registerPalette("default", PALETTE_DEFAULT_36);
         registerPalette("classic", PALETTE_CLASSIC_24);
+        // 真实品牌色板
+        registerPalette("artkal-c", PALETTE_ARTKAL_C);
+        registerPalette("artkal-r", PALETTE_ARTKAL_R);
+        registerPalette("perler", PALETTE_PERLER);
+        registerPalette("hama-midi", PALETTE_HAMA_MIDI);
     }
 
     private static void registerPalette(String key, String[] hexes) {

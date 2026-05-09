@@ -14,6 +14,7 @@ import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData 
 import { SkiaBeadCanvas, type SkiaBeadCanvasHandle } from '../../components/editor/SkiaBeadCanvas';
 import { exportGridAsPng, exportGridAsPdf, savePngToAlbum, shareFile } from '../../utils/exporter';
 import { lineCells, rectCells, ellipseCells, applyMirror } from '../../utils/shapes';
+import { BEAD_PALETTES, type BeadColor } from '../../data/palettes';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { imageToGrid, type DitherMode } from '../../api/imageToGrid';
@@ -27,31 +28,21 @@ import { shadow } from '../../utils/shadow';
 
 const PAD = wp(15);
 
-/* ──────────────── 调色板 — 多套预设，与后端 AiController.PALETTES 镜像 ────────────── */
+/* ──────────────── 调色板 — 4 个真实拼豆品牌（来自 maxcleme/beadcolors，MIT） ────────────── */
 
-// "default" 36 色：原 24 + 肤色 / 头发 / 唇色 / 高光，能转人像照片
-// "classic" 24 色：纯卡通 / 抽象用，无肤色
-const PALETTES: Record<string, string[][]> = {
-  default: [
-    ['#EF4444', '#F87171', '#FCA5A5', '#FDA4AF', '#F9A8D4', '#EC4899'], // 红 / 粉
-    ['#F97316', '#FB923C', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'], // 橙 / 黄
-    ['#22C55E', '#16A34A', '#86EFAC', '#0EA5E9', '#7DD3FC', '#3B82F6'], // 绿 / 蓝
-    ['#8B5CF6', '#A78BFA', '#C4B5FD', '#1E1B2E', '#6B7280', '#FAFAFA'], // 紫 / 中性
-    ['#FDD9B4', '#F8C399', '#F4B68F', '#DDA67D', '#C68863', '#8B5A2B'], // 肤色阶
-    ['#2C1810', '#5D4037', '#A0784A', '#DEB887', '#B8534F', '#F8F0E5'], // 头发 / 唇 / 高光
-  ],
-  classic: [
-    ['#EF4444', '#F87171', '#FCA5A5', '#FDA4AF', '#F9A8D4', '#EC4899'],
-    ['#F97316', '#FB923C', '#FBBF24', '#FCD34D', '#FDE68A', '#FEF3C7'],
-    ['#22C55E', '#16A34A', '#86EFAC', '#0EA5E9', '#7DD3FC', '#3B82F6'],
-    ['#8B5CF6', '#A78BFA', '#C4B5FD', '#1E1B2E', '#6B7280', '#FAFAFA'],
-  ],
-};
-type PaletteKey = keyof typeof PALETTES;
-const PALETTE_OPTIONS: { key: PaletteKey; label: string; desc: string }[] = [
-  { key: 'default', label: '标准 36', desc: '含肤色，适合人像 / 自拍' },
-  { key: 'classic', label: '经典 24', desc: '无肤色，适合卡通 / 抽象' },
-];
+// 品牌 key 直接来自 BEAD_PALETTES。后端 AiController 也用同样的 key 注册各品牌的全色板，
+// 让 image-to-grid 的最近色匹配能用真实 SKU 色。每个品牌默认显示 popularIndices（30+ 色精选），
+// 用户可切"全部"看完整品牌色板（100-200 色不等）
+type PaletteKey = string;
+const PALETTE_OPTIONS: { key: PaletteKey; label: string; desc: string }[] =
+  BEAD_PALETTES.map((p) => ({ key: p.key, label: p.label, desc: p.desc }));
+
+// 每行 6 颗珠子，给现有调色板 UI 用
+function chunkRows<T>(arr: T[], colsPerRow: number = 6): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += colsPerRow) out.push(arr.slice(i, i + colsPerRow));
+  return out;
+}
 
 // AI 风格预设。和后端 buildStylePrompt 镜像。每个 key 对应一套 prompt 模板，
 // 让 AI 用对应风格重绘原图。市场上 PixelMe 这类工具的核心就是风格预设——
@@ -157,10 +148,24 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [showAiInput, setShowAiInput] = useState(mode === 'ai' && !hasInitialGrid);
   const useRealApi = true; // API Key 存后端数据库，始终尝试调用
 
-  /* ---- 调色板：默认 36（含肤色），用户可切到经典 24 ---- */
-  const [paletteKey, setPaletteKey] = useState<PaletteKey>('default');
-  const PALETTE_ROWS = PALETTES[paletteKey];
-  const PALETTE = useMemo(() => PALETTE_ROWS.flat(), [PALETTE_ROWS]);
+  /* ---- 调色板：默认 Artkal C（国内主流 2.6mm 迷你珠） ---- */
+  const [paletteKey, setPaletteKey] = useState<PaletteKey>('artkal-c');
+  // showAllColors=false 显示精选 30+ 色（popularIndices），true 显示该品牌全色板
+  const [showAllColors, setShowAllColors] = useState(false);
+  // 长按某色弹出 SKU 信息卡（code / hex / name）
+  const [colorInfo, setColorInfo] = useState<BeadColor | null>(null);
+
+  const currentPalette = useMemo(
+    () => BEAD_PALETTES.find((p) => p.key === paletteKey) ?? BEAD_PALETTES[0],
+    [paletteKey],
+  );
+  const visibleBeadColors = useMemo<BeadColor[]>(() => {
+    if (showAllColors) return currentPalette.colors;
+    return currentPalette.popularIndices.map((i) => currentPalette.colors[i]).filter(Boolean);
+  }, [currentPalette, showAllColors]);
+  const PALETTE_ROWS_OBJ = useMemo(() => chunkRows(visibleBeadColors, 6), [visibleBeadColors]);
+  // doubaoGenerate 还需要扁平 hex 数组传给 AI prompt
+  const PALETTE = useMemo(() => visibleBeadColors.map((c) => c.hex), [visibleBeadColors]);
 
   /* ---- AI 增强：image 模式专用，让 GPT 先卡通化再 pixelize；默认开启 ---- */
   // 真人照片 / 复杂背景照片走纯算法效果有限，开启此项让 AI 重绘成"卡通色块"
@@ -180,8 +185,12 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       if (json) {
         try {
           const saved = JSON.parse(json);
-          if (saved.paletteKey === 'default' || saved.paletteKey === 'classic') {
+          // 老数据可能存的是 'default' / 'classic'，迁到 artkal-c（默认）
+          const validKey = BEAD_PALETTES.some((p) => p.key === saved.paletteKey);
+          if (validKey) {
             setPaletteKey(saved.paletteKey);
+          } else if (saved.paletteKey === 'default' || saved.paletteKey === 'classic') {
+            setPaletteKey('artkal-c');
           }
           if (typeof saved.aiEnhance === 'boolean') setAiEnhance(saved.aiEnhance);
           const validStyles: StyleKey[] = ['auto', 'portrait', 'chibi', 'anime', 'scene'];
@@ -208,7 +217,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [grid, setGrid] = useState<string[][]>(() => fitInitialGrid(initialGrid) || createEmptyGrid(cols, rows));
   const [tool, setTool] = useState<ToolType>('pen');
   // 初始色用 default 的第一格；切换调色板不会自动改当前色（用户已选的色仍可继续画）
-  const [color, setColor] = useState(PALETTES.default[0][0]);
+  const [color, setColor] = useState(BEAD_PALETTES[0].colors[BEAD_PALETTES[0].popularIndices[0]]?.hex ?? BEAD_PALETTES[0].colors[0].hex);
   const [history, setHistory] = useState<string[][][]>([]);
   const [future, setFuture] = useState<string[][][]>([]);
   const [showGridLine, setShowGridLine] = useState(true);
@@ -1294,25 +1303,30 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           </View>
         )}
 
-        {/* ── 调色板 ── */}
+        {/* ── 调色板（4 品牌横向滚动 + 当前品牌精选/全部色板） ── */}
         <View style={$.section}>
           <View style={$.paletteHeader}>
             <Text style={[$.secLabel, { color: colors.textSecondary }]}>调色板</Text>
-            <View style={$.palettePresetRow}>
-              {PALETTE_OPTIONS.map((opt) => {
-                const active = paletteKey === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    activeOpacity={0.75}
-                    onPress={() => { hapticSelection(); setPaletteKey(opt.key); }}
-                    style={[
-                      $.palettePresetChip,
-                      {
-                        backgroundColor: active ? colors.accent : colors.inputBg,
-                        borderColor: active ? colors.accent : colors.border,
-                      },
-                    ]}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={$.palettePresetScrollRow}
+          >
+            {PALETTE_OPTIONS.map((opt) => {
+              const active = paletteKey === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  activeOpacity={0.75}
+                  onPress={() => { hapticSelection(); setPaletteKey(opt.key); setShowAllColors(false); }}
+                  style={[
+                    $.palettePresetChip,
+                    {
+                      backgroundColor: active ? colors.accent : colors.inputBg,
+                      borderColor: active ? colors.accent : colors.border,
+                    },
+                  ]}
                   >
                     <Text style={[$.palettePresetText, { color: active ? '#fff' : colors.textSecondary }]}>
                       {opt.label}
@@ -1320,8 +1334,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
                   </TouchableOpacity>
                 );
               })}
-            </View>
-          </View>
+            </ScrollView>
           {recentColors.length > 0 && (
             <View style={$.recentRow}>
               <Text style={[$.recentLabel, { color: colors.textHint }]}>最近</Text>
@@ -1341,21 +1354,42 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
               ))}
             </View>
           )}
-          {PALETTE_ROWS.map((row, ri) => (
+          {/* 精选 / 全部切换 + 当前品牌色数量 */}
+          <View style={$.paletteToolRow}>
+            <Text style={[$.paletteCount, { color: colors.textHint }]}>
+              {showAllColors
+                ? `全部 ${currentPalette.colors.length} 色`
+                : `精选 ${visibleBeadColors.length} / 全 ${currentPalette.colors.length}`}
+            </Text>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => { hapticSelection(); setShowAllColors(!showAllColors); }}
+              style={[$.paletteToggleBtn, { backgroundColor: showAllColors ? colors.accent : colors.inputBg, borderColor: showAllColors ? colors.accent : colors.border }]}
+            >
+              <Feather name={showAllColors ? 'chevron-up' : 'chevron-down'} size={fp(11)} color={showAllColors ? '#fff' : colors.textSecondary} />
+              <Text style={[$.paletteToggleText, { color: showAllColors ? '#fff' : colors.textSecondary }]}>
+                {showAllColors ? '收起' : '全部'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {PALETTE_ROWS_OBJ.map((row, ri) => (
             <View key={ri} style={$.paletteRow}>
-              {row.map((c) => (
+              {row.map((bc) => (
                 <TouchableOpacity
-                  key={c}
+                  key={bc.code}
                   activeOpacity={0.6}
-                  onPress={() => { hapticSelection(); selectColor(c); if (tool === 'eraser') setTool('pen'); }}
+                  onPress={() => { hapticSelection(); selectColor(bc.hex); if (tool === 'eraser') setTool('pen'); }}
+                  onLongPress={() => { hapticSelection(); setColorInfo(bc); }}
+                  delayLongPress={250}
                   style={[
                     $.paletteCell,
-                    { backgroundColor: c },
-                    c === color && $.paletteCellActive,
-                    c === color && { borderColor: colors.accent },
+                    { backgroundColor: bc.hex },
+                    bc.hex === color && $.paletteCellActive,
+                    bc.hex === color && { borderColor: colors.accent },
                   ]}
                 >
-                  {c === color && <Feather name="check" size={fp(10)} color={isLightColor(c) ? '#333' : '#fff'} />}
+                  {bc.hex === color && <Feather name="check" size={fp(10)} color={isLightColor(bc.hex) ? '#333' : '#fff'} />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -1379,6 +1413,30 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <Text style={$.saveBtnText}>完成</Text>
         </HoverView>
       </View>
+
+      {/* ── 长按色块查看 SKU 信息 ── */}
+      <Modal
+        visible={!!colorInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setColorInfo(null)}
+      >
+        <TouchableOpacity
+          style={$.colorInfoOverlay}
+          activeOpacity={1}
+          onPress={() => setColorInfo(null)}
+        >
+          <View style={[$.colorInfoCard, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+            <View style={[$.colorInfoSwatch, { backgroundColor: colorInfo?.hex }]} />
+            <Text style={[$.colorInfoCode, { color: colors.text }]}>{colorInfo?.code}</Text>
+            <Text style={[$.colorInfoHex, { color: colors.textSecondary }]}>{colorInfo?.hex.toUpperCase()}</Text>
+            <Text style={[$.colorInfoName, { color: colors.textHint }]}>{colorInfo?.name}</Text>
+            <Text style={[$.colorInfoBrand, { color: colors.textHint }]}>
+              {currentPalette.label}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── 导出 PNG / PDF action sheet ── */}
       <Modal
@@ -1853,11 +1911,43 @@ const $ = StyleSheet.create({
     marginBottom: wp(8),
   },
   palettePresetRow: { flexDirection: 'row', gap: wp(6) },
+  palettePresetScrollRow: { flexDirection: 'row', gap: wp(6), paddingVertical: wp(2), paddingRight: wp(8) },
   palettePresetChip: {
     paddingHorizontal: wp(10), paddingVertical: wp(4),
     borderRadius: wp(10), borderWidth: 1,
   },
   palettePresetText: { fontSize: fp(11), fontWeight: '600' },
+  paletteToolRow: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(8),
+    marginTop: wp(6), marginBottom: wp(8),
+  },
+  paletteCount: { fontSize: fp(10), fontWeight: '500', fontVariant: ['tabular-nums'] },
+  paletteToggleBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(3),
+    paddingHorizontal: wp(8), paddingVertical: wp(3),
+    borderRadius: wp(8), borderWidth: 1,
+  },
+  paletteToggleText: { fontSize: fp(10), fontWeight: '600' },
+  // 长按色块弹出的 SKU 信息卡
+  colorInfoOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  colorInfoCard: {
+    minWidth: wp(220), maxWidth: '80%',
+    paddingHorizontal: wp(20), paddingVertical: wp(20),
+    borderRadius: BorderRadius.lg, alignItems: 'center', gap: wp(4),
+    ...shadow(4, 16, 0.18, '#000', 6),
+  },
+  colorInfoSwatch: {
+    width: wp(64), height: wp(64), borderRadius: wp(32),
+    marginBottom: wp(8),
+    ...shadow(1, 4, 0.12, '#000', 2),
+  },
+  colorInfoCode: { fontSize: fp(20), fontWeight: '800' },
+  colorInfoHex: { fontSize: fp(13), fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  colorInfoName: { fontSize: fp(12), marginTop: wp(2) },
+  colorInfoBrand: { fontSize: fp(10), marginTop: wp(8) },
   paletteRow: {
     flexDirection: 'row', gap: wp(8), marginBottom: wp(8),
   },
