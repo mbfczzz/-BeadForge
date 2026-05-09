@@ -419,26 +419,33 @@ public class AiController {
      * 至于 48×48 拼豆本来也表达不出精确人脸，所以这个损失可接受。
      */
     private BufferedImage aiStylize(BufferedImage original, String style, int targetCols, int targetRows, String paletteKey) {
-        String apiKey = getConfig("ai_image_api_key");
+        // image 生成（Step 2）配置：必填
+        String imageApiKey = getConfig("ai_image_api_key");
         String imageModel = getConfig("ai_image_model");
+        String imageBaseUrl = getConfig("ai_image_base_url");
+        if (imageApiKey == null || imageModel == null || imageBaseUrl == null) return null;
+
+        // vision 描述（Step 1）配置：可选，独立 key + base_url。没配就回退到 image 那套
+        // 用途：当一个代理只开图像生成、另一个代理只开 vision 时，分开配置可以混搭
+        // （比如 image 用 uocode 的 gpt-image-2、vision 用 oaipro 的 gpt-4o-mini）
+        String visionApiKey = getConfig("ai_vision_api_key");
+        String visionBaseUrl = getConfig("ai_vision_base_url");
         String visionModel = getConfig("ai_vision_model");
-        String baseUrl = getConfig("ai_image_base_url");
-        if (apiKey == null || imageModel == null || baseUrl == null) return null;
+        if (visionApiKey == null || visionApiKey.trim().isEmpty()) visionApiKey = imageApiKey;
+        if (visionBaseUrl == null || visionBaseUrl.trim().isEmpty()) visionBaseUrl = imageBaseUrl;
+        if (visionModel == null || visionModel.trim().isEmpty()) visionModel = "gpt-4o-mini";
 
-        // vision 模型是可选配置，没配就默认 gpt-4o-mini（最便宜的 vision 模型）
-        if (visionModel == null || visionModel.trim().isEmpty()) {
-            visionModel = "gpt-4o-mini";
-        }
-
-        apiKey = apiKey.trim();
+        imageApiKey = imageApiKey.trim();
         imageModel = imageModel.trim();
+        imageBaseUrl = imageBaseUrl.trim().replaceAll("/+$", "");
+        visionApiKey = visionApiKey.trim();
+        visionBaseUrl = visionBaseUrl.trim().replaceAll("/+$", "");
         visionModel = visionModel.trim();
-        baseUrl = baseUrl.trim().replaceAll("/+$", "");
-        if (apiKey.isEmpty() || imageModel.isEmpty() || baseUrl.isEmpty()) return null;
+        if (imageApiKey.isEmpty() || imageModel.isEmpty() || imageBaseUrl.isEmpty()) return null;
 
         try {
             // Step 1: 让 vision 模型看图写描述（512px 给它看就够，省 token）
-            String description = aiVisionDescribe(original, apiKey, baseUrl, visionModel);
+            String description = aiVisionDescribe(original, visionApiKey, visionBaseUrl, visionModel);
             if (description == null || description.trim().isEmpty()) {
                 log.warn("AI vision 描述失败 → 降级");
                 return null;
@@ -453,7 +460,7 @@ public class AiController {
             int promptBudget = isDallE3 ? 4000 : 1000;
             String fullPrompt = buildStylePromptWithDescription(description, style, paletteKey, promptBudget);
             String outputSize = pickOutputSize(targetCols, targetRows, imageModel);
-            return aiGenerateFromText(fullPrompt, imageModel, apiKey, baseUrl, outputSize);
+            return aiGenerateFromText(fullPrompt, imageModel, imageApiKey, imageBaseUrl, outputSize);
         } catch (HttpStatusCodeException e) {
             String msg = extractApiError(e.getResponseBodyAsString());
             log.warn("AI 风格化被拒({}): {}", e.getRawStatusCode(), msg);
