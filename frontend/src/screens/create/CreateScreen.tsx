@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { EditorMode, CreateMethodOption, CreateSizeOption, CreateTipOption } from '../../api/create';
+import type { EditorMode, CreateMethodOption, CreateTipOption } from '../../api/create';
 import type { RootStackParamList } from '../../navigation/types';
 import type { DesignItem } from '../../api/design';
 import { Feather } from '@expo/vector-icons';
@@ -15,14 +15,22 @@ import { ALL_PATTERNS, BeadGrid } from '../../components/common';
 import { wp, fp, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { useUiConfig } from '../../store/useUiConfigStore';
 
-const FALLBACK_SIZES: CreateSizeOption[] = [
-  { label: '小', cols: 9, rows: 9, desc: '钥匙扣', icon: 'key' },
-  { label: '中', cols: 16, rows: 16, desc: '杯垫', icon: 'coffee' },
-  { label: '大', cols: 32, rows: 32, desc: '挂画 / 摆件', icon: 'image' },
-  { label: '肖像', cols: 48, rows: 48, desc: '人像 / 头像', icon: 'user' },
-  { label: '宽幅', cols: 48, rows: 24, desc: '书签 / 横幅', icon: 'bookmark' },
-  { label: '巨幅', cols: 64, rows: 64, desc: '挂画大件', icon: 'layout' },
+// 画布尺寸固定 4 档：3 个预设 + 自定义。前端硬编码，不走后端 Discovery
+type SizeOption =
+  | { kind: 'preset'; label: string; cols: number; rows: number; desc: string; icon: string }
+  | { kind: 'custom'; label: string; desc: string; icon: string };
+
+const SIZES: SizeOption[] = [
+  { kind: 'preset', label: '30 × 30',   cols: 30,  rows: 30,  desc: '小幅 · 杯垫 / 钥匙扣',  icon: 'square' },
+  { kind: 'preset', label: '50 × 50',   cols: 50,  rows: 50,  desc: '中幅 · 摆件 / 头像',    icon: 'grid' },
+  { kind: 'preset', label: '100 × 100', cols: 100, rows: 100, desc: '大幅 · 挂画 / 海报',    icon: 'maximize' },
+  { kind: 'custom', label: '自定义',     desc: '手动输入行列数',                                icon: 'sliders' },
 ];
+
+// 自定义尺寸边界，太小没意义、太大首次渲染会卡
+const CUSTOM_MIN = 5;
+const CUSTOM_MAX = 200;
+const clampSize = (n: number) => Math.max(CUSTOM_MIN, Math.min(CUSTOM_MAX, n | 0));
 // 当 useUiConfig 拉不到后端 Discovery 配置（断网 / 首次启动 / 后端没种子）时的兜底，
 // 跟 data.sql 里 'create.methods' 种子保持一致，避免线下 dev 看不到 image / ai 入口
 const FALLBACK_METHODS: CreateMethodOption[] = [
@@ -68,13 +76,14 @@ const SIZE_W = Math.floor((W - PAD * 2 - wp(10)) / 2);
 export const CreateScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors, dark } = useTheme();
-  const [sizeIdx, setSizeIdx] = useState(1);
+  const [sizeIdx, setSizeIdx] = useState(0);
+  const [customCols, setCustomCols] = useState('30');
+  const [customRows, setCustomRows] = useState('30');
 
   const recentDrafts = useDesignStore((s) => s.recentDrafts);
   const recentDraftsLoading = useDesignStore((s) => s.recentDraftsLoading);
   const loadRecentDrafts = useDesignStore((s) => s.loadRecentDrafts);
 
-  const sizes = useUiConfig<CreateSizeOption[]>('create.sizes', FALLBACK_SIZES);
   const methods = useUiConfig<CreateMethodOption[]>('create.methods', FALLBACK_METHODS);
   const tips = useUiConfig<CreateTipOption[]>('create.tips', FALLBACK_TIPS);
 
@@ -85,8 +94,10 @@ export const CreateScreen: React.FC = () => {
   );
 
   const go = (mode: EditorMode) => {
-    const size = sizes[Math.min(sizeIdx, sizes.length - 1)] || FALLBACK_SIZES[0];
-    navigation.navigate('Editor', { mode, cols: size.cols, rows: size.rows });
+    const size = SIZES[sizeIdx];
+    const cols = size.kind === 'custom' ? clampSize(parseInt(customCols, 10) || 30) : size.cols;
+    const rows = size.kind === 'custom' ? clampSize(parseInt(customRows, 10) || 30) : size.rows;
+    navigation.navigate('Editor', { mode, cols, rows });
   };
 
   // 草稿点开 → 编辑器恢复（带 designId 让保存走 update）
@@ -174,7 +185,7 @@ export const CreateScreen: React.FC = () => {
 
         <Text style={[$.sectionTitle, { color: colors.text }]}>画布尺寸</Text>
         <View style={$.sizeGrid}>
-          {sizes.map((size, index) => {
+          {SIZES.map((size, index) => {
             const active = index === sizeIdx;
             return (
               <TouchableOpacity
@@ -190,12 +201,43 @@ export const CreateScreen: React.FC = () => {
                 <Feather name={size.icon as any} size={fp(16)} color={active ? '#fff' : colors.textHint} />
                 <Text style={[$.sizeLabel, { color: active ? '#fff' : colors.text }]}>{size.label}</Text>
                 <Text style={[$.sizeDesc, { color: active ? 'rgba(255,255,255,0.75)' : colors.textHint }]}>
-                  {size.cols}x{size.rows} · {size.desc}
+                  {size.desc}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
+
+        {SIZES[sizeIdx].kind === 'custom' && (
+          <View style={[$.customRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={$.customField}>
+              <Text style={[$.customLabel, { color: colors.textHint }]}>列数</Text>
+              <TextInput
+                value={customCols}
+                onChangeText={setCustomCols}
+                keyboardType="numeric"
+                maxLength={3}
+                placeholder="30"
+                placeholderTextColor={colors.textHint}
+                style={[$.customInput, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
+              />
+            </View>
+            <Text style={[$.customX, { color: colors.textHint }]}>×</Text>
+            <View style={$.customField}>
+              <Text style={[$.customLabel, { color: colors.textHint }]}>行数</Text>
+              <TextInput
+                value={customRows}
+                onChangeText={setCustomRows}
+                keyboardType="numeric"
+                maxLength={3}
+                placeholder="30"
+                placeholderTextColor={colors.textHint}
+                style={[$.customInput, { color: colors.text, backgroundColor: colors.inputBg, borderColor: colors.border }]}
+              />
+            </View>
+            <Text style={[$.customHint, { color: colors.textHint }]}>{CUSTOM_MIN}–{CUSTOM_MAX}</Text>
+          </View>
+        )}
 
         <Text style={[$.sectionTitle, { color: colors.text }]}>开始创作</Text>
         {methods.map((method) => (
@@ -274,6 +316,30 @@ const $ = StyleSheet.create({
   },
   sizeLabel: { fontSize: fp(14), fontWeight: '700', marginTop: wp(4) },
   sizeDesc: { fontSize: fp(10), marginTop: wp(2) },
+  customRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginHorizontal: PAD,
+    marginTop: wp(2),
+    marginBottom: wp(6),
+    paddingVertical: wp(10),
+    paddingHorizontal: wp(12),
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    gap: wp(8),
+  },
+  customField: { flex: 1 },
+  customLabel: { fontSize: fp(10), marginBottom: wp(4) },
+  customInput: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: wp(10),
+    paddingVertical: wp(6),
+    fontSize: fp(14),
+    fontWeight: '600',
+  },
+  customX: { fontSize: fp(14), fontWeight: '700', paddingBottom: wp(8) },
+  customHint: { fontSize: fp(10), paddingBottom: wp(8), marginLeft: wp(4) },
   methodButton: {
     flexDirection: 'row',
     alignItems: 'center',
