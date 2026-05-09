@@ -12,6 +12,7 @@ import { useTheme, FontSize, BorderRadius } from '../../theme';
 import type { ThemeColors } from '../../theme';
 import { HoverView, ALL_PATTERNS, PublishResultCard, type PublishResultCardData } from '../../components/common';
 import { SkiaBeadCanvas, type SkiaBeadCanvasHandle } from '../../components/editor/SkiaBeadCanvas';
+import { exportGridAsPng, exportGridAsPdf, savePngToAlbum, shareFile } from '../../utils/exporter';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
 import { imageToGrid } from '../../api/imageToGrid';
@@ -204,6 +205,58 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [mirrorY, setMirrorY] = useState(false);
   const [recentColors, setRecentColors] = useState<string[]>([]);
   const [hoverCoord, setHoverCoord] = useState<{ r: number; c: number } | null>(null);
+
+  /* ---- W2：导出（PNG / PDF） ---- */
+  const [exportSheetOpen, setExportSheetOpen] = useState(false);
+  const [exporting, setExporting] = useState<null | 'png-album' | 'png-share' | 'pdf-share'>(null);
+
+  const designNameForExport = useMemo(() => `${MODE_TITLES[mode]}-${cols}x${rows}`, [mode, cols, rows]);
+
+  const handleExportPngToAlbum = useCallback(async () => {
+    if (exporting) return;
+    setExporting('png-album');
+    try {
+      const uri = await exportGridAsPng(grid, designNameForExport);
+      await savePngToAlbum(uri);
+      setExportSheetOpen(false);
+      Alert.alert('已保存', '拼豆图已存到系统相册');
+    } catch (e: any) {
+      const msg = e?.message === 'PERMISSION_DENIED'
+        ? '需要相册权限。去系统设置开启后重试。'
+        : `导出失败：${e?.message || '未知错误'}`;
+      Alert.alert('保存失败', msg);
+    } finally {
+      setExporting(null);
+    }
+  }, [exporting, grid, designNameForExport]);
+
+  const handleExportPngShare = useCallback(async () => {
+    if (exporting) return;
+    setExporting('png-share');
+    try {
+      const uri = await exportGridAsPng(grid, designNameForExport);
+      await shareFile(uri, 'image/png');
+      setExportSheetOpen(false);
+    } catch (e: any) {
+      Alert.alert('分享失败', e?.message || '未知错误');
+    } finally {
+      setExporting(null);
+    }
+  }, [exporting, grid, designNameForExport]);
+
+  const handleExportPdf = useCallback(async () => {
+    if (exporting) return;
+    setExporting('pdf-share');
+    try {
+      const uri = await exportGridAsPdf(grid, designNameForExport);
+      await shareFile(uri, 'application/pdf');
+      setExportSheetOpen(false);
+    } catch (e: any) {
+      Alert.alert('PDF 失败', e?.message || '未知错误');
+    } finally {
+      setExporting(null);
+    }
+  }, [exporting, grid, designNameForExport]);
 
   // 启动时拉一次 AsyncStorage 中的最近用色
   useEffect(() => {
@@ -827,6 +880,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
         <View style={$.navActions}>
           <NavAction icon="corner-up-left" onPress={undo} disabled={!history.length} colors={colors} />
           <NavAction icon="corner-up-right" onPress={redo} disabled={!future.length} colors={colors} />
+          <NavAction icon="download" onPress={() => setExportSheetOpen(true)} disabled={false} colors={colors} />
           <HoverView
             onPress={() => { void saveDraft(false); }}
             style={[$.draftBtn, { backgroundColor: dirtySinceSave ? colors.gold : colors.inputBg, opacity: savingDraft ? 0.6 : 1 }]}
@@ -1186,6 +1240,88 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           <Text style={$.saveBtnText}>完成</Text>
         </HoverView>
       </View>
+
+      {/* ── 导出 PNG / PDF action sheet ── */}
+      <Modal
+        visible={exportSheetOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !exporting && setExportSheetOpen(false)}
+      >
+        <TouchableOpacity
+          style={$.exportOverlay}
+          activeOpacity={1}
+          onPress={() => !exporting && setExportSheetOpen(false)}
+        >
+          <View style={[$.exportSheet, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+            <Text style={[$.exportTitle, { color: colors.text }]}>导出作品</Text>
+            <Text style={[$.exportSub, { color: colors.textHint }]}>{designNameForExport}</Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleExportPngToAlbum}
+              disabled={!!exporting}
+              style={[$.exportBtn, { backgroundColor: colors.inputBg, opacity: exporting && exporting !== 'png-album' ? 0.4 : 1 }]}
+            >
+              <View style={[$.exportIcon, { backgroundColor: '#22C55E' }]}>
+                {exporting === 'png-album'
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Feather name="image" size={fp(16)} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[$.exportBtnTitle, { color: colors.text }]}>保存图片到相册</Text>
+                <Text style={[$.exportBtnDesc, { color: colors.textHint }]}>1:1 像素 PNG，圆形珠子白底</Text>
+              </View>
+              <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleExportPngShare}
+              disabled={!!exporting}
+              style={[$.exportBtn, { backgroundColor: colors.inputBg, opacity: exporting && exporting !== 'png-share' ? 0.4 : 1 }]}
+            >
+              <View style={[$.exportIcon, { backgroundColor: '#3B82F6' }]}>
+                {exporting === 'png-share'
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Feather name="share-2" size={fp(16)} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[$.exportBtnTitle, { color: colors.text }]}>分享图片</Text>
+                <Text style={[$.exportBtnDesc, { color: colors.textHint }]}>系统分享面板,发给朋友 / 社交</Text>
+              </View>
+              <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleExportPdf}
+              disabled={!!exporting}
+              style={[$.exportBtn, { backgroundColor: colors.inputBg, opacity: exporting && exporting !== 'pdf-share' ? 0.4 : 1 }]}
+            >
+              <View style={[$.exportIcon, { backgroundColor: '#F59E0B' }]}>
+                {exporting === 'pdf-share'
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Feather name="file-text" size={fp(16)} color="#fff" />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[$.exportBtnTitle, { color: colors.text }]}>导出 PDF 拼豆指引</Text>
+                <Text style={[$.exportBtnDesc, { color: colors.textHint }]}>编号网格底图 + 颜色 / 数量清单</Text>
+              </View>
+              <Feather name="chevron-right" size={fp(14)} color={colors.textHint} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => !exporting && setExportSheetOpen(false)}
+              disabled={!!exporting}
+              style={[$.exportCancel, { borderColor: colors.border }]}
+            >
+              <Text style={[$.exportCancelText, { color: colors.textSecondary }]}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── 原图预览全屏 modal ── */}
       <Modal
@@ -1610,6 +1746,33 @@ const $ = StyleSheet.create({
   // 发布弹窗
   pubOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   pubSheet: { borderTopLeftRadius: wp(16), borderTopRightRadius: wp(16), padding: wp(20) },
+
+  // 导出 action sheet
+  exportOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  exportSheet: {
+    borderTopLeftRadius: wp(16), borderTopRightRadius: wp(16),
+    paddingHorizontal: wp(16), paddingTop: wp(20), paddingBottom: wp(28),
+  },
+  exportTitle: { fontSize: fp(16), fontWeight: '700' },
+  exportSub: { fontSize: fp(11), marginTop: wp(2), marginBottom: wp(14), fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+  exportBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: wp(12),
+    padding: wp(12), borderRadius: BorderRadius.md, marginBottom: wp(8),
+  },
+  exportIcon: {
+    width: wp(36), height: wp(36), borderRadius: wp(10),
+    justifyContent: 'center', alignItems: 'center',
+  },
+  exportBtnTitle: { fontSize: fp(13), fontWeight: '700' },
+  exportBtnDesc: { fontSize: fp(11), marginTop: wp(2) },
+  exportCancel: {
+    marginTop: wp(8),
+    paddingVertical: wp(12),
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  exportCancelText: { fontSize: fp(13), fontWeight: '600' },
   pubTitle: { fontSize: fp(17), fontWeight: '700', marginBottom: wp(14) },
   pubLabel: { fontSize: fp(12), fontWeight: '600', marginTop: wp(10), marginBottom: wp(6) },
   pubInput: { height: wp(40), borderRadius: wp(10), paddingHorizontal: wp(12), fontSize: fp(14) },

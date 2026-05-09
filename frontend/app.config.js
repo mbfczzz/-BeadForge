@@ -37,6 +37,15 @@ export default {
             usesCleartextTraffic: true
           }
         }
+      ],
+      // 导出 PNG 写到相册需要 MediaLibrary 权限，文案要本地化（iOS Info.plist + Android 权限说明）
+      [
+        "expo-media-library",
+        {
+          photosPermission: "允许 BeadForge 把拼豆作品保存到你的相册。",
+          savePhotosPermission: "允许 BeadForge 把拼豆作品保存到你的相册。",
+          isAccessMediaLocationEnabled: false
+        }
       ]
     ],
     extra: {
