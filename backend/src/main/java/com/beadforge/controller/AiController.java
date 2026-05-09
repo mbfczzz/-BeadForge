@@ -274,9 +274,16 @@ public class AiController {
                 }
             }
 
-            // AI 增强时跳过 k-means（AI 已经把图卡通化成有限色块，再 k-means 是冗余 +
-            // 可能反而把 AI 仔细安排的色块边界给"再聚合"模糊掉）。本地算法路径保留 k-means。
-            String[][] grid = pixelizeToGrid(processed, c, r, palette, !aiUsed, dither, ditherStrength);
+            // 两条路径分明：
+            // - aiEnhance=true：AI 流程（成功就用 AI 卡通图、失败降级 k-means）→ 富 pipeline
+            // - aiEnhance=false：用户明确想要"纯像素画"，直接 bilinear → 调色板最近色 + 抖动，
+            //   不做 k-means、不做 mode 滤波、不动饱和度、不做背景透明检测
+            String[][] grid;
+            if (aiEnhance) {
+                grid = pixelizeToGrid(processed, c, r, palette, !aiUsed, dither, ditherStrength);
+            } else {
+                grid = pixelizeToGridPlain(original, c, r, palette, dither, ditherStrength);
+            }
             Map<String, Object> result = new HashMap<>();
             result.put("grid", grid);
             result.put("cols", c);
@@ -733,6 +740,76 @@ public class AiController {
         rs[ty][tx] += er * w;
         gs[ty][tx] += eg * w;
         bs[ty][tx] += eb * w;
+    }
+
+    /**
+     * 纯像素化路径（aiEnhance=false 走这条）。
+     * 直接 bilinear 缩到 target → 每像素 → 调色板最近色 + 用户选的抖动。
+     * 不做 k-means、不做 mode 滤波、不增饱和度、不做背景透明检测。
+     * 适合"我就是想把这张图拼出来"的素朴诉求。
+     */
+    private String[][] pixelizeToGridPlain(BufferedImage original, int cols, int rows, String paletteKey,
+                                           String dither, float ditherStrength) {
+        Object[] resolved = resolvePalette(paletteKey);
+        String[] palette = (String[]) resolved[0];
+        int[][] paletteRgb = (int[][]) resolved[1];
+        double[][] paletteLab = (double[][]) resolved[2];
+
+        // 1) bilinear 直接缩到 target，白底兜底（透明 PNG 的透明区不再保留）
+        BufferedImage scaled = new BufferedImage(cols, rows, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g0 = scaled.createGraphics();
+        g0.setColor(Color.WHITE);
+        g0.fillRect(0, 0, cols, rows);
+        g0.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g0.drawImage(original, 0, 0, cols, rows, null);
+        g0.dispose();
+
+        // 2) 拷进浮点缓冲做误差扩散
+        float[][] rs = new float[rows][cols];
+        float[][] gs = new float[rows][cols];
+        float[][] bs = new float[rows][cols];
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                int rgb = scaled.getRGB(x, y);
+                rs[y][x] = (rgb >> 16) & 0xFF;
+                gs[y][x] = (rgb >> 8) & 0xFF;
+                bs[y][x] = rgb & 0xFF;
+            }
+        }
+        // 全 false：spreadError 兼容签名要求传一份"是否透明"，纯模式没有透明像素
+        final boolean[][] noTransparent = new boolean[rows][cols];
+
+        String[][] grid = new String[rows][cols];
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < cols; x++) {
+                float r = clamp(rs[y][x]);
+                float gv = clamp(gs[y][x]);
+                float b = clamp(bs[y][x]);
+                int idx = nearestPaletteIdx(r, gv, b, paletteLab);
+                grid[y][x] = palette[idx];
+
+                float scale = "none".equalsIgnoreCase(dither) ? 0f : Math.max(0f, Math.min(1f, ditherStrength));
+                if (scale == 0f) continue;
+                float er = (r - paletteRgb[idx][0]) * scale;
+                float eg = (gv - paletteRgb[idx][1]) * scale;
+                float eb = (b - paletteRgb[idx][2]) * scale;
+
+                if ("atkinson".equalsIgnoreCase(dither)) {
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 1, y, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 2, y, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x - 1, y + 1, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x, y + 1, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 1, y + 1, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x, y + 2, cols, rows, noTransparent);
+                } else {
+                    spreadError(rs, gs, bs, er, eg, eb, 7f / 16f, x + 1, y, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 3f / 16f, x - 1, y + 1, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 5f / 16f, x, y + 1, cols, rows, noTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 16f, x + 1, y + 1, cols, rows, noTransparent);
+                }
+            }
+        }
+        return grid;
     }
 
     /**
