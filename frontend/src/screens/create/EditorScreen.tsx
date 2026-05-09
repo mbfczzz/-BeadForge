@@ -16,7 +16,7 @@ import { exportGridAsPng, exportGridAsPdf, savePngToAlbum, shareFile } from '../
 import { lineCells, rectCells, ellipseCells, applyMirror } from '../../utils/shapes';
 import type { RootScreenProps } from '../../navigation/types';
 import { doubaoGenerate } from '../../api/doubao';
-import { imageToGrid } from '../../api/imageToGrid';
+import { imageToGrid, type DitherMode } from '../../api/imageToGrid';
 import { designApi } from '../../api/design';
 import { feedApi } from '../../api/community';
 import { usePatternStore } from '../../store/usePatternStore';
@@ -169,6 +169,8 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   const [aiEnhance, setAiEnhance] = useState(true);
   // AI 风格预设：选不同风格 → 后端用不同 prompt → AI 重绘出不同效果
   const [stylePreset, setStylePreset] = useState<StyleKey>('auto');
+  // 抖动算法：fs 渐变细腻 / atkinson 颗粒复古 / none 纯色块（最适合对照实物拼）
+  const [ditherMode, setDitherMode] = useState<DitherMode>('fs');
 
   /* ---- 偏好持久化：palette / style / aiEnhance 跨会话保留，省每次手动配 ---- */
   const PREFS_KEY = 'beadforge_editor_prefs_v1';
@@ -186,6 +188,10 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
           if (validStyles.includes(saved.stylePreset)) {
             setStylePreset(saved.stylePreset);
           }
+          const validDithers: DitherMode[] = ['fs', 'atkinson', 'none'];
+          if (validDithers.includes(saved.ditherMode)) {
+            setDitherMode(saved.ditherMode);
+          }
         } catch { /* JSON 损坏忽略，下次写入会覆盖 */ }
       }
       prefsLoadedRef.current = true;
@@ -194,9 +200,9 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
   useEffect(() => {
     if (!prefsLoadedRef.current) return;
     void AsyncStorage.setItem(PREFS_KEY, JSON.stringify({
-      paletteKey, aiEnhance, stylePreset,
+      paletteKey, aiEnhance, stylePreset, ditherMode,
     }));
-  }, [paletteKey, aiEnhance, stylePreset]);
+  }, [paletteKey, aiEnhance, stylePreset, ditherMode]);
 
   /* ---- 画布状态 ---- */
   const [grid, setGrid] = useState<string[][]>(() => fitInitialGrid(initialGrid) || createEmptyGrid(cols, rows));
@@ -410,7 +416,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setLastImageUri(asset.uri); // 记下来，让"重做" / "查看原图"能复用
       setGenerating(true);
       // imageToGrid 失败会抛错，外层 catch 透出 server 的 message
-      const result2 = await imageToGrid(asset.uri, cols, rows, paletteKey, aiEnhance, stylePreset);
+      const result2 = await imageToGrid(asset.uri, cols, rows, paletteKey, aiEnhance, stylePreset, ditherMode);
       pushHistory(result2.grid);
       // AI 增强请求了但实际没生效 → 显式告诉用户走的是本地算法
       // （后端 AI 调用失败时会静默降级，不告诉用户的话他会以为"AI 增强没用"）
@@ -427,7 +433,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setGenerating(false);
       pickingRef.current = false;
     }
-  }, [cols, rows, pushHistory, navigation, paletteKey, aiEnhance, stylePreset]);
+  }, [cols, rows, pushHistory, navigation, paletteKey, aiEnhance, stylePreset, ditherMode]);
 
   /* ---- 用上次的图重新生成（不打开 picker，节省一步操作）---- */
   // 用户在切风格 / 调色板 / 开关 AI 增强后想试新效果时用这个；
@@ -439,7 +445,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
     setGenerating(true);
     setGenError('');
     try {
-      const result = await imageToGrid(uri, cols, rows, paletteKey, aiEnhance, stylePreset);
+      const result = await imageToGrid(uri, cols, rows, paletteKey, aiEnhance, stylePreset, ditherMode);
       pushHistory(result.grid);
       if (aiEnhance && !result.aiUsed) {
         setGenError('AI 增强未生效，已用本地算法。检查后端日志确认 oaipro 是否支持 /images/edits');
@@ -452,7 +458,7 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
       setGenerating(false);
       pickingRef.current = false;
     }
-  }, [lastImageUri, cols, rows, pushHistory, paletteKey, aiEnhance, stylePreset]);
+  }, [lastImageUri, cols, rows, pushHistory, paletteKey, aiEnhance, stylePreset, ditherMode]);
 
   /* ---- 初始化 ---- */
   useEffect(() => {
@@ -1193,6 +1199,45 @@ export const EditorScreen: React.FC<RootScreenProps<'Editor'>> = ({ route, navig
                 { transform: [{ translateX: aiEnhance ? wp(16) : 0 }] },
               ]} />
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ── 抖动算法（仅 image 模式可见，影响图像→拼豆的色彩还原方式）── */}
+        {mode === 'image' && (
+          <View style={$.styleBar}>
+            <Text style={[$.styleBarLabel, { color: colors.textSecondary }]}>细节</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={$.styleChipRow}
+            >
+              {([
+                { key: 'fs', label: '渐变', desc: 'Floyd-Steinberg 细腻' },
+                { key: 'atkinson', label: '颗粒', desc: '复古像素感' },
+                { key: 'none', label: '色块', desc: '干净便于对照实物' },
+              ] as const).map((opt) => {
+                const active = ditherMode === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    activeOpacity={0.75}
+                    onPress={() => { hapticSelection(); setDitherMode(opt.key); }}
+                    style={[
+                      $.styleChip,
+                      {
+                        backgroundColor: active ? colors.accent : colors.inputBg,
+                        borderColor: active ? colors.accent : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[$.styleChipLabel, { color: active ? '#fff' : colors.text }]}>{opt.label}</Text>
+                    <Text style={[$.styleChipDesc, { color: active ? 'rgba(255,255,255,0.85)' : colors.textHint }]} numberOfLines={1}>
+                      {opt.desc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 

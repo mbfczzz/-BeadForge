@@ -20,6 +20,14 @@ export interface ImageToGridResult {
   aiUsed: boolean;
 }
 
+/**
+ * 抖动算法选择：
+ * - 'fs'       Floyd-Steinberg，误差扩散，适合渐变 / 写实
+ * - 'atkinson' Atkinson 抖动（早期 Mac 风），颗粒感复古
+ * - 'none'     不扩散，纯最近色 → 干净色块，便于对照实物拼
+ */
+export type DitherMode = 'fs' | 'atkinson' | 'none';
+
 export async function imageToGrid(
   uri: string,
   cols: number,
@@ -27,6 +35,8 @@ export async function imageToGrid(
   paletteKey: string = 'default',
   aiEnhance: boolean = false,
   style: string = 'auto',
+  dither: DitherMode = 'fs',
+  ditherStrength: number = 1.0,
 ): Promise<ImageToGridResult> {
   const filename = uri.split('/').pop() || 'image.jpg';
   const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
@@ -43,6 +53,8 @@ export async function imageToGrid(
   formData.append('palette', paletteKey);
   formData.append('aiEnhance', String(aiEnhance));
   formData.append('style', style);
+  formData.append('dither', dither);
+  formData.append('ditherStrength', String(ditherStrength));
 
   const res: any = await client.post('/ai/image-to-grid', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

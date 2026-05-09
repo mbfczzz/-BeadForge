@@ -184,7 +184,7 @@ public class AiController {
             }
             if (original == null) return ApiResponse.error(500, "AI图片解码失败");
             // AI 文生图路径：图本来就是 AI 出的（已卡通化），跳 k-means
-            String[][] grid = pixelizeToGrid(original, cols, rows, req.getPalette(), false);
+            String[][] grid = pixelizeToGrid(original, cols, rows, req.getPalette(), false, "fs", 1.0f);
 
             Map<String, Object> result = new HashMap<>();
             result.put("grid", grid);
@@ -220,6 +220,10 @@ public class AiController {
             @RequestParam(value = "palette", defaultValue = "default") String palette,
             @RequestParam(value = "aiEnhance", defaultValue = "false") boolean aiEnhance,
             @RequestParam(value = "style", defaultValue = "auto") String style,
+            // 抖动算法："fs"（Floyd-Steinberg，渐变细腻）/ "atkinson"（颗粒复古）/ "none"（色块）
+            @RequestParam(value = "dither", defaultValue = "fs") String dither,
+            // 抖动强度 0.0-1.0，越低越像色块。block 模式忽略此参数
+            @RequestParam(value = "ditherStrength", defaultValue = "1.0") float ditherStrength,
             HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         if (userId == null) return ApiResponse.error(401, "需要登录");
@@ -247,9 +251,9 @@ public class AiController {
                 return ApiResponse.error(400, "图片分辨率过高，请换一张（建议 50MP 以内）");
             }
 
-            log.info("图片转拼豆: filename={}, size={}, sourcePx={}x{}, target={}x{}, palette={}, aiEnhance={}, style={}, userId={}",
+            log.info("图片转拼豆: filename={}, size={}, sourcePx={}x{}, target={}x{}, palette={}, aiEnhance={}, style={}, dither={}, strength={}, userId={}",
                     file.getOriginalFilename(), file.getSize(),
-                    original.getWidth(), original.getHeight(), c, r, palette, aiEnhance, style, userId);
+                    original.getWidth(), original.getHeight(), c, r, palette, aiEnhance, style, dither, ditherStrength, userId);
 
             // AI 增强：把照片喂给配置中的图像模型让它重绘成"简化卡通色块"风格。
             // 关键 trick：把调色板 hex 列表直接拼进 prompt，AI 会偏向用这些色出图，
@@ -270,7 +274,7 @@ public class AiController {
 
             // AI 增强时跳过 k-means（AI 已经把图卡通化成有限色块，再 k-means 是冗余 +
             // 可能反而把 AI 仔细安排的色块边界给"再聚合"模糊掉）。本地算法路径保留 k-means。
-            String[][] grid = pixelizeToGrid(processed, c, r, palette, !aiUsed);
+            String[][] grid = pixelizeToGrid(processed, c, r, palette, !aiUsed, dither, ditherStrength);
             Map<String, Object> result = new HashMap<>();
             result.put("grid", grid);
             result.put("cols", c);
@@ -592,7 +596,7 @@ public class AiController {
      *   6) transparent 标记
      *   7) Floyd-Steinberg + LAB ΔE 调色板匹配
      */
-    private String[][] pixelizeToGrid(BufferedImage original, int cols, int rows, String paletteKey, boolean useKMeans) {
+    private String[][] pixelizeToGrid(BufferedImage original, int cols, int rows, String paletteKey, boolean useKMeans, String dither, float ditherStrength) {
         // 解析 palette：拿到对应的 hex / rgb / lab 三件套
         Object[] resolved = resolvePalette(paletteKey);
         String[] palette = (String[]) resolved[0];
@@ -679,30 +683,45 @@ public class AiController {
                 int idx = nearestPaletteIdx(r, gv, b, paletteLab);
                 grid[y][x] = palette[idx];
 
-                // 量化误差：源像素 - 实际选中的调色板色
-                float er = r - paletteRgb[idx][0];
-                float eg = gv - paletteRgb[idx][1];
-                float eb = b - paletteRgb[idx][2];
+                // 量化误差：源像素 - 实际选中的调色板色，乘强度系数让用户调节抖动力度
+                float scale = "none".equalsIgnoreCase(dither) ? 0f : Math.max(0f, Math.min(1f, ditherStrength));
+                float er = (r - paletteRgb[idx][0]) * scale;
+                float eg = (gv - paletteRgb[idx][1]) * scale;
+                float eb = (b - paletteRgb[idx][2]) * scale;
+                if (scale == 0f) continue; // none 模式：纯最近色，不扩散
 
-                // Floyd-Steinberg 7/16 3/16 5/16 1/16；只往非透明邻居扩散，
-                // 否则会把误差泄进背景把"被透明化的像素"染成花斑
-                if (x + 1 < cols && !isTransparent[y][x + 1]) {
-                    rs[y][x + 1] += er * 7f / 16; gs[y][x + 1] += eg * 7f / 16; bs[y][x + 1] += eb * 7f / 16;
-                }
-                if (y + 1 < rows) {
-                    if (x - 1 >= 0 && !isTransparent[y + 1][x - 1]) {
-                        rs[y + 1][x - 1] += er * 3f / 16; gs[y + 1][x - 1] += eg * 3f / 16; bs[y + 1][x - 1] += eb * 3f / 16;
-                    }
-                    if (!isTransparent[y + 1][x]) {
-                        rs[y + 1][x] += er * 5f / 16; gs[y + 1][x] += eg * 5f / 16; bs[y + 1][x] += eb * 5f / 16;
-                    }
-                    if (x + 1 < cols && !isTransparent[y + 1][x + 1]) {
-                        rs[y + 1][x + 1] += er * 1f / 16; gs[y + 1][x + 1] += eg * 1f / 16; bs[y + 1][x + 1] += eb * 1f / 16;
-                    }
+                if ("atkinson".equalsIgnoreCase(dither)) {
+                    // Atkinson：误差按 1/8 分散到 6 个邻居，丢失 2/8（最早出现在 Mac 早期画图程序）
+                    // 比 FS 颗粒感更强、色块更干净，更像复古像素艺术
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 1, y, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 2, y, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x - 1, y + 1, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x, y + 1, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x + 1, y + 1, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 8f, x, y + 2, cols, rows, isTransparent);
+                } else {
+                    // Floyd-Steinberg 7/16 3/16 5/16 1/16；只往非透明邻居扩散，
+                    // 否则会把误差泄进背景把"被透明化的像素"染成花斑
+                    spreadError(rs, gs, bs, er, eg, eb, 7f / 16f, x + 1, y, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 3f / 16f, x - 1, y + 1, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 5f / 16f, x, y + 1, cols, rows, isTransparent);
+                    spreadError(rs, gs, bs, er, eg, eb, 1f / 16f, x + 1, y + 1, cols, rows, isTransparent);
                 }
             }
         }
         return grid;
+    }
+
+    /** 把量化误差按权重 w 散到 (tx, ty)。越界 / 透明像素跳过（避免给背景染杂色） */
+    private static void spreadError(float[][] rs, float[][] gs, float[][] bs,
+                                    float er, float eg, float eb, float w,
+                                    int tx, int ty, int cols, int rows,
+                                    boolean[][] isTransparent) {
+        if (tx < 0 || tx >= cols || ty < 0 || ty >= rows) return;
+        if (isTransparent[ty][tx]) return;
+        rs[ty][tx] += er * w;
+        gs[ty][tx] += eg * w;
+        bs[ty][tx] += eb * w;
     }
 
     /**
