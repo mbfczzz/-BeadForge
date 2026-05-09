@@ -72,11 +72,11 @@ INSERT IGNORE INTO t_feed (id, user_id, content, design_id, tags, like_count, co
 (6, 8, '宝石拼豆第一弹！蓝色钻石搞定✨ 接下来挑战红宝石', 7, '宝石,新手', 95, 12, 3, '2026-04-11 08:00:00'),
 (7, 9, '彩虹挂画完成了！这个用了快 600 颗珠子，7 种颜色。推荐新手从这个练起，配色简单效果好。', 8, '彩虹,教程', 521, 78, 45, '2026-04-10 12:00:00');
 
--- API配置
+-- API配置（注意：明文 key 不应长期留在 repo 里，建议在 admin / 直接 SQL 中维护）
 INSERT IGNORE INTO t_api_config (config_key, config_value, description) VALUES
-('ai_image_api_key', 'sk-Cb7PfT5JaojNCoj4pSuBEqrGssASay6hEtnGnjybMkp9EkUoSMUG', 'AI 文生图 API Key'),
-('ai_image_model', 'dall-e-2', 'AI 文生图模型 ID'),
-('ai_image_base_url', 'https://api.oaipro.com/v1', 'AI 文生图 API 地址'),
+('ai_image_api_key', 'sk-rngt2ULWyyM0uVWz3KTluZLElSgIx9Ij0BcwlOjegbTxlDy6', 'AI 文生图 API Key'),
+('ai_image_model', 'gpt-image-2', 'AI 文生图模型 ID'),
+('ai_image_base_url', 'https://www.uocode.com/v1', 'AI 文生图 API 地址'),
 ('ai_vision_model', 'gpt-4o-mini', 'AI 视觉模型 ID（图片转拼豆 AI 增强用，看图写描述）'),
 ('hot_like_weight', '3', '热度算法-点赞权重'),
 ('hot_view_weight', '1', '热度算法-浏览权重'),
@@ -133,9 +133,12 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 -- 确保 test1 用户有 ADMIN 角色（方便管理后台登录）
 UPDATE t_user SET role = 'ADMIN' WHERE username = 'test1' AND (role IS NULL OR role != 'ADMIN');
 
--- 老库里若还是 gpt-image-1 / dall-e-3，翻成 dall-e-2（速度优先 5-10s 出图）；
--- 用户在 admin 手动改成其它值则不会被覆盖
-UPDATE t_api_config SET config_value = 'dall-e-2' WHERE config_key = 'ai_image_model' AND config_value IN ('gpt-image-1', 'dall-e-3');
+-- 切回 gpt-image-1 + uocode 代理（老库里 INSERT IGNORE 命中、值不会更新，必须显式
+-- UPDATE 才能覆盖已有数据库）。同时迁 base_url / api_key 到 uocode。
+-- 用户改 model 到非 dall-e-2 / gpt-image-1 的别的值，则视为有意保留，不动。
+UPDATE t_api_config SET config_value = 'gpt-image-2' WHERE config_key = 'ai_image_model' AND config_value IN ('dall-e-2', 'dall-e-3', 'gpt-image-1');
+UPDATE t_api_config SET config_value = 'https://www.uocode.com/v1' WHERE config_key = 'ai_image_base_url' AND config_value IN ('https://api.oaipro.com/v1');
+UPDATE t_api_config SET config_value = 'sk-rngt2ULWyyM0uVWz3KTluZLElSgIx9Ij0BcwlOjegbTxlDy6' WHERE config_key = 'ai_image_api_key' AND config_value LIKE 'sk-Cb7P%';
 
 -- ────────── Discovery 配置初始数据 ──────────
 INSERT IGNORE INTO t_discover_banner (id, title, sub, pi, bg, cat, sort_mode, sort_order, eyebrow, button_text, enabled) VALUES

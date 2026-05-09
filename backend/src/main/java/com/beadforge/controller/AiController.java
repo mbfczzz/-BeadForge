@@ -146,12 +146,14 @@ public class AiController {
 
             // 显式要 b64_json：避免再发一次 HTTP 下载图（默认 url 模式 1-2s round-trip）。
             // 下方仍保留 url 解析路径——个别代理会忽略此参数继续返回 url 字段
+            // gpt-image-1 不接受 response_format（官方 API 直接 400），且默认就返 b64_json
+            boolean isGptImage = model.toLowerCase().contains("gpt-image");
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("model", model);
             body.put("prompt", "像素风格拼豆图案，简洁可爱，纯色背景，" + prompt.trim());
             body.put("size", "1024x1024");
             body.put("n", 1);
-            body.put("response_format", "b64_json");
+            if (!isGptImage) body.put("response_format", "b64_json");
 
             log.info("AI生图: prompt={}, cols={}, rows={}, userId={}", prompt.trim(), cols, rows, userId);
             ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(body, headers), Map.class);
@@ -423,13 +425,15 @@ public class AiController {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
 
+        boolean isGptImage = model != null && model.toLowerCase().contains("gpt-image");
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", model);
         body.put("prompt", prompt);
         body.put("size", size);
         body.put("n", 1);
-        // 同 generateImage：要 b64_json 省一次下载 round-trip
-        body.put("response_format", "b64_json");
+        // 同 generateImage：要 b64_json 省一次下载 round-trip。但 gpt-image-1 不接受
+        // response_format（默认就返 b64_json），传了会 400
+        if (!isGptImage) body.put("response_format", "b64_json");
 
         log.info("AI 文生图(两步法 step2): promptLen={}, size={}", prompt.length(), size);
         ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST,
@@ -549,15 +553,22 @@ public class AiController {
      * 让输出尽量接近 target 比例，下游 mode 滤波缩到 target 时不会拉伸。
      */
     private String pickOutputSize(int cols, int rows, String model) {
-        boolean isDallE3 = model != null && model.toLowerCase().contains("dall-e-3");
-        if (!isDallE3) {
-            // dall-e-2 / 未知：只能方形，给最大尺寸保留细节
+        if (model == null) return "1024x1024";
+        String m = model.toLowerCase();
+        double ratio = (double) cols / rows;
+        if (m.contains("dall-e-3")) {
+            if (ratio > 1.3) return "1792x1024";
+            if (ratio < 0.77) return "1024x1792";
             return "1024x1024";
         }
-        double ratio = (double) cols / rows;
-        if (ratio > 1.3) return "1792x1024";   // 横长（如 32×16 书签）
-        if (ratio < 0.77) return "1024x1792";  // 竖长
-        return "1024x1024";                     // 接近方形
+        if (m.contains("gpt-image")) {
+            // gpt-image-1 支持的非方形档位：1024x1536（竖）/ 1536x1024（横）
+            if (ratio > 1.3) return "1536x1024";
+            if (ratio < 0.77) return "1024x1536";
+            return "1024x1024";
+        }
+        // dall-e-2 / 未知：只能方形
+        return "1024x1024";
     }
 
     /** 缩到 maxDim 内（保持比例），编码为 PNG bytes。送 AI 前的压缩 + 格式归一。 */
