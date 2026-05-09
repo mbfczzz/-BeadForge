@@ -9,6 +9,7 @@ import { shadow } from '../../utils/shadow';
 import { useCartStore } from '../../store/useCartStore';
 import { useAddressStore } from '../../store/useAddressStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { shareText, buildProductShareMessage } from '../../utils/share';
 
 const DETAIL_RED = '#F2270C';
 const DETAIL_ORANGE = '#FF8A00';
@@ -176,7 +177,7 @@ export const ProductDetailScreen: React.FC<RootScreenProps<'ProductDetail'>> = (
 
           <TouchableOpacity
             activeOpacity={0.82}
-            onPress={() => Alert.alert('分享', '当前演示环境未接入系统分享。')}
+            onPress={() => shareText(buildProductShareMessage(product.name, product.price), '分享商品')}
             style={styles.navBtn}
           >
             <Feather name="share-2" size={fp(20)} color={colors.text} />

@@ -178,12 +178,7 @@ export const DirectMessageScreen: React.FC<RootScreenProps<'DirectMessage'>> = (
             },
           ]}
         >
-          <Pressable
-            style={[styles.toolButton, { backgroundColor: colors.inputBg }]}
-            onPress={() => Alert.alert('图片消息', '功能开发中，即将上线')}
-          >
-            <MCI name="image-plus-outline" size={fp(18)} color={colors.textSecondary} />
-          </Pressable>
+          {/* 图片消息功能尚未做完，先不渲染按钮，避免"看似可点"的死按钮 */}
           <View style={[styles.inputWrap, { backgroundColor: colors.inputBg }]}>
             <TextInput
               value={draft}

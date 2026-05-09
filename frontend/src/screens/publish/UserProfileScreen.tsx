@@ -12,6 +12,7 @@ import { AppHeader, Avatar, HoverView, BeadGrid, ALL_PATTERNS, PressableScale } 
 import { getFeedMockMedia } from '../../utils/feedMedia';
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
+import { shareText, buildUserShareMessage } from '../../utils/share';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 import { useUiConfig } from '../../store/useUiConfigStore';
 
@@ -354,7 +355,7 @@ export const UserProfileScreen: React.FC<RootScreenProps<'UserProfile'>> = ({ ro
               <MCI name="chat-outline" size={fp(18)} color={colors.text} />
             </HoverView>
             <HoverView
-              onPress={() => Alert.alert('分享', '当前演示环境不接入系统分享。')}
+              onPress={() => shareText(buildUserShareMessage(user.name), '分享用户')}
               style={[$.iconAction, { borderColor: colors.border }]}
               hoverScale={1.03}
               hoverLift={0}

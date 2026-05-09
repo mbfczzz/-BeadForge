@@ -23,6 +23,7 @@ import { Avatar, BeadGrid, HoverView, AppHeader } from '../../components/common'
 import { wp, fp, screenW, BOTTOM_SAFE_H } from '../../utils/responsive';
 import { shadow } from '../../utils/shadow';
 import { getFeedMockGallery } from '../../utils/feedMedia';
+import { shareText, buildFeedShareMessage } from '../../utils/share';
 import type { RootScreenProps, RootStackParamList } from '../../navigation/types';
 import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
 import { likeApi, favoriteApi, followApi, commentApi, type CommentItem } from '../../api/community';
@@ -434,7 +435,12 @@ export const FeedDetailScreen: React.FC<RootScreenProps<'FeedDetail'>> = ({ rout
                 <MCI name={bookmarked ? 'bookmark' : 'bookmark-outline'} size={fp(20)} color={bookmarked ? colors.accent : colors.textHint} />
                 <Text style={[$.actionText, { color: bookmarked ? colors.accent : colors.textHint }]}>{bookmarked ? '已收藏' : '收藏'}</Text>
               </HoverView>
-              <HoverView onPress={() => Alert.alert('分享', '当前演示环境不接入分享。')} style={$.actionItem} hoverScale={1.05} hoverLift={0}>
+              <HoverView
+                onPress={() => shareText(buildFeedShareMessage(feed.user.name, feed.content), '分享动态')}
+                style={$.actionItem}
+                hoverScale={1.05}
+                hoverLift={0}
+              >
                 <MCI name="share-outline" size={fp(20)} color={colors.textHint} />
               </HoverView>
             </View>

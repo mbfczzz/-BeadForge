@@ -29,6 +29,7 @@ import { useUiConfig } from '../../store/useUiConfigStore';
 const FALLBACK_COMMUNITY_TABS = ['推荐', '关注', '最新'];
 import { useAuthStore } from '../../store/useAuthStore';
 import { getFeedMockGallery } from '../../utils/feedMedia';
+import { shareText, buildFeedShareMessage } from '../../utils/share';
 import { shadow } from '../../utils/shadow';
 import { FeedMediaViewer } from '../../components/community/FeedMediaViewer';
 import { useCommunityFeedStore } from '../../store/useCommunityFeedStore';
@@ -458,7 +459,11 @@ const FeedCard: React.FC<{
                 {formatCount(feed.commentCount)}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity activeOpacity={0.8} style={styles.countAction}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.countAction}
+              onPress={() => shareText(buildFeedShareMessage(feed.user.name, feed.content), '分享动态')}
+            >
               <MCI name="send-outline" size={fp(22)} color={colors.text} />
               <Text style={[styles.iconCountText, { color: colors.textSecondary }]}>
                 {formatCount(feed.shareCount)}
